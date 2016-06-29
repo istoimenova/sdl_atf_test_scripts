@@ -1,0 +1,525 @@
+{
+  "policy_table": {
+    "module_config": {
+      "endpoints": {
+          "default": [
+            "http://sdl.cloud.net/"
+          ]
+      }
+    },
+	"module_meta": {
+       "ccpu_version": "1.1"
+    },
+	"device_data": {
+		"HUU40DAS7F970UEI17A73JH32L41K32JH4L1K234H3K4": {
+			"os": "Android"
+		}
+	},
+	"usage_and_error_counts": {
+		"app_level": {
+			"123456": {
+				"count_of_user_selections": 7
+			}
+		}
+	},
+    "functional_groupings": {
+      "Notifications": {
+        "user_consent_prompt": "Notifications",
+        "rpcs": {
+          "Alert": {
+            "hmi_levels": [
+              "BACKGROUND"
+            ]
+          }
+        }
+      },
+      "Location-1": {
+        "user_consent_prompt": "Location",
+        "rpcs": {
+          "getVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "gps",
+              "speed"
+            ]
+          },
+          "SubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "gps",
+              "speed"
+            ]
+          },
+          "UnSubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "gps",
+              "speed"
+            ]
+          },
+          "OnVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "gps",
+              "speed"
+            ]
+          }
+        }
+      },
+      "AudioPassThru-1": {
+        "rpcs": {
+          "PerformAudioPassThru": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "EndAudioPassThru": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnAudioPassThru": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          }
+        }
+      },
+      "Navigation-1": {
+        "rpcs": {
+          "AlertManeuver": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "ShowConstantTBT": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "UpdateTurnList": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          }
+        }
+      },
+      "ScrollableMessageGroup-1": {
+        "rpcs": {
+          "ScrollableMessage": {
+            "hmi_levels": [
+              "FULL"
+            ]
+          }
+        }
+      },
+      "Base-3": {
+        "rpcs": {
+          "Alert": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "SetGlobalProperties": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnCommand": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "SetMediaClockTimer": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "SubscribeButton": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnPermissionsChange": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "DeleteSubMenu": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "AddCommand": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "RegisterAppInterface": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "OnHMIStatus": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "DeleteInteractionChoiceSet": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnButtonPress": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "AddSubMenu": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnButtonEvent": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnTBTClientState": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "Speak": {
+            "hmi_levels": [
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "DeleteCommand": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnAppInterfaceUnregistered": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "PerformInteraction": {
+            "hmi_levels": [
+              "FULL"
+            ]
+          },
+          "ChangeRegistration": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "Slider": {
+            "hmi_levels": [
+              "FULL"
+            ]
+          },
+          "Show": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "UnregisterAppInterface": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED",
+              "NONE"
+            ]
+          },
+          "UnsubscribeButton": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "CreateInteractionChoiceSet": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "OnDriverDistraction": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "ResetGlobalProperties": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          },
+          "GenericResponse": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ]
+          }
+        }
+      },
+      "VehicleInfo-2": {
+        "user_consent_prompt": "VehicleInfo",
+        "rpcs": {
+          "SubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "avgFuelEconomy",
+              "batteryVoltage",
+              "externalTemperature",
+              "fuelLevel",
+              "fuelLevelState",
+              "instantFuelConsumption",
+              "odometer",
+              "tirePressure"
+            ]
+          },
+          "getVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "avgFuelEconomy",
+              "batteryVoltage",
+              "externalTemperature",
+              "fuelLevel",
+              "fuelLevelState",
+              "instantFuelConsumption",
+              "odometer",
+              "tirePressure",
+              "vin"
+            ]
+          },
+          "OnVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "avgFuelEconomy",
+              "batteryVoltage",
+              "externalTemperature",
+              "fuelLevel",
+              "fuelLevelState",
+              "instantFuelConsumption",
+              "odometer",
+              "tirePressure",
+              "vin"
+            ]
+          },
+          "UnSubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "avgFuelEconomy",
+              "batteryVoltage",
+              "externalTemperature",
+              "fuelLevel",
+              "fuelLevelState",
+              "instantFuelConsumption",
+              "odometer",
+              "tirePressure"
+            ]
+          }
+        }
+      },
+      "DrivingCharacteristics-2": {
+        "user_consent_prompt": "DrivingCharacteristics",
+        "rpcs": {
+          "getVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "acceleration",
+              "beltStatus",
+              "driverBraking",
+              "MyKey",
+              "prndl",
+              "rpm"
+            ]
+          },
+          "UnSubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "acceleration",
+              "beltStatus",
+              "driverBraking",
+              "MyKey",
+              "prndl",
+              "rpm"
+            ]
+          },
+          "OnVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "acceleration",
+              "beltStatus",
+              "driverBraking",
+              "MyKey",
+              "prndl",
+              "rpm"
+            ]
+          },
+          "SubscribeVehicleData": {
+            "hmi_levels": [
+              "BACKGROUND",
+              "FULL",
+              "LIMITED"
+            ],
+            "parameters": [
+              "acceleration",
+              "beltStatus",
+              "driverBraking",
+              "MyKey",
+              "prndl",
+              "rpm"
+            ]
+          }
+        }
+      }
+    },
+    "consumer_friendly_messages": {
+      "version": "001.001.001",
+      "messages": {
+        "StatusNeeded": {
+          "languages": {
+            "en-us": {
+              "line1": "Update Needed",
+              "tts": "Update Needed"
+            },
+            "zh-cn": {
+              "line1": "需要更新",
+              "tts": "需要更新"
+			},
+            "de-de": {
+              "line1": "Aktualisierung erforderlich",
+              "tts": "Aktualisierung erforderlich"
+            }
+		  }
+        }
+      }
+    },
+    "app_policies": {
+      "default": {
+        "priority": "NONE",
+        "groups": [
+          "Base-3"
+        ]
+      },
+      "123456": {
+        "priority": "NORMAL",
+        "groups": [
+          "Notifications",
+          "Location-1",
+          "AudioPassThru-1",
+          "Navigation-1",
+          "ScrollableMessageGroup-1",
+          "Base-3",
+          "VehicleInfo-2",
+          "DrivingCharacteristics-2"
+        ],
+        "nicknames": [
+          "SyncProxyTester"
+        ]
+      }
+    }
+  }
+}
