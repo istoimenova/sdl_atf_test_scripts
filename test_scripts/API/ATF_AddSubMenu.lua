@@ -2,23 +2,86 @@ Test = require('connecttest')
 require('cardinalities')
 local events = require('events')	
 local mobile_session = require('mobile_session')
-
-config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
+local commonSteps = require('user_modules/shared_testcases/commonSteps')
+local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
+local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 
 local infoMessage = string.rep("a",1000)
+APIName = "AddSubMenu"
 
 require('user_modules/AppTypes')
 
+
+
 local AddedSubMenus = {}
 
-function DelayedExp()
-  local event = events.Event()
-  event.matches = function(self, e) return self == e end
-  EXPECT_EVENT(event, "Delayed event")
-  RUN_AFTER(function()
-              RAISE_EVENT(event, event)
-            end, 2000)
+
+---------------------------------------------------------------------------------------------
+-------------------------- Overwrite These Functions For This Script-------------------------
+---------------------------------------------------------------------------------------------
+--Specific functions for this script
+--1. createRequest()
+--2. createResponse(Request)
+--3. verify_SUCCESS_Case(Request)
+---------------------------------------------------------------------------------------------
+
+--Use this variable in createRequest function
+icreasingNumber = 1
+
+--Create default request
+function Test:createRequest()
+	icreasingNumber = icreasingNumber + 1
+	return 	{
+		menuID = 520+ icreasingNumber,
+		position = 520 + icreasingNumber,
+		menuName ="SubMenupositive999_" .. tostring(icreasingNumber)
+	}	
 end
+
+--Create UI.AddSubMenu expected result based on parameters from the request
+function Test:createResponse(Request)
+	
+	--local Req = commonFunctions:cloneTable(Request)
+	
+	local Response = {}
+	if Request["menuID"] ~= nil then
+		Response["menuID"] = Request["menuID"]
+	end
+	
+	if Request["menuName"] ~= nil then
+		Response["menuParams"] = 
+		{
+			position = Request["position"],
+			menuName = Request["menuName"]
+		}
+	end
+	
+	return Response
+	
+end
+
+--This function sends a request from mobile and verify result on HMI and mobile for SUCCESS resultCode cases.
+function Test:verify_SUCCESS_Case(Request)
+	
+	--mobile side: sending the request
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect UI.AddSubMenu request 
+	local Response = self:createResponse(Request)
+	EXPECT_HMICALL("UI.AddSubMenu", Response)
+	:Do(function(_,data)
+		--hmi side: sending response		
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+	end)
+
+	--mobile side: expect AddSubMenu response
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
+
+	--mobile side: expect OnHashChange notification
+	EXPECT_NOTIFICATION("OnHashChange")
+end
+
 	
 local function SendOnSystemContext(self, ctx)
   self.hmiConnection:SendNotification("UI.OnSystemContext",{ appID = self.applications["Test Application"], systemContext = ctx })
@@ -27,54 +90,20 @@ end
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
-	--Begin Precondition.1
-	--Description: Activation App by sending SDL.ActivateApp	
-		function Test:ActivationApp()
-			--hmi side: sending SDL.ActivateApp request
-			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
+	
+	commonSteps:DeleteLogsFileAndPolicyTable()
+	
+	--Print new line to separate new test cases group
+	commonFunctions:newTestCasesGroup("Preconditions")
 
-			--hmi side: expect SDL.ActivateApp response
-			EXPECT_HMIRESPONSE(RequestId)
-				:Do(function(_,data)
-					--In case when app is not allowed, it is needed to allow app
-					if
-						data.result.isSDLAllowed ~= true then
+	--1. Activate application
+	commonSteps:ActivationApp()
 
-							--hmi side: sending SDL.GetUserFriendlyMessage request
-							local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", 
-												{language = "EN-US", messageCodes = {"DataConsent"}})
+	--2. Update policy to allow request
+	--TODO: Will be updated after policy flow implementation
+	policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FULL", "LIMITED"})
 
-							--hmi side: expect SDL.GetUserFriendlyMessage response
-							--TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-							EXPECT_HMIRESPONSE(RequestId)
-								:Do(function(_,data)
-
-									--hmi side: send request SDL.OnAllowSDLFunctionality
-									self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", 
-										{allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
-
-									--hmi side: expect BasicCommunication.ActivateApp request
-									EXPECT_HMICALL("BasicCommunication.ActivateApp")
-									:Do(function(_,data)
-
-										--hmi side: sending BasicCommunication.ActivateApp response
-										self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
-
-									end)
-									:Times(2)
-
-								end)
-
-				end
-			end)
-			
-			--mobile side: expect notification
-			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN" }) 
-		end
-	--End Precondition.1
-
-	-----------------------------------------------------------------------------------------
-		
+	
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
 --CommonRequestCheck: Check of mandatory/conditional request's parameters (mobile protocol)--
@@ -2135,7 +2164,7 @@ end
 				end
 			end
 	
-			function Test: AddSubMenu_REJECTED()				
+			function Test:AddSubMenu_REJECTED()				
 				--mobile side: sending AddSubMenu request
 				local cid = self.mobileSession:SendRPC("AddSubMenu",
 														{
@@ -2169,6 +2198,100 @@ end
 		
 		----------------------------------------------------------------------------------------- 
 		
+		--Begin Test case ResultCodeCheck.3
+		--Description: A command can not be executed because no application has been registered with RegisterApplication.
+
+			--Requirement id in JAMA:
+				--SDLAQ-CRS-434
+
+			--Verification criteria:
+				--SDL sends APPLICATION_NOT_REGISTERED code when the app sends a request within the same connection before RegisterAppInterface has been performed yet.
+			
+			--Description: Unregistered application
+			function Test:UnregisterAppInterface_Success()
+				local cid = self.mobileSession:SendRPC("UnregisterAppInterface",{})
+
+				EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)
+			end 
+			
+			--Description: Send AddSubMenu when application not registered yet.
+			function Test:AddSubMenu_AppNotRegistered()
+				--mobile side: sending AddSubMenu request
+					local cid = self.mobileSession:SendRPC("AddSubMenu",
+															{
+																menuID = 223,
+																position = 500,
+																menuName ="SubMenu223"
+															})
+
+				--mobile side: expect DeleteCommand response 
+				EXPECT_RESPONSE(cid, { success = false, resultCode = "APPLICATION_NOT_REGISTERED" })
+						
+				--mobile side: expect OnHashChange notification is not send to mobile
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Times(0)
+			end			
+		--End Test case ResultCodeCheck.3	
+		
+		----------------------------------------------------------------------------------------- 
+		
+		--Begin Test case ResultCodeCheck.4
+		--Description: Policies manager must validate an RPC request as "disallowed" if it is not allowed by the backend.
+
+			--Requirement id in JAMA:
+				--SDLAQ-CRS-2396
+
+			--Verification criteria:
+				--An RPC request is not allowed by the backend. Policies Manager validates it as "disallowed".
+			
+			commonSteps:RegisterAppInterface("RegisterAppInterface1")
+			commonSteps:RegisterAppInterface("RegisterAppInterface_WorkAround")
+			
+			--Description: Send AddSubMenu when HMI leve is NONE
+			function Test:AddSubMenu_DisallowedHMINone()
+				--mobile side: sending AddSubMenu request
+				local cid = self.mobileSession:SendRPC("AddSubMenu",
+														{
+															menuID = 201,
+															position = 50,
+															menuName ="SubMenu201"
+														})
+										
+				--mobile side: expect AddSubMenu response
+				EXPECT_RESPONSE(cid, { success = false, resultCode = "DISALLOWED" })
+						
+				--mobile side: expect OnHashChange notification is not send to mobile
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Times(0)
+				
+				commonTestCases:DelayedExp(2000)
+			end			
+		--End Test case ResultCodeCheck.4
+		
+		----------------------------------------------------------------------------------------- 
+	
+		--Begin Test case ResultCodeCheck.5
+		--Description: Policies Manager must validate an RPC request as "userDisallowed" if the request is allowed by the backend but disallowed by the use
+
+			--Requirement id in JAMA:
+				--SDLAQ-CRS-2394
+
+			--Verification criteria:
+				--An RPC request is allowed by the backend but disallowed by the user. Policy Manager validates it as "userDisallowed"
+			
+			--Description: Activate application
+			commonSteps:ActivationApp()
+			
+			--Check AddSubMenu is Disallowed when it is not in PT
+			policyTable:checkPolicyWhenAPIIsNotExist()
+			
+			--Check AddSubMenu is DISALLOWED/USER_DISALLOWED when it is in PT and it has not been allowed yet/user disallows. 
+			policyTable:checkPolicyWhenUserDisallowed({"FULL", "LIMITED", "BACKGROUND"})
+			
+		--End Test case ResultCodeCheck.5
+
+	--End Test suit ResultCodeCheck
 
 
 ----------------------------------------------------------------------------------------------
@@ -2578,7 +2701,7 @@ end
 				--mobile side: expected OnHMIStatus notification
 				if 
 					self.isMediaApplication == true or
-					Test.appHMITypes["NAVIGATION"] == true then
+					self.appHMITypes["NAVIGATION"] == true then
 						EXPECT_NOTIFICATION("OnHMIStatus", 
 							{ systemContext = "MENU", hmiLevel = "FULL", audioStreamingState = "AUDIBLE" },
 							{ systemContext = "MAIN", hmiLevel = "FULL", audioStreamingState = "AUDIBLE" })
@@ -2619,154 +2742,11 @@ end
 				--SDL doesn't reject AddSubMenu request when current HMI is FULL.
 				--SDL doesn't reject AddSubMenu request when current HMI is LIMITED.
 				--SDL doesn't reject AddSubMenu request when current HMI is BACKGROUND.
-						
-		if 
-			Test.isMediaApplication == true or 
-			Test.appHMITypes["NAVIGATION"] == true then
-			--Begin DifferentHMIlevel.1.1
-			--Description: SDL doesn't reject AddSubMenu request when current HMI is LIMITED (for media/navi app)
-				function Test:ChangeHMIToLimited()
-					local cid = self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated",
-					{
-						appID = self.applications["Test Application"],
-						reason = "GENERAL"
-					})
-					
-					EXPECT_NOTIFICATION("OnHMIStatus",{hmiLevel = "LIMITED", systemContext = "MAIN", audioStreamingState = "AUDIBLE" })
-				end
-				
-				function Test:AddSubMenu_HMILevelLimited()
-					--mobile side: sending AddSubMenu request
-					local cid = self.mobileSession:SendRPC("AddSubMenu",
-															{
-																menuID = 213,
-																position = 10,
-																menuName ="SubMenu213"
-															})
-					--hmi side: expect UI.AddSubMenu request
-					EXPECT_HMICALL("UI.AddSubMenu", 
-									{ 
-										menuID = 213,
-										menuParams = {
-											position = 10,
-											menuName ="SubMenu213"
-										}
-									})
-					:Do(function(_,data)
-						--hmi side: sending UI.AddSubMenu response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-						
-					--mobile side: expect AddSubMenu response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
+		
+		--Verify resultCode in NONE, LIMITED, BACKGROUND HMI level
+		commonTestCases:verifyDifferentHMIStatus("DISALLOWED", "SUCCESS", "SUCCESS")	
+		
+	--Postcondition: restore sdl_preloaded_pt.json
+	policyTable:Restore_preloaded_pt()
 
-					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange")					
-				end
-			--End DifferentHMIlevel.1.1
-			
-			--Begin DifferentHMIlevel.1.2
-			--Description: SDL doesn't reject AddSubMenu request when current HMI is BACKGROUND.
-				
-				--Precondition for media app type
-				--Description:Start second session
-					function Test:Case_SecondSession()
-					  self.mobileSession1 = mobile_session.MobileSession(
-						self,
-						self.mobileConnection)
-					end
-				
-				--Description "Register second app"
-					function Test:Case_AppRegistrationInSecondSession()
-						self.mobileSession1:StartService(7)
-						:Do(function()
-								local CorIdRegister = self.mobileSession1:SendRPC("RegisterAppInterface",
-								{
-								  syncMsgVersion =
-								  {
-									majorVersion = 3,
-									minorVersion = 0
-								  },
-								  appName = "Test Application2",
-								  isMediaApplication = true,
-								  languageDesired = 'EN-US',
-								  hmiDisplayLanguageDesired = 'EN-US',
-								  appHMIType = { "NAVIGATION" },
-								  appID = "1"
-								})
-
-								EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", 
-								{
-								  application = 
-								  {
-									appName = "Test Application2"
-								  }
-								})
-								:Do(function(_,data)
-								  appId2 = data.params.application.appID
-									end)
-
-								self.mobileSession1:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
-								:Timeout(2000)
-
-							self.mobileSession1:ExpectNotification("OnHMIStatus",{hmiLevel = "NONE", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-
-							end)
-						end
-					
-				--Description: Activate second app
-					function Test:ActivateSecondApp()
-						local rid = self.hmiConnection:SendRequest("SDL.ActivateApp",{appID = appId2})
-						EXPECT_HMIRESPONSE(rid)
-						
-						self.mobileSession1:ExpectNotification("OnHMIStatus",{hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-						self.mobileSession:ExpectNotification("OnHMIStatus",{hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-					end
-
-			elseif
-				Test.isMediaApplication == false then
-				--Precondition for non-media app type
-
-				function Test:ChangeHMIToBackground()
-					local cid = self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated",
-					{
-						appID = self.applications["Test Application"],
-						reason = "GENERAL"
-					})
-					
-					EXPECT_NOTIFICATION("OnHMIStatus",{hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-				end
-
-			end
-				--Description: AddSubMenu when HMI level BACKGROUND
-					function Test:AddSubMenu_HMILevelBackground()
-						--mobile side: sending AddSubMenu request
-						local cid = self.mobileSession:SendRPC("AddSubMenu",
-																{
-																	menuID = 214,
-																	position = 20,
-																	menuName ="SubMenu214"
-																})
-						--hmi side: expect UI.AddSubMenu request
-						EXPECT_HMICALL("UI.AddSubMenu", 
-										{ 
-											menuID = 214,
-											menuParams = {
-												position = 20,
-												menuName ="SubMenu214"
-											}
-										})
-						:Do(function(_,data)
-							--hmi side: sending UI.AddSubMenu response
-							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-						end)
-							
-						--mobile side: expect AddSubMenu response
-						EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
-
-						--mobile side: expect OnHashChange notification
-						EXPECT_NOTIFICATION("OnHashChange")						
-					end
-			--End Test case DifferentHMIlevel.1.2			
-		--End Test case DifferentHMIlevel.1	
-	--End Test suit DifferentHMIlevel
+return Test	
