@@ -1,3 +1,7 @@
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
   
 function DeleteLog_app_info_dat_policy()
@@ -26,12 +30,14 @@ end
 
 DeleteLog_app_info_dat_policy()
 
---Test = require('user_modules/connecttest_EL-GR')
-Test = require('connecttest')
-require('cardinalities')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_languages.lua
+commonPreconditions:Connecttest_Languages_update("connecttest_languages.lua", true)
+
+Test = require('user_modules/connecttest_languages')
 local events = require('events')
 local mobile_session = require('mobile_session')
-local config = require('config')
+require('user_modules/AppTypes')
 
 
 
@@ -71,6 +77,12 @@ local function UnregisterApplicationSessionOne(self)
 	EXPECT_RESPONSE(CorIdUAI, { success = true, resultCode = "SUCCESS"})
 		:Timeout(2000) 
 end
+
+-- Precondition: removing user_modules/connecttest_languages.lua
+	function Test:Precondition_remove_user_connecttest()
+	  os.execute( "rm -f ./user_modules/connecttest_languages.lua" )
+	end
+
 
 
 ---------------------------------------------------------------------------------------------

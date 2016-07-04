@@ -1,4 +1,15 @@
-Test = require('user_modules/connecttest_onScreenPresetsAvailable')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_VehicleTypeIn_RAI_Response.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_onScreen_Presets_Available.lua")
+
+
+commonPreconditions:Connecttest_InitHMI_onReady_call("connecttest_onScreen_Presets_Available.lua")
+
+Test = require('user_modules/connecttest_onScreen_Presets_Available')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -10,6 +21,7 @@ local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 require('user_modules/AppTypes')
 local bOnScreenPresetsAvailable = true
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
 --local storagePath = config.SDLStoragePath..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 local SDLConfig = require('user_modules/shared_testcases/SmartDeviceLinkConfigurations')
 local storagePath = config.pathToSDL .. SDLConfig:GetValue("AppStorageFolder") .. "/" .. tostring(config.application1.registerAppInterfaceParams.appID .. "_" .. tostring(config.deviceMAC) .. "/")
@@ -576,6 +588,11 @@ function Test:show(successValue, resultCodeValue)
 
 	--mobile side: expect Show response
 	EXPECT_RESPONSE(cid, { success = successValue, resultCode = resultCodeValue })				
+end
+
+-- Precondition: removing user_modules/connecttest_onScreen_Presets_Available.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_onScreen_Presets_Available.lua" )
 end
 
 -----------------------------------------------------------------------------------------

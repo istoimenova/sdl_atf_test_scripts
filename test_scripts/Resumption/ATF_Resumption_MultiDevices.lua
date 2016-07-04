@@ -7,7 +7,7 @@
 local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 
 -- Cretion dummy connections fo script
-os.execute("ifconfig lo:1 1.0.0.1 ; ifconfig lo:2 2.0.0.1 ; ifconfig lo:3 3.0.0.1 ; ifconfig lo:4 4.0.0.1 ; ifconfig lo:5 5.0.0.1 ; ifconfig lo:6 6.0.0.1 ; ifconfig lo:7 7.0.0.1 ; ifconfig lo:8 8.0.0.1 ; ifconfig lo:9 9.0.0.1 ; ifconfig lo:10 10.0.0.1 ; ifconfig lo:11 11.0.0.1 ; ifconfig lo:12 12.0.0.1 ; ifconfig lo:13 13.0.0.1 ; ifconfig lo:14 14.0.0.1 ; ifconfig lo:15 15.0.0.1 ; ifconfig lo:16 16.0.0.1 ; ifconfig lo:17 17.0.0.1 ; ifconfig lo:18 18.0.0.1 ; ifconfig lo:19 19.0.0.1 ; ifconfig lo:20 20.0.0.1 ; ifconfig lo:21 21.0.0.1 ; ifconfig lo:22 22.0.0.1 ; ifconfig lo:23 23.0.0.1 ; ifconfig lo:24 24.0.0.1 ; ifconfig lo:25 25.0.0.1 ; ifconfig lo:26 26.0.0.1 ; ifconfig lo:27 27.0.0.1 ; ifconfig lo:28 28.0.0.1 ; ifconfig lo:29 29.0.0.1 ; ifconfig lo:30 30.0.0.1 ; ifconfig lo:31 31.0.0.1 ; ifconfig lo:32 32.0.0.1 ; ifconfig lo:33 33.0.0.1 ; ifconfig lo:34 34.0.0.1 ; ifconfig lo:35 35.0.0.1 ; ifconfig lo:36 36.0.0.1 ; ifconfig lo:37 37.0.0.1 ; ifconfig lo:38 38.0.0.1 ; ifconfig lo:39 39.0.0.1 ; ifconfig lo:40 40.0.0.1 ; ifconfig lo:41 41.0.0.1 ; ifconfig lo:42 42.0.0.1 ; ifconfig lo:43 43.0.0.1 ; ifconfig lo:44 44.0.0.1 ; ifconfig lo:45 45.0.0.1 ; ifconfig lo:46 46.0.0.1 ; ifconfig lo:47 47.0.0.1 ; ifconfig lo:48 48.0.0.1 ; ifconfig lo:49 49.0.0.1 ; ifconfig lo:50 50.0.0.1 ; ifconfig lo:51 51.0.0.1 ; ifconfig lo:52 52.0.0.1 ; ifconfig lo:53 53.0.0.1 ; ifconfig lo:54 54.0.0.1 ; ifconfig lo:55 55.0.0.1 ; ifconfig lo:56 56.0.0.1 ; ifconfig lo:57 57.0.0.1 ; ifconfig lo:58 58.0.0.1 ; ifconfig lo:59 59.0.0.1 ; ifconfig lo:60 60.0.0.1 ; ifconfig lo:61 61.0.0.1 ; ifconfig lo:62 62.0.0.1 ; ifconfig lo:63 63.0.0.1 ; ifconfig lo:64 64.0.0.1 ; ifconfig lo:65 65.0.0.1 ; ifconfig lo:66 66.0.0.1 ; ifconfig lo:67 67.0.0.1 ; ifconfig lo:68 68.0.0.1 ; ifconfig lo:69 69.0.0.1 ; ifconfig lo:70 70.0.0.1 ; ifconfig lo:71 71.0.0.1 ; ifconfig lo:72 72.0.0.1 ; ifconfig lo:73 73.0.0.1 ; ifconfig lo:74 74.0.0.1 ; ifconfig lo:75 75.0.0.1 ; ifconfig lo:76 76.0.0.1 ; ifconfig lo:77 77.0.0.1 ; ifconfig lo:78 78.0.0.1 ; ifconfig lo:79 79.0.0.1 ; ifconfig lo:80 80.0.0.1 ; ifconfig lo:81 81.0.0.1 ; ifconfig lo:82 82.0.0.1 ; ifconfig lo:83 83.0.0.1 ; ifconfig lo:84 84.0.0.1 ; ifconfig lo:85 85.0.0.1 ; ifconfig lo:86 86.0.0.1 ; ifconfig lo:87 87.0.0.1 ; ifconfig lo:88 88.0.0.1 ; ifconfig lo:89 89.0.0.1 ; ifconfig lo:90 90.0.0.1 ; ifconfig lo:91 91.0.0.1 ; ifconfig lo:92 92.0.0.1 ; ifconfig lo:93 93.0.0.1 ; ifconfig lo:94 94.0.0.1 ; ifconfig lo:95 95.0.0.1 ; ifconfig lo:96 96.0.0.1 ; ifconfig lo:97 97.0.0.1 ; ifconfig lo:98 98.0.0.1 ; ifconfig lo:99 99.0.0.1 ; ifconfig lo:100 100.0.0.1 ; ifconfig lo:101 101.0.0.1")
+os.execute("ifconfig lo:1 1.0.0.1")
 
 --------------------------------------------------------------------------------
 --Precondition: preparation connecttest_resumption.lua
@@ -32,6 +32,7 @@ local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTab
 ----------------------------------------------------------------------------
 
 -- User required variables
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
 local appIDAndDeviceMac = config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 config.SDLStoragePath = config.pathToSDL .. "storage/"
 local storagePath = config.SDLStoragePath..appIDAndDeviceMac
@@ -740,6 +741,9 @@ local Connections = {
 	APPLINK_16333()
 
 	
+	--ToDo: Need to add additional checks in July
+		--Check resumption on both devices in the same time
+		--Check resumption the same app on second device after ign_OFF
 	
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Postcondition-------------------------------------
@@ -753,8 +757,7 @@ local Connections = {
 	
 
 	function Test:RemoveCreatedDummyConnections()
-		os.execute("ifconfig lo:1 down ; ifconfig lo:2 down ; ifconfig lo:3 down ; ifconfig lo:4 down ; ifconfig lo:5 down ; ifconfig lo:6 down ; ifconfig lo:7 down ; ifconfig lo:8 down ; ifconfig lo:9 down ; ifconfig lo:10 down ; ifconfig lo:11 down ; ifconfig lo:12 down ; ifconfig lo:13 down ; ifconfig lo:14 down ; ifconfig lo:15 down ; ifconfig lo:16 down ; ifconfig lo:17 down ; ifconfig lo:18 down ; ifconfig lo:19 down ; ifconfig lo:20 down ; ifconfig lo:21 down ; ifconfig lo:22 down ; ifconfig lo:23 down ; ifconfig lo:24 down ; ifconfig lo:25 down ; ifconfig lo:26 down ; ifconfig lo:27 down ; ifconfig lo:28 down ; ifconfig lo:29 down ; ifconfig lo:30 down ; ifconfig lo:31 down ; ifconfig lo:32 down ; ifconfig lo:33 down ; ifconfig lo:34 down ; ifconfig lo:35 down ; ifconfig lo:36 down ; ifconfig lo:37 down ; ifconfig lo:38 down ; ifconfig lo:39 down ; ifconfig lo:40 down ; ifconfig lo:41 down ; ifconfig lo:42 down ; ifconfig lo:43 down ; ifconfig lo:44 down ; ifconfig lo:45 down ; ifconfig lo:46 down ; ifconfig lo:47 down ; ifconfig lo:48 down ; ifconfig lo:49 down ; ifconfig lo:50 down ; ifconfig lo:51 down ; ifconfig lo:52 down ; ifconfig lo:53 down ; ifconfig lo:54 down ; ifconfig lo:55 down ; ifconfig lo:56 down ; ifconfig lo:57 down ; ifconfig lo:58 down ; ifconfig lo:59 down ; ifconfig lo:60 down ; ifconfig lo:61 down ; ifconfig lo:62 down ; ifconfig lo:63 down ; ifconfig lo:64 down ; ifconfig lo:65 down ; ifconfig lo:66 down ; ifconfig lo:67 down ; ifconfig lo:68 down ; ifconfig lo:69 down ; ifconfig lo:70 down ; ifconfig lo:71 down ; ifconfig lo:72 down ; ifconfig lo:73 down ; ifconfig lo:74 down ; ifconfig lo:75 down ; ifconfig lo:76 down ; ifconfig lo:77 down ; ifconfig lo:78 down ; ifconfig lo:79 down ; ifconfig lo:80 down ; ifconfig lo:81 down ; ifconfig lo:82 down ; ifconfig lo:83 down ; ifconfig lo:84 down ; ifconfig lo:85 down ; ifconfig lo:86 down ; ifconfig lo:87 down ; ifconfig lo:88 down ; ifconfig lo:89 down ; ifconfig lo:90 down ; ifconfig lo:91 down ; ifconfig lo:92 down ; ifconfig lo:93 down ; ifconfig lo:94 down ; ifconfig lo:95 down ; ifconfig lo:96 down ; ifconfig lo:97 down ; ifconfig lo:98 down ; ifconfig lo:99 down ; ifconfig lo:100 down ; ifconfig lo:101 down")
-
+		os.execute("ifconfig lo:1 down")
 	end
 		
 return Test

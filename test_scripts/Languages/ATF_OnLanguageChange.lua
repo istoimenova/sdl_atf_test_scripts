@@ -1,8 +1,15 @@
-Test = require('connecttest')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_languages.lua
+commonPreconditions:Connecttest_Languages_update("connecttest_languages.lua", true)
+
+Test = require('user_modules/connecttest_languages')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
-local config = require('config')
 
 
 ---------------------------------------------------------------------------------------------
@@ -16,9 +23,11 @@ require('user_modules/AppTypes')
 
 APIName = "OnLanguageChange" -- set API name
 
+config.deviceMAC      = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+
 Apps = {}
 Apps[1] = {}
-Apps[1].storagePath = config.SDLStoragePath..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
+Apps[1].storagePath = config.pathToSDL .. "storage/"..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 Apps[1].appName = config.application1.registerAppInterfaceParams.appName 
 Apps[1].isMedia = commonFunctions:isMediaApp()
 --Set audioStreamingState
@@ -291,6 +300,11 @@ local Languages = {
 
 
 	commonSteps:DeleteLogsFileAndPolicyTable()
+
+	-- Precondition: removing user_modules/connecttest_languages.lua
+	function Test:Precondition_remove_user_connecttest()
+	  os.execute( "rm -f ./user_modules/connecttest_languages.lua" )
+	end
 
 	--Print new line to separate new test cases group
 	commonFunctions:newTestCasesGroup("Preconditions")

@@ -1,6 +1,55 @@
-Test = require('user_modules/connecttest_VehicleType')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_VehicleTypeIn_RAI_Response.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_VehicleTypeIn_RAI_Response.lua", true)
+
+f = assert(io.open('./user_modules/connecttest_VehicleTypeIn_RAI_Response.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+  local pattern1 = "function .?module%:InitHMI_onReady.-initHMI_onReady.-end"
+  local pattern1Result = fileContent:match(pattern1)
+
+  if pattern1Result == nil then 
+    print(" \27[31m InitHMI_onReady functions is not found in /user_modules/connecttest_VehicleTypeIn_RAI_Response.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern1, "")
+  end
+
+    -- update initHMI_onReady
+  local pattern2 = "function .?module%.?:.?initHMI%_onReady%(.?%)"
+  local ResultPattern2 = fileContent:match(pattern2)
+
+  if ResultPattern2 == nil then 
+    print(" \27[31m initHMI_onReady function is not found in /user_modules/connecttest_VehicleTypeIn_RAI_Response.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern2, 'function module:initHMI_onReady(MYmake, MYmodel, MYmodelYear, MYtrim) \n MYmake = MYmake or "make" \n if MYmake == "absent" then MYmake = nil end \n  MYmodel = MYmodel or "model" \n if MYmodel == "absent" then MYmodel = nil end \n MYmodelYear = MYmodelYear or "modelYear" \n if MYmodelYear == "absent" then MYmodelYear = nil end \n  MYtrim = MYtrim or "trim" \n if MYtrim == "absent" then MYtrim = nil end \n   if MYmake ~= nil then print("In connecttest make: "..MYmake) else print("In connecttest: make is absent") end \n if MYmodel ~= nil then print("In connecttest model: "..MYmodel) else  print("In connecttest: model is absent") end \n if MYmodelYear ~= nil then  print("In connecttest modelYear: "..MYmodelYear) else  print("In connecttest: modelYear is absent") end \n if MYtrim ~= nil then  print("In connecttest trim: "..MYtrim) else  print("In connecttest: trim is absent") end')
+  end
+
+    -- update hmiCapabilities in UI.GetCapabilities
+  local pattern3 = 'ExpectRequest%s-%(%s-"%s-VehicleInfo.GetVehicleType-".-%{.-%}%s-%)'
+  local ResultPattern3 = fileContent:match(pattern3)
+
+  if ResultPattern2 == nil then 
+    print(" \27[31m ExpectRequest VehicleInfo.GetVehicleType call is not found in /user_modules/connecttest_VehicleTypeIn_RAI_Response.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern3,'ExpectRequest("VehicleInfo.GetVehicleType", true, {vehicleType = { make = MYmake, model = MYmodel, modelYear = MYmodelYear, trim = MYtrim}})')
+  end
+
+f = assert(io.open('./user_modules/connecttest_VehicleTypeIn_RAI_Response.lua', "w"))
+f:write(fileContent)
+f:close()
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+Test = require('user_modules/connecttest_VehicleTypeIn_RAI_Response')
 require('cardinalities')
 local mobile_session = require('mobile_session')
+require('user_modules/AppTypes')
 
 --------------------------------------------------------------------------------------------------------------------------------
 ------------- Tesst script for testing CRQ APPLINK-9945 - VehicleType from PolicyTable for RegisterAppInterfaceResponse---------
@@ -30,35 +79,41 @@ local function RegisterApp(self, RAImake, RAImodel, RAImodelYear, RAItrim)
   -- self.mobileSession:ExpectResponse(correlationId, { success = true })
     EXPECT_RESPONSE(correlationId, { success = true })
     :Do(function(_,data)
+      if data.payload.vehicleType then
+        if data.payload.vehicleType.make ~= nil then 
+        print ("in RAI response make: "..data.payload.vehicleType.make)
+        end
 
-      if data.payload.vehicleType.make ~= nil then 
-      print ("in RAI response make: "..data.payload.vehicleType.make)
-      end
+        if data.payload.vehicleType.model ~= nil then 
+        print ("in RAI response model: "..data.payload.vehicleType.model)
+        end
 
-      if data.payload.vehicleType.model ~= nil then 
-      print ("in RAI response model: "..data.payload.vehicleType.model)
-      end
+        if data.payload.vehicleType.modelYear ~= nil then 
+        print ("in RAI response modelYear: "..data.payload.vehicleType.modelYear)
+        end
 
-      if data.payload.vehicleType.modelYear ~= nil then 
-      print ("in RAI response modelYear: "..data.payload.vehicleType.modelYear)
-      end
-
-      if data.payload.vehicleType.trim ~= nil then 
-      print ("in RAI response trim: "..data.payload.vehicleType.trim)
+        if data.payload.vehicleType.trim ~= nil then 
+        print ("in RAI response trim: "..data.payload.vehicleType.trim)
+        end
       end
 
      end)
 
   -- validation of make, model, modelYear and trim parameters which send in GetVehicleType response from HMI and in RAI response
   :ValidIf(function (_,data)
-    if (data.payload.vehicleType.make ~= nil and (data.payload.vehicleType.make == "make_from_Policy" or RAImake))
-      and (data.payload.vehicleType.make ~= nil and (data.payload.vehicleType.model == "model_from_Policy" or RAImodel))
-      and (data.payload.vehicleType.modelYear == nil or RAImodelYear)
-      and (data.payload.vehicleType.trim == nil or RAItrim) 
-    then
-      return true
+    if data.payload.vehicleType then
+      if (data.payload.vehicleType.make ~= nil and (data.payload.vehicleType.make == "make_from_Policy" or RAImake))
+        and (data.payload.vehicleType.make ~= nil and (data.payload.vehicleType.model == "model_from_Policy" or RAImodel))
+        and (data.payload.vehicleType.modelYear == nil or RAImodelYear)
+        and (data.payload.vehicleType.trim == nil or RAItrim) 
+      then
+        return true
 
-    else
+      else
+        return false
+      end
+    else 
+      userPrint( 31, "vehicleType is not present in RAI response")
       return false
     end
 
@@ -86,6 +141,12 @@ function RestartSDL(self, suffix, MYmake, MYmodel, MYmodelYear, MYtrim)
 
 end
   
+
+-- Precondition: removing user_modules/connecttest_VehicleTypeIn_RAI_Response.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_VehicleTypeIn_RAI_Response.lua" )
+end
+
 ---------------------------------------------------------------------------------------------
 -----------------------              Test 1                 ---------------------------------
 ---------------------------------------------------------------------------------------------

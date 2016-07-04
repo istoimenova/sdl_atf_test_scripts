@@ -1,4 +1,84 @@
-Test = require('user_modules/connecttestRAIttsUnavailable')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_RAIttsUnavailable.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_RAIttsUnavailable.lua")
+
+f = assert(io.open('./user_modules/connecttest_RAIttsUnavailable.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+ -- update hmiCapabilities in UI.GetCapabilities
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.GetLanguage%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.GetLanguage call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("TTS.GetLanguage", false, {')
+  	end
+
+ -- update hmiCapabilities in TTS.SetGlobalProperties
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.SetGlobalProperties%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.SetGlobalProperties call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("TTS.SetGlobalProperties", false, {')
+  	end
+
+-- update hmiCapabilities in TTS.ChangeRegistration
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.ChangeRegistration%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.ChangeRegistration call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("TTS.ChangeRegistration", false, {')
+  	end
+
+-- update hmiCapabilities in TTS.GetSupportedLanguages
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.GetSupportedLanguages%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.GetSupportedLanguages call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("TTS.GetSupportedLanguages", false, {')
+  	end
+
+-- update hmiCapabilities in TTS.GetCapabilities
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.GetCapabilities%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.GetCapabilities call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("TTS.GetCapabilities", false, {')
+  	end
+
+-- update hmiCapabilities in TTS.IsReady
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-TTS.IsReady%s-".-%{.-%}%s-%)'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest TTS.IsReady call is not found in /user_modules/connecttest_RAIttsUnavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'EXPECT_HMICALL("TTS.IsReady"):Do(function(_,data) self.hmiConnection:SendError(data.id, data.method, "UNSUPPORTED_RESOURCE", "TTS is not available now") end)')
+  	end
+
+
+f = assert(io.open('./user_modules/connecttest_RAIttsUnavailable.lua', "w"))
+f:write(fileContent)
+f:close()
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_RAIttsUnavailable')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -11,6 +91,11 @@ local module         = require('testbase')
 local mobile  = require('mobile_connection')
 local tcp = require('tcp_connection')
 local file_connection  = require('file_connection')
+
+	-- Precondition: removing user_modules/connecttest_RAIttsUnavailable.lua
+	function Test:Precondition_remove_user_connecttest()
+	 	os.execute( "rm -f ./user_modules/connecttest_RAIttsUnavailable.lua" )
+	end
 
 	--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-1328
 

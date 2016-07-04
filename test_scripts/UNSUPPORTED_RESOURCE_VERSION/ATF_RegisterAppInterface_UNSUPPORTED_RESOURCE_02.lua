@@ -1,4 +1,74 @@
-Test = require('user_modules/connecttestRAIvrUnsupported')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_RAIvrUnsupported.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_RAIvrUnsupported.lua")
+
+f = assert(io.open('./user_modules/connecttest_RAIvrUnsupported.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+ -- update hmiCapabilities in VR.GetLanguage
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-VR.GetLanguage%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest VR.GetLanguage call is not found in /user_modules/connecttest_RAIvrUnsupported.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("VR.GetLanguage", false, {')
+  	end
+
+-- update hmiCapabilities in VR.ChangeRegistration
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-VR.ChangeRegistration%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest VR.ChangeRegistration call is not found in /user_modules/connecttest_RAIvrUnsupported.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("VR.ChangeRegistration", false, {')
+  	end
+
+-- update hmiCapabilities in VR.GetSupportedLanguages
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-VR.GetSupportedLanguages%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest VR.GetSupportedLanguages call is not found in /user_modules/connecttest_RAIvrUnsupported.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("VR.GetSupportedLanguages", false, {')
+  	end
+
+-- update hmiCapabilities in VR.GetCapabilities
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-VR.GetCapabilities%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest VR.GetCapabilities call is not found in /user_modules/connecttest_RAIvrUnsupported.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("VR.GetCapabilities", false, {')
+  	end
+
+-- update hmiCapabilities in VR.IsReady
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-VR.IsReady%s-".-%{.-%}%s-%)'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest VR.IsReady call is not found in /user_modules/connecttest_RAIvrUnsupported.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("VR.IsReady", true, { available = false })')
+  	end
+
+
+f = assert(io.open('./user_modules/connecttest_RAIvrUnsupported.lua', "w"))
+f:write(fileContent)
+f:close()
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_RAIvrUnsupported')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -11,6 +81,11 @@ local module         = require('testbase')
 local mobile  = require('mobile_connection')
 local tcp = require('tcp_connection')
 local file_connection  = require('file_connection')
+
+	-- Precondition: removing user_modules/connecttest_RAIvrUnsupported.lua
+	function Test:Precondition_remove_user_connecttest()
+	 	os.execute( "rm -f ./user_modules/connecttest_RAIvrUnsupported.lua" )
+	end
 
 	--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-1328
 

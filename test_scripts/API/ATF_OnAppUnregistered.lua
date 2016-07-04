@@ -12,10 +12,9 @@ local commonPreconditions = require('user_modules/shared_testcases/commonPrecond
 --Precondition: preparation connecttest_OnAppUnregistered.lua
 commonPreconditions:Connecttest_without_ExitBySDLDisconnect("connecttest_OnAppUnregistered.lua")
 
---ToDo: shall be removed when APPLINK-16610 is fixed
-config.defaultProtocolVersion = 2
+config.defaultProtocolVersion = 3
 
-	function Precondition_ArchivateINI()
+        function Precondition_ArchivateINI()
 	    commonPreconditions:BackupFile("smartDeviceLink.ini")
 	end
 
@@ -162,7 +161,7 @@ end
 																						  majorVersion = 3,
 																						  minorVersion = 1
 																						},
-																						appName = "SPT",
+																						appName = "SPTtest",
 																						isMediaApplication = false,
 																						languageDesired = 'EN-US',
 																						hmiDisplayLanguageDesired = 'EN-US',
@@ -183,12 +182,12 @@ end
 			{
 				application =
 				{
-					appName = "SPT",
+					appName = "SPTtest",
 					policyAppID = "1234567"
 				}
 			})
 			:Do(function(_,data)
-				self.applications["SPT"] = data.params.application.appID
+				self.applications["SPTtest"] = data.params.application.appID
 			end)
 
 			--mobile side: expect response
@@ -207,7 +206,7 @@ end
 		function Test:Wait_14_seconds_And_Verify_OnAppUnregistered_01()
 
 			--hmi side: expect BasicCommunication.OnAppUnregistered
-			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPT"], unexpectedDisconnect =  true})
+			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPTtest"], unexpectedDisconnect =  true})
 			:Timeout(15000)
 			:Do(function()
 				self.mobileSession:StopHeartbeat()
@@ -241,7 +240,7 @@ end
 																						  majorVersion = 3,
 																						  minorVersion = 1
 																						},
-																						appName = "SPT",
+																						appName = "SPTtest",
 																						isMediaApplication = false,
 																						languageDesired = 'EN-US',
 																						hmiDisplayLanguageDesired = 'EN-US',
@@ -262,9 +261,9 @@ end
 			{
 				application =
 				{
-					appName = "SPT",
+					appName = "SPTtest",
 					policyAppID = "1234567",
-					appID = self.applications["SPT"]
+					appID = self.applications["SPTtest"]
 				}
 			})
 
@@ -313,7 +312,7 @@ end
 																						  majorVersion = 3,
 																						  minorVersion = 1
 																						},
-																						appName = "SPT",
+																						appName = "SPTtest",
 																						isMediaApplication = false,
 																						languageDesired = 'EN-US',
 																						hmiDisplayLanguageDesired = 'EN-US',
@@ -334,12 +333,12 @@ end
 			{
 				application =
 				{
-					appName = "SPT",
+					appName = "SPTtest",
 					policyAppID = "1234567"
 				}
 			})
 			:Do(function(_,data)
-				self.applications["SPT"] = data.params.application.appID
+				self.applications["SPTtest"] = data.params.application.appID
 			end)
 
 			--mobile side: expect response
@@ -356,7 +355,7 @@ end
 			self.mobileConnection:Close()
 
 			--hmi side: expect BasicCommunication.OnAppUnregistered
-			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPT"], unexpectedDisconnect =  true})
+			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPTtest"], unexpectedDisconnect =  true})
 
 		end
 
@@ -378,7 +377,7 @@ end
 																						  majorVersion = 3,
 																						  minorVersion = 1
 																						},
-																						appName = "SPT",
+																						appName = "SPTtest",
 																						isMediaApplication = false,
 																						languageDesired = 'EN-US',
 																						hmiDisplayLanguageDesired = 'EN-US',
@@ -399,9 +398,9 @@ end
 			{
 				application =
 				{
-					appName = "SPT",
+					appName = "SPTtest",
 					policyAppID = "1234567",
-					appID = self.applications["SPT"]
+					appID = self.applications["SPTtest"]
 				}
 			})
 
@@ -441,7 +440,7 @@ end
 																						  majorVersion = 3,
 																						  minorVersion = 1
 																						},
-																						appName = "SPT",
+																						appName = "SPTtest",
 																						isMediaApplication = false,
 																						languageDesired = 'EN-US',
 																						hmiDisplayLanguageDesired = 'EN-US',
@@ -462,11 +461,11 @@ end
 			{
 				application =
 				{
-					appName = "SPT"
+					appName = "SPTtest"
 				}
 			})
 			:Do(function(_,data)
-				self.applications["SPT"] = data.params.application.appID
+				self.applications["SPTtest"] = data.params.application.appID
 			end)
 
 			--mobile side: expect response
@@ -482,7 +481,7 @@ end
 
 		function Test:Activation_App_05()
 
-			local Input_AppId = self.applications["SPT"]
+			local Input_AppId = self.applications["SPTtest"]
 
 			--hmi side: sending SDL.ActivateApp request
 			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = Input_AppId})
@@ -545,7 +544,7 @@ end
 
 
 			--hmi side: expect SDL.OnAppPermissionChanged
-			EXPECT_HMINOTIFICATION("SDL.OnAppPermissionChanged", {appID = self.applications["SPT"], appUnauthorized =  true, priority = "NORMAL"})
+			EXPECT_HMINOTIFICATION("SDL.OnAppPermissionChanged", {appID = self.applications["SPTtest"], appUnauthorized =  true, priority = "NORMAL"})
 			:Do(function(_,data)
 
 				--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
@@ -561,7 +560,7 @@ end
 
 
 			--hmi side: expect BasicCommunication.OnAppUnregistered
-			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPT"], unexpectedDisconnect =  false})
+			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {appID = self.applications["SPTtest"], unexpectedDisconnect =  false})
 
 
 			--mobile side: expect notification
@@ -574,7 +573,7 @@ end
 			end)
 			:ValidIf (function(_,data)
 				for _, app in pairs(data.params.applications) do
-					if app.appID == self.applications["SPT"] then
+					if app.appID == self.applications["SPTtest"] then
 						commonFunctions:printError(" Application is not removed on AppsList ")
 						return false
 					end

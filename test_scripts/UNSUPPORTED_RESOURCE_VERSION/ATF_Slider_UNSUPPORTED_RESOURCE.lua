@@ -1,4 +1,74 @@
-Test = require('user_modules/connecttestUIUnavailable')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_UI_unavailable.lua
+os.execute(  'cp ./modules/connecttest.lua  ./user_modules/connecttest_UI_unavailable.lua')
+
+f = assert(io.open('./user_modules/connecttest_UI_unavailable.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+ -- update hmiCapabilities in UI.GetLanguage
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-UI.GetLanguage%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest UI.GetLanguage call is not found in /user_modules/connecttest_UI_unavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("UI.GetLanguage", false, {')
+  	end
+
+-- update hmiCapabilities in UI.ChangeRegistration
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-UI.ChangeRegistration%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest UI.ChangeRegistration call is not found in /user_modules/connecttest_UI_unavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("UI.ChangeRegistration", false, {')
+  	end
+
+-- update hmiCapabilities in UI.GetSupportedLanguages
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-UI.GetSupportedLanguages%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest UI.GetSupportedLanguages call is not found in /user_modules/connecttest_UI_unavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("UI.GetSupportedLanguages", false, {')
+  	end
+
+-- update hmiCapabilities in UI.GetCapabilities
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-UI.GetCapabilities%s-".-%{'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest UI.GetCapabilities call is not found in /user_modules/connecttest_UI_unavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("UI.GetCapabilities", false, {')
+  	end
+
+-- update hmiCapabilities in UI.IsReady
+	local pattern1 = 'ExpectRequest%s-%(%s-"%s-UI.IsReady%s-".-%{.-%}%s-%)'
+	local ResultPattern2 = fileContent:match(pattern1)
+
+	if ResultPattern2 == nil then 
+    	print(" \27[31m ExpectRequest UI.IsReady call is not found in /user_modules/connecttest_UI_unavailable.lua \27[0m ")
+  	else
+	    fileContent  =  string.gsub(fileContent, pattern1, 'ExpectRequest("UI.IsReady", true, { available = false })')
+  	end
+
+
+f = assert(io.open('./user_modules/connecttest_UI_unavailable.lua', "w"))
+f:write(fileContent)
+f:close()
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_UI_unavailable')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -25,14 +95,13 @@ APIName = "Slider" -- set request name
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
 
+	-- Precondition: removing user_modules/connecttest_UI_unavailable.lua
+	function Test:Precondition_remove_user_connecttest()
+	 	os.execute( "rm -f ./user_modules/connecttest_UI_unavailable.lua" )
+	end
+
 	--1. Activate application
 	commonSteps:ActivationApp()
-
-	--2. Update policy to allow request
-	--local keep_context = true
-	--local steal_focus = true
-	policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FULL", "LIMITED", "NONE"})
-	--policyTable:updatePolicyAndAllowFunctionGroup({"FULL"}, keep_context, steal_focus)
 
 
 
@@ -68,9 +137,5 @@ APIName = "Slider" -- set request name
 		:Timeout(12000)
 	end
 --End Test suit ResultCodeChecks
-
-
---Postcondition: restore sdl_preloaded_pt.json
-policyTable:Restore_preloaded_pt()
 
 return Test

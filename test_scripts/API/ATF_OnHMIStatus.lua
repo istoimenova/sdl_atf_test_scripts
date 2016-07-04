@@ -1,3 +1,37 @@
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect("connecttest_OnHMIStatus.lua")
+
+  f = assert(io.open('./user_modules/connecttest_OnHMIStatus.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+  -- update initHMI_onReady
+  local pattern1 = "function .?module%.?:.?initHMI%_onReady%(.?%)"
+  local ResultPattern1 = fileContent:match(pattern1)
+
+  if ResultPattern1 == nil then 
+    print(" \27[31m initHMI_onReady function is not found in /user_modules/connecttest_OnHMIStatus.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern1, "function module:initHMI_onReady(MixingAudioValue)")
+  end
+
+  -- update attenuatedSupported value
+  local pattern2 = "%{%s-attenuatedSupported%s-=.-%}"
+  local ResultPattern2 = fileContent:match(pattern2)
+
+  if ResultPattern2 == nil then 
+    print(" \27[31m attenuatedSupported is not found in /user_modules/connecttest_OnHMIStatus.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern2, "{ attenuatedSupported = MixingAudioValue }")
+  end 
+
+f = assert(io.open('./user_modules/connecttest_OnHMIStatus.lua', "w"))
+f:write(fileContent)
+f:close()
+
 Test = require('user_modules/connecttest_OnHMIStatus')
 require('cardinalities')
 
@@ -327,6 +361,11 @@ function DeletingDatabase_RestartSDL(prefix, MixingAudioValue)
 end
 
 ----------------------------------------------------------------------------
+
+-- Precondition: removing user_modules/connecttest_OnHMIStatus.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_OnHMIStatus.lua" )
+end
 
 function Test:Precondition_UnregisterRegisteredApp()
 	UnregisterApplication_Success(self, self.mobileSession, self.applications[config.application2.registerAppInterfaceParams.appName])

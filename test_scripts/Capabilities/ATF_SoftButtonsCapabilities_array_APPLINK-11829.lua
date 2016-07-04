@@ -56,7 +56,7 @@ config.defaultProtocolVersion = 2
 
 -- Postcondition: removing user_modules/connecttest_softButtonsCapabilities.lua
 function Test:Postcondition_remove_user_connecttest()
-  -- os.execute( "rm -f ./user_modules/connecttest_softButtonsCapabilities.lua" )
+  os.execute( "rm -f ./user_modules/connecttest_softButtonsCapabilities.lua" )
 end
 
 -- Stop SDL
