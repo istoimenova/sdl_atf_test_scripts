@@ -1,12 +1,34 @@
-Test = require('user_modules/connecttest_sdl_version')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_sdl_ver.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_sdl_ver.lua", true)
+
+f = assert(io.open('./user_modules/connecttest_sdl_ver.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+  local pattern1 = "function .?module%:InitHMI_onReady.-initHMI_onReady.-end"
+  local pattern1Result = fileContent:match(pattern1)
+
+  if pattern1Result == nil then 
+    print(" \27[31m InitHMI_onReady functions is not found in /user_modules/connecttest_sdl_ver.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern1, "")
+  end
+
+f = assert(io.open('./user_modules/connecttest_sdl_ver.lua', "w"))
+f:write(fileContent)
+f:close()
+
+Test = require('user_modules/connecttest_sdl_ver')
 require('cardinalities')
--- local events = require('events')
 local mobile_session = require('mobile_session')
--- local mobile  = require('mobile_connection')
--- local tcp = require('tcp_connection')
--- local file_connection  = require('file_connection')
--- local config = require('config')
--- local module = require('testbase')
+require('user_modules/AppTypes')
+
 
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Functions-------------------------------------
@@ -125,7 +147,11 @@ function RestartSDL(self, suffix)
 
 end
 
-	
+
+-- Precondition: removing user_modules/connecttest_sdl_ver.lua
+  function Test:Precondition_remove_user_connecttest()
+    os.execute( "rm -f ./user_modules/connecttest_sdl_ver.lua" )
+  end
 	
 ---------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------

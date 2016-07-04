@@ -1,18 +1,98 @@
-Test = require('user_modules/connecttest_GetSystemInfo')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_getSystemInfo.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_getSystemInfo.lua")
+
+-- read file
+f = assert(io.open('./user_modules/connecttest_getSystemInfo.lua', "r"))
+
+fileContent = f:read("*all")
+f:close()
+
+-- remove InitHMI_onReady from ATF start 
+local pattern1 = "function .?module%:InitHMI_onReady.-initHMI_onReady.-end"
+local pattern1Result = fileContent:match(pattern1)
+  if pattern1Result == nil then 
+    print(" \27[31m InitHMI_onReady functions is not found in /user_modules/connecttest_getSystemInfo.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern1, "")
+  end
+
+-- update initHMI_onReady function
+  local pattern2 = "function .?module%.?:.?initHMI%_onReady%(.?%)"
+  local ResultPattern2 = fileContent:match(pattern2)
+
+  if ResultPattern2 == nil then 
+    print(" \27[31m initHMI_onReady function is not found in /user_modules/connecttest_getSystemInfo.lua.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern2, 'function module:initHMI_onReady(ccpu, success) \n ccpu = ccpu or "ccpu_version" \n if ccpu == "absent" then ccpu = nil end \n print(ccpu) \n print("Start of InitHMI") \n success = success or "SUCCESS"')
+  end
+
+-- update resultCode value in EXPECT_HMIEVENT in ExpectRequest function
+local pattern3 = "local%s-function%s-ExpectRequest.-end%)%s-end"
+local pattern3Result = fileContent:match(pattern3)
+  if pattern3Result == nil then 
+    print(" \27[31m local function ExpectRequest is not found in /user_modules/connecttest_getSystemInfo.lua \27[0m ")
+  else
+    local pattern3_1 = 'self%s-.%s-hmiConnection%s-:%s-SendResponse%s-%(%s-data.id%s-,%s-data.method%s-,%s-"SUCCESS"%s-,%s-params%s-%)'
+    local pattern3_1Result = pattern3Result:match(pattern3_1)
+    if pattern3_1Result == nil then 
+        print(" \27[31m SendResponse sending is not found in ExpectRequest function \27[0m ")
+    else
+      pattern3Result  =  string.gsub(pattern3Result, pattern3_1, 'self.hmiConnection:SendResponse(data.id, data.method, success, params)')
+      fileContent = string.gsub(fileContent, pattern3,pattern3Result)
+    end
+  end
+
+-- update BasicCommunication.GetSystemInfo expectation
+local pattern4 = 'ExpectRequest%s-%(%s-"BasicCommunication.GetSystemInfo".-%{.-%}%s-%)'
+  ResultPattern4 =  fileContent:match(pattern4)
+
+  if ResultPattern4 == nil then 
+    print(" \27[31m ExpectRequest(\"BasicCommunication.GetSystemInfo\" struct is not found in /user_modules/connecttest_getSystemInfo.lua \27[0m ")
+  else
+    -- update false valur to true
+    local pattern4_1 = '"BasicCommunication.GetSystemInfo".-%{'
+    local pattern4_1Result = ResultPattern4:match(pattern4_1)
+    if pattern4_1Result == nil then 
+        print(" \27[31m BasicCommunication.GetSystemInfo part is not found in ExpectRequest GetSystemInfo function call\27[0m ")
+    else
+      ResultPattern4  =  string.gsub(ResultPattern4, pattern4_1, '"BasicCommunication.GetSystemInfo", true ,{')
+      fileContent = string.gsub(fileContent, pattern4,ResultPattern4)
+    end
+    -- update ccpu_version value
+    local pattern4_2 = 'ccpu%_version%s-=%s-.-,'
+    local pattern4_2Result = ResultPattern4:match(pattern4_2)
+    if ResultPattern4 == nil then 
+        print(" \27[31m ccpu_version is not found in ExpectRequest GetSystemInfo function call \27[0m ")
+    else
+      ResultPattern4  =  string.gsub(ResultPattern4, pattern4_2, 'ccpu_version = ccpu,')
+      fileContent = string.gsub(fileContent, pattern4,ResultPattern4)
+    end
+  end
+
+
+  f = assert(io.open('./user_modules/connecttest_getSystemInfo.lua', "w+"))
+  f:write(fileContent)
+  f:close()
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_getSystemInfo')
 require('cardinalities')
 -- local events = require('events')
 local mobile_session = require('mobile_session')
--- local mobile  = require('mobile_connection')
--- local tcp = require('tcp_connection')
--- local file_connection  = require('file_connection')
--- local config = require('config')
--- local module = require('testbase')
+local commonSteps = require('user_modules/shared_testcases/commonSteps')
+require('user_modules/AppTypes')
 
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Functions-------------------------------------
 ---------------------------------------------------------------------------------------------
-
-local query = "sqlite3 " .. config.pathToSDL .. "storage/policy.sqlite".. " \"select ccpu_version from module_meta;\""
 
 local function CreateSession( self)
   self.mobileSession = mobile_session.MobileSession(
@@ -38,12 +118,19 @@ local function RegisterApp(self, passCriteria)
       self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
     end)
 
-  -- self.mobileSession:ExpectResponse(correlationId, { success = true })
   EXPECT_RESPONSE(correlationId, { success = true })
   :ValidIf(function (_,data)
-    if data.payload.systemSoftwareVersion == passCriteria then
+    if  passCriteria == nil then
+      if data.payload.systemSoftwareVersion then
+        userPrint( 31, "RAI response contains systemSoftwareVersion parameter, expected absence of parameter")
+        return false
+      else
+        return true
+      end
+    elseif data.payload.systemSoftwareVersion == passCriteria then
       return true
     else
+      userPrint( 31, "systemSoftwareVersion value in RAI response is unexpected '" .. tostring(data.payload.systemSoftwareVersion) .. "', expected value is '" .. tostring(passCriteria) .. "'")
       return false
     end
   end)
@@ -75,25 +162,44 @@ end
 function Check_ccpu_version(self, suffix, ccpu)
   
   -- Test to check ccpu_version parameter in policy DB
-  Test["CheckPolicyDB"..tostring(suffix)] = function (self, ccpu)
-    -- body
-    sleep(1)
-    local handler = io.popen(query)
-    local result = handler:read("*a")
-    handler:close()
+  Test["CheckPolicyDB"..tostring(suffix)] = function (self)
 
-    if result == ccpu then
+    local query
+
+    if commonSteps:file_exists(config.pathToSDL .. "storage/policy.sqlite") then
+      query = "sqlite3 " .. config.pathToSDL .. "storage/policy.sqlite".. " \"select ccpu_version from module_meta\""
+    elseif commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") then
+      query = "sqlite3 " .. config.pathToSDL .. "policy.sqlite".. " \"select ccpu_version from module_meta\""
+    else userPrint( 31, "policy.sqlite is not found" )
+    end
+
+    if query ~= nil then
+
+      os.execute("sleep 3")
+      local handler = io.popen(query, 'r')
+      os.execute("sleep 1")
+      local result = handler:read( '*l' )
+      handler:close()
+
+      print(result)
+
+      if result == ccpu then
       --do
       return true
     else
+        self:FailTestCase("ccpu value in DB is unexpected value " .. tostring(result))
       return false    
     end
   end
+  end
 
 end
+  
 
-	
-	
+-- Precondition: removing user_modules/connecttest_getSystemInfo.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_getSystemInfo.lua" )
+end
 ---------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------
 ---------------------------------------------------------------------------------------------

@@ -1,4 +1,55 @@
-Test = require('user_modules/connecttest_hmiCapabilities')
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+  -- copy initial connecttest.lua to connecttest_hmiCapabilities_value
+  os.execute(  'cp ./modules/connecttest.lua  ./user_modules/connecttest_hmiCapabilities_value.lua')
+
+  f = assert(io.open('./user_modules/connecttest_hmiCapabilities_value.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+  -- update function,  softButtonCapabilities struct
+  local pattern1 = "function .?module%.?:.?initHMI%_onReady%(.?%)"
+  local ResultPattern1 = fileContent:match(pattern1)
+
+  if ResultPattern1 == nil then 
+    print(" \27[31m initHMI_onReady function is not found in /user_modules/connecttest_hmiCapabilities_value.lua \27[0m ")
+  else
+    fileContent  =  string.gsub(fileContent, pattern1, "function module:initHMI_onReady(hmiCapabilitiesValue)")
+  end
+
+  -- update hmiCapabilities in UI.GetCapabilities
+local pattern2 = 'ExpectRequest%s-%(%s-"%s-UI.GetCapabilities%s-".-%{.-%}%s-%)'
+local pattern2Result = fileContent:match(pattern2)
+  if pattern2Result == nil then 
+    print(" \27[31m function ExpectRequest UI.GetCapabilities call is not found in /user_modules/connecttest_hmiCapabilities_value.lua \27[0m ")
+  else
+    local pattern2_1 = 'hmiCapabilities%s-=%s-%{.-%}'
+    local pattern2_1Result = pattern2Result:match(pattern2_1)
+    if pattern2_1Result == nil then 
+        print(" \27[33m hmiCapabilitiesis not found in UI.GetCapabilities response, will be added \27[0m ")
+        local pattern2_1_1 = 'ExpectRequest%s-%(%s-"%s-UI.GetCapabilities%s-".-%{'
+    	local pattern2_1_1Result = pattern2Result:match(pattern2_1_1)
+    		if pattern2_1_1Result == nil then 
+		    	print(" \27[31m UI.GetCapabilitie is not found in /user_modules/connecttest_hmiCapabilities_value.lua \27[0m ")
+		  	else
+		    	pattern2Result  =  string.gsub(pattern2Result, pattern2_1_1, pattern2_1_1Result .. "\n hmiCapabilities = hmiCapabilitiesValue,")
+		    	fileContent = string.gsub(fileContent, pattern2,pattern2Result)
+		  	end
+    else
+      pattern2Result  =  string.gsub(pattern2Result, pattern2_1, 'hmiCapabilities = hmiCapabilitiesValue,')
+      fileContent = string.gsub(fileContent, pattern2,pattern2Result)
+    end
+  end
+
+f = assert(io.open('./user_modules/connecttest_hmiCapabilities_value.lua', "w+"))
+f:write(fileContent)
+f:close()
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_hmiCapabilities_value')
 require('cardinalities')
 local mobile_session = require('mobile_session')
 
@@ -7,6 +58,8 @@ require('user_modules/AppTypes')
 local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
+--ToDo: shall be removed when APPLINK-16610 is fixed
+config.defaultProtocolVersion = 2
 
 local function OpenSessionRegisterApp(self, hmiCapabilitiesValue)
 
@@ -154,6 +207,11 @@ local function RestartSDL(prefix, hmiCapabilitiesValue, hmiCapabilitiesValueRegi
 		commonFunctions:userPrint(34, "=================== Test Case ===================")	
   		OpenSessionRegisterApp(self, hmiCapabilitiesValueRegister)
 	end
+end
+
+-- Precondition: removing user_modules/connecttest_hmiCapabilities_value.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_hmiCapabilities_value.lua" )
 end
 
 --//////////////////////////////////////////////////////////////////////////////////////--

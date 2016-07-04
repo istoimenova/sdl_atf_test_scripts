@@ -308,5 +308,141 @@ function Preconditions:Connecttest_OnButtonSubscription(FileName, createFile)
 
 end
 
+--------------------------------------------------------------------------------------------------------
+-- Updating user connect test: adding languages in language array
+function Preconditions:Connecttest_Languages_update(FileName, createFile)
+	if createFile == true then
+		-- copy initial connecttest.lua to FileName
+		os.execute(  'cp ./modules/connecttest.lua  ./user_modules/'  .. tostring(FileName))
+
+		-- open file
+		f = assert(io.open('./user_modules/'  .. tostring(FileName), "r"))
+	else
+		-- open file
+		f = assert(io.open('./user_modules/'  .. tostring(FileName), "r"))
+	end
+
+	fileContent = f:read("*all")
+	f:close()
+
+	local function LanguageCheck(FileContent)
+		local AddedLanguage = ""
+		if not FileContent:match("NL%-BE") then
+			AddedLanguage = AddedLanguage .. '"NL-BE",'
+		end
+
+		if not FileContent:match("EL%-GR") then
+			AddedLanguage = AddedLanguage .. '"EL-GR",'
+		end
+
+		if not FileContent:match("HU%-HU") then
+			AddedLanguage = AddedLanguage .. '"HU-HU",'
+		end
+
+		if not FileContent:match("FI%-FI") then
+			AddedLanguage = AddedLanguage .. '"FI-FI",'
+		end
+
+		if not FileContent:match("SK%-SK") then
+			AddedLanguage = AddedLanguage .. '"SK-SK",'
+		end
+
+		return AddedLanguage
+	end
+
+	-- update VR.GetSupportedLanguages with new language
+	local pattern1 = 'ExpectRequest%s-%(%s-"VR.GetSupportedLanguages".-%{.-%}%s-%)'
+	local pattern1Result = fileContent:match(pattern1)
+
+	if pattern1Result == nil then 
+		print(" \27[31m ExpectRequest VR.GetSupportedLanguages function call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+	else
+		local StringToAdd = LanguageCheck(pattern1Result)
+
+		local pattern1_1 = 'ExpectRequest%s-%(%s-"VR.GetSupportedLanguages".-%{%s-languages%s-=%s-%{'
+		local pattern1_1Result = pattern1Result:match(pattern1_1)
+		if pattern1_1Result == nil then
+			print(" \27[31m VR.GetSupportedLanguages call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+		else
+			pattern1Result  =  string.gsub(pattern1Result, pattern1_1, pattern1_1Result .. StringToAdd)
+			fileContent  =  string.gsub(fileContent, pattern1, pattern1Result)
+		end
+	end
+
+	-- update TTS.GetSupportedLanguages with new language
+	local pattern2 = 'ExpectRequest%s-%(%s-"TTS.GetSupportedLanguages".-%{.-%}%s-%)'
+	local pattern2Result = fileContent:match(pattern2)
+
+	if pattern2Result == nil then 
+		print(" \27[31m ExpectRequest TTS.GetSupportedLanguages function call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+	else
+		local StringToAdd = LanguageCheck(pattern2Result)
+
+		local pattern2_1 = 'ExpectRequest%s-%(%s-"TTS.GetSupportedLanguages".-%{%s-languages%s-=%s-%{'
+		local pattern2_1Result = pattern2Result:match(pattern2_1)
+		if pattern2_1Result == nil then
+			print(" \27[31m TTS.GetSupportedLanguages call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+		else
+			pattern2Result  =  string.gsub(pattern2Result, pattern2_1, pattern2_1Result .. StringToAdd)
+			fileContent  =  string.gsub(fileContent, pattern2, pattern2Result)
+		end
+	end
+
+	-- update UI.GetSupportedLanguages with new language
+	local pattern3 = 'ExpectRequest%s-%(%s-"UI.GetSupportedLanguages".-%{.-%}%s-%)'
+	local pattern3Result = fileContent:match(pattern3)
+
+	if pattern3Result == nil then 
+		print(" \27[31m ExpectRequest UI.GetSupportedLanguages function call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+	else
+		local StringToAdd = LanguageCheck(pattern3Result)
+
+		local pattern3_1 = 'ExpectRequest%s-%(%s-"UI.GetSupportedLanguages".-%{%s-languages%s-=%s-%{'
+		local pattern3_1Result = pattern3Result:match(pattern3_1)
+		if pattern3_1Result == nil then
+			print(" \27[31m UI.GetSupportedLanguages call is not found in /user_modules/" .. tostring(FileName) .. " \27[0m ")
+		else
+			pattern3Result  =  string.gsub(pattern3Result, pattern3_1, pattern3_1Result .. StringToAdd)
+			fileContent  =  string.gsub(fileContent, pattern3, pattern3Result)
+		end
+	end
+
+	f = assert(io.open('./user_modules/' .. tostring(FileName), "w+"))
+	f:write(fileContent)
+	f:close()
+
+end
+
+--------------------------------------------------------------------------------------------------------
+-- Updating user connect test: removing InitHMI_onReady call
+function Preconditions:Connecttest_InitHMI_onReady_call(FileName, createFile)
+	if createFile == true then
+		-- copy initial connecttest.lua to FileName
+		os.execute(  'cp ./modules/connecttest.lua  ./user_modules/'  .. tostring(FileName))
+
+		-- open file
+		f = assert(io.open('./user_modules/'  .. tostring(FileName), "r"))
+	else
+		-- open file
+		f = assert(io.open('./user_modules/'  .. tostring(FileName), "r"))
+	end
+
+	fileContent = f:read("*all")
+	f:close()
+
+  	local pattern1 = "function .?module%:InitHMI_onReady.-initHMI_onReady.-end"
+  	local pattern1Result = fileContent:match(pattern1)
+
+  	if pattern1Result == nil then 
+    	print(" \27[31m InitHMI_onReady functions is not found in /user_modules/" .. tostring(FileName) " \27[0m ")
+  	else
+    	fileContent  =  string.gsub(fileContent, pattern1, "")
+  	end
+
+  	f = assert(io.open('./user_modules/' .. tostring(FileName), "w+"))
+	f:write(fileContent)
+	f:close()
+
+end
 
 return Preconditions

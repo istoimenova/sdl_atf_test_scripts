@@ -1,6 +1,13 @@
 --ATF version: 2.2
 
-Test = require('user_modules/connecttest_UpdateSDL')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_AfterUpdateSDL.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_OpenConnection("connecttest_AfterUpdateSDL.lua", true)
+Test = require('user_modules/connecttest_AfterUpdateSDL')
 require('cardinalities')
 local mobile_session = require('mobile_session')
 
@@ -166,6 +173,11 @@ local function UpdatePolicy(self, PTName)
 		end)
 		
 	end)
+end
+
+-- Precondition: removing user_modules/connecttest_AfterUpdateSDL.lua
+function Test:Precondition_remove_user_connecttest()
+ 	os.execute( "rm -f ./user_modules/connecttest_AfterUpdateSDL.lua" )
 end
 
 -- TODO: uncomment after resolving ATF defect APPLINK-19192

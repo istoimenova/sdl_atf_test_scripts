@@ -53,7 +53,6 @@ local function SubscribeWayPoints_Success(TCName)
 	
 	--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 	--EXPECT_NOTIFICATION("OnHashChange")
-	-- :Times(1)
 	end		
 end
 
@@ -74,7 +73,7 @@ function Test:unSubscribeWayPoints()
 	--mobile side: expect OnHashChange notification
 	--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 	--EXPECT_NOTIFICATION("OnHashChange")
-	-- :Times(1)
+
 end
 
 function Test:registerAppInterface2()
@@ -280,7 +279,7 @@ local function SpecialRequestChecks()
 			serviceType = 7,
 			frameInfo = 0,
 			rpcType = 0,
-			rpcFunctionId = 42,
+			rpcFunctionId = 43,
 			rpcCorrelationId = self.mobileSession.correlationId,
 			--<<!-- extra ','
 			payload = '{,}'
@@ -313,7 +312,6 @@ local function SpecialRequestChecks()
 
 		--hmi side: there is no UnsubscribeWayPoints request
 		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-		:Times(1)
 
 		:Do(function(_,data)
 			--hmi side: sending Navigation.UnsubscribeWayPoints response
@@ -333,7 +331,6 @@ local function SpecialRequestChecks()
 
 		--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 		--EXPECT_NOTIFICATION("OnHashChange")
-		-- :Times(1)
 
 	end
 	--End Test case NegativeRequestCheck.2
@@ -353,7 +350,7 @@ local function SpecialRequestChecks()
 
     --hmi side: there is no UnsubscribeWayPoints request
     EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    :Times(1)
+
 
     :Do(function(_,data)
         --hmi side: sending Navigation.UnsubscribeWayPoints response
@@ -373,7 +370,7 @@ local function SpecialRequestChecks()
 
     --TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 	--EXPECT_NOTIFICATION("OnHashChange")
-	-- :Times(1))
+
 	
 	end
 	--End Test case NegativeRequestCheck.3
@@ -414,7 +411,7 @@ local function SpecialRequestChecks()
 				serviceType = 7,
 				frameInfo = 0,
 				rpcType = 0,
-				rpcFunctionId = 42,
+				rpcFunctionId = 43,
 				rpcCorrelationId = self.mobileSession.correlationId,
 				payload = '{}'
 			  }
@@ -425,7 +422,6 @@ local function SpecialRequestChecks()
 
 		--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 		--EXPECT_NOTIFICATION("OnHashChange")
-		-- :Times(1)
 			
 	end	
 	--End Test case NegativeRequestCheck.4
@@ -447,7 +443,8 @@ local function HMIResponseChecks()
 		 -- APPLINK-21641 #6 (APPLINK-21906)
 
 	function Test:UnsubscribeWayPoints_IGNORED()
-	
+		commonTestCases:DelayedExp(2000)
+		
 		--mobile side: UnsubscribeWayPoints request
 		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
 
@@ -457,7 +454,6 @@ local function HMIResponseChecks()
 
 		--mobile side: UnsubscribeWayPoints response
 		EXPECT_RESPONSE(CorIdSWP,{ success = false, resultCode = "IGNORED"})
-		:Times(1)
 
 		EXPECT_NOTIFICATION("OnHashChange")
 		:Times(0)
@@ -491,7 +487,6 @@ local function HMIResponseChecks()
 
 		--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 		--EXPECT_NOTIFICATION("OnHashChange")
-		-- :Times(1)
 
 	end
 	
@@ -523,7 +518,6 @@ local function HMIResponseChecks()
 
 		--TODO: This step is failed due to APPLINK-25808 defect. Should be uncommented after defect is fixed.
 		--EXPECT_NOTIFICATION("OnHashChange")
-		-- :Times(1)
 
 	end
 	-- End Test case NegativeRequestCheck.2
@@ -548,296 +542,279 @@ HMIResponseChecks()
 	5. SeveralNotifications with the same values
 	6. SeveralNotifications with different values
 --]]
-commonFunctions:newTestCasesGroup("****************************** Test suite IV: SpecialHMIResponseCheck ******************************")	
+commonFunctions:newTestCasesGroup("Test suite IV: SpecialHMIResponseCheck")	
 
 local function SpecialNotificationChecks()
 
 	--1. Verify UnsubscribeWayPoints with invalid Json syntax
 	----------------------------------------------------------------------------------------------
 	--Requirement id in JAMA/or Jira ID:
-	--APPLINK-21641 #3
-
-	--Verification criteria: the request is sent invalid format of JSON message, the response comes with INVALID_DATA result code.
+	--Verification criteria: --Description: Invalid structure of response.
+	
 	--Post Condition 
 	SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_7")
+
 	
-  function Test:UnsubscribeWayPoints_InvalidJSON()
+	function Test:UnsubscribeWayPoints_Response_IsInvalidJson()
 	
-	commonTestCases:DelayedExp(2000)
-    self.mobileSession.correlationId = self.mobileSession.correlationId + 1
-
-    --mobile side: UnsubscribeWayPoints request
-    local msg =
-    {
-      serviceType = 7,
-      frameInfo = 0,
-      rpcType = 0,
-      rpcFunctionId = 42,
-      rpcCorrelationId = self.mobileSession.correlationId,
-      --<<!-- extra ','
-      payload = '{,}'
-    }
-    self.mobileSession:Send(msg)
-
-    --hmi side: there is no UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    :Times(0)
-
-    --mobile side:UnsubscribeWayPoints response
-    self.mobileSession:ExpectResponse(self.mobileSession.correlationId, { success = false, resultCode = "INVALID_DATA" })
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(0)
-
-  end
-	
-	--2. Verify UnsubscribeWayPoints with invalid structure
-	----------------------------------------------------------------------------------------------
-	 function Test:UnsubscribeWayPoints_FakeParam()
-	
-    --mobile side: send UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {fakeParam = "fakeParam"})
-
-    --hmi side: there is no UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    :Do(function(_,data)
-        --hmi side: sending Navigation.UnsubscribeWayPoints response
-        self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-      end)
-    :ValidIf(function(_,data)
-        if data.params then
-		--data.params.fakeParam
-          print("SDL re-sends fakeParam parameters to HMI in UnsubscribeWayPoints request")
-		 
-          return false
-        else
-          return true
-        end
-       end)
-	
-    --mobile side: UnsubscribeWayPoints response
-    self.mobileSession:ExpectResponse(self.mobileSession.correlationId, { success = true, resultCode = "SUCCESS"})
-	
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(1)
-
-  end
-	--Postcondition
-
-  SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_8")
-  
-  --Begin Test case CommonRequestCheck.3
-  --Description: Check processing UnregisterAppInterface request with parameters from another request
-
-  --Requirement id in JAMA/or Jira ID:
-  --APPLINK-21641 #3
-
-  --Verification criteria:
-  -- In case mobile app sends the SubscribeWayPoints_request to SDL with invalid format of JSON message SDL must: consider this request as invalid respond "INVALID_DATA, success:false" to mobile app
-
-  function Test:UnsubscribeWayPoints_AnotherRequest()
-
-    --mobile side: UnregisterAppInterface request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", { menuName = "shouldn't be transfered" })
-
-    --hmi side: there is no UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    :Times(1)
-
-    :Do(function(_,data)
-        --hmi side: sending Navigation.UnsubscribeWayPoints response
-        self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-      end)
-    :ValidIf(function(_,data)
-        if data.params then
-          print("SDL re-sends fakeParam parameters to HMI in UnsubscribeWayPoints request")
-          return false
-        else
-          return true
-        end
-      end)
-
-    --mobile side: UnsubscribeWayPoints response
-    self.mobileSession:ExpectResponse(self.mobileSession.correlationId, { success = true, resultCode = "SUCCESS" })
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(1)
-
-  end
-  
- --Postcondition
-
-  SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_9")
-
-  -- Begin Test case CommonRequestCheck.4
-  -- Description: Check processing requests with duplicate correlationID
-  -- TODO: fill Requirement, Verification criteria about duplicate correlationID
-  -- Requirement id in JAMA/or Jira ID:
-  -- APPLINK-21641 #6
-
-  -- Verification criteria: In case mobile app already subscribed on wayPoints-related parameters and the same mobile app sends UnsubscribeWayPoints_request to SDL SDL must: respond "IGNORED, success:false" to mobile app
-
-  function Test:UnsubscribeWayPoints_correlationIdDuplicateValue()
-
-    --mobile side: UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
-
-    self.mobileSession.correlationId = CorIdSWP
-
-    --hmi side: expected UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    -- :Times(1)
-
-    :Do(function(_,data)
-        --hmi side: sending Navigation.UnsubscribeWayPoints response
-        self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-      end)
-    -- :Times(1)
-
-    --mobile side: UnsubscribeWayPoints response
-    EXPECT_RESPONSE(CorIdSWP,
-      { success = true, resultCode = "SUCCESS"},
-      { success = false, resultCode = "IGNORED"})
-    -- :Times(2)
-    :Do(function(exp,data)
-
-        if exp.occurences == 1 then
-
-          --mobile side: UnsubscribeWayPoints request
-          local msg =
-          {
-            serviceType = 7,
-            frameInfo = 0,
-            rpcType = 0,
-            rpcFunctionId = 42,
-            rpcCorrelationId = self.mobileSession.correlationId,
-            payload = '{}'
-          }
-          self.mobileSession:Send(msg)
-        end
-
-      end)
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(1)
-
-  end
---Requirement id in JAMA/or Jira ID:
-  --APPLINK-21641 #6
-  --Verification criteria: the request is sent 2 times concusively
-  --Postcondition
-  --SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_10")
- 
-  function Test:UnsubscribeWayPoints_Success()
-  
-	self:unSubscribeWayPoints()
-	
-  end
-  
-  function Test:UnsubscribeWayPoints_IGNORED()
-	
-	commonTestCases:DelayedExp(2000)
-	
-    --mobile side: UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
-
-    --hmi side: expected UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-    :Times(0)
-
-    --mobile side: UnsubscribeWayPoints response
-    EXPECT_RESPONSE(CorIdSWP,{ success = false, resultCode = "IGNORED"})
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(0)
-  end
-  
-  --Postcondition
-
-  SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_11")
- 
-  --Check all uncovered pairs resultCodes+success
-  --Begin Test suit ResultCodeCheck
-  --Description: TC's check all resultCodes values in pair with success value
-  --Begin Test case ResultCodeCheck.1
-  --Description: Checking result code responded from HMI
-
-  --Requirement id in JIRA:
-  -- APPLINK-21641
-
-  --Verification criteria:
-  -- SDL returns REJECTED code for the request sent
-
-  function Test:UnsubscribeWayPoints_REJECTED()
-	
-	commonTestCases:DelayedExp(2000)
-    --mobile side: send UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
-	
-    --hmi side: expected UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-	
-    :Do(function(_,data)
-        --hmi side: sending UI.AddCommand response
-        self.hmiConnection:SendError(data.id, data.method, "REJECTED", "")
+		commonTestCases:DelayedExp(2000)
+		 --mobile side: UnsubscribeWayPoints request
 		
-      end)
-
-    EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "REJECTED"})
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(0)
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
+		
+		--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+			:Do(function(_,data)
+				--hmi side: sending the response
+				 -- self.hmiConnection:Send('{"id":'..tostring(data.id)..',"jsonrpc":"2.0","result":{"code":0, "method":"Navigation.UnsubscribeWayPoints"}}')
+				 self.hmiConnection:Send('{"id";'  .. tostring(data.id) .. ',"jsonrpc":"2.0","result":{"code":0,"method":"Navigation.UnsubscribeWayPoints"}}')
+				 
+			end)
+		
+		--mobile side: expect the response
+		EXPECT_RESPONSE(CorIdSWP, { success = false, resultCode = "GENERIC_ERROR" })
+		:Timeout(12000)
 	
-  end
-
-  --Verification criteria:
-  -- SDL returns UNSUPPORTED_RESOURCE code for the request sent
-
-  function Test:UnsubscribeWayPoints_UNSUPPORTED_RESOURCE()
+	end		
+  
+ 
+	-- 2. Verify parameter is not from any API
 	
-	commonTestCases:DelayedExp(2000)
+	function Test:UnsubscribeWayPoints_Response_FakeParams_IsNotFromAnyAPI()
+	
+		commonTestCases:DelayedExp(2000)
+		
+		--mobile side: send UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
+		
+		--hmi side: there is no UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+		:Do(function(_,data)
+			
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+				
+		end)
+		
+		--mobile side: expect the response
+		local ExpectedResponse = commonFunctions:cloneTable()
+			
+		ExpectedResponse["success"] = true
+		ExpectedResponse["resultCode"] = "SUCCESS"
+		ExpectedResponse["fake"] = nil
+		
+		EXPECT_RESPONSE(CorIdSWP, ExpectedResponse)
+		:ValidIf (function(_,data)
+		
+			if data.payload.fake then
+				commonFunctions:printError(" SDL resend fake parameter to mobile app ")
+				return false
+			else 
+				return true
+			end
+			
+		end)
+		
+    end
+	
+	-- Post Condition
+	SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_8")
+  
+	-- 3. Verify parameter is from other API
+	function Test:UnsubscribeWayPoints_FakeParams_IsFromAnotherAPI()
+	
+		--mobile side: sending the request
+		local cid = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
+									
+		--hmi side: expect the request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")	
+		:Do(function(_,data)
+			--hmi side: sending the response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS",{})
+		end)
+		--mobile side: expect the response
+		local ExpectedResponse = commonFunctions:cloneTable()
+		ExpectedResponse["success"] = true
+		ExpectedResponse["resultCode"] = "SUCCESS"
+		ExpectedResponse["sliderPosition"] = nil
+		EXPECT_RESPONSE(cid, ExpectedResponse)
+		:ValidIf (function(_,data)
+			if data.payload.sliderPosition then
+				commonFunctions:printError(" SDL resend fake parameter to mobile app ")
+				return false
+			else 
+				return true
+			end
+		end)
+					
+	end								
+		
+	-- Post Condition
+	SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_9")
+	
+	-- 4. Verify reponse is invalid json
+	function Test:UnsubscribeWayPoints_Response_IsInvalidStructure()
+
+		--mobile side: sending the request
+		
+		local cid = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
+							
+		--hmi side: expect the request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")		
+		:Do(function(_,data)
+			--hmi side: sending the response
+			--self.hmiConnection:Send('{"id":'..tostring(data.id)..',"jsonrpc":"2.0","result":{"method":"Navigation.UnsubscribeWayPoints"}}')
+			--self.hmiConnection:Send('{"id":'  .. tostring(data.id) .. ',"jsonrpc":"2.0","result":{"code":0,"method":"Navigation.UnsubscribeWayPoints"}}')
+			self.hmiConnection:Send('{"id":'..tostring(data.id)..',"jsonrpc":"2.0", "code":0, "result":{"method":"Navigation.UnsubscribeWayPoints"}}')
+			 
+		end)							
+	
+		--mobile side: expect response 
+		EXPECT_RESPONSE(cid, {  success = false, resultCode = "INVALID_DATA"})
+		:Timeout(12000)
+					
+	end
+
+	 --Postcondition
+	 SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_10")
+	 
+	--5. Verification criteria: the request is sent 2 times concusively
+ 
+	function Test:UnsubscribeWayPoints_Success()
+  
+		self:unSubscribeWayPoints()
+	
+	end
+  
+	function Test:UnsubscribeWayPoints_IGNORED()
+	
+		commonTestCases:DelayedExp(2000)
+		
+		--mobile side: UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
+
+		--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+		:Times(0)
+
+		--mobile side: UnsubscribeWayPoints response
+		EXPECT_RESPONSE(CorIdSWP,{ success = false, resultCode = "IGNORED"})
+
+		EXPECT_NOTIFICATION("OnHashChange")
+		:Times(0)
+	end
+  
+	--Postcondition
+	SubscribeWayPoints_Success("Precondition_SubscribleWayPoints_11")
+ 
+	--6. Verification criteria: HMI send error to SDL
+	function Test:UnsubscribeWayPoints_REJECTED()
+	
+		commonTestCases:DelayedExp(2000)
+		--mobile side: send UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
+		
+		--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+		
+		:Do(function(_,data)
+			--hmi side: sending UI.AddCommand response
+			self.hmiConnection:SendError(data.id, data.method, "REJECTED", "")
+		end)
+
+		EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "REJECTED"})
+
+		EXPECT_NOTIFICATION("OnHashChange")
+		:Times(0)
+	end
+
+	--7. Verification criteria: SDL returns UNSUPPORTED_RESOURCE code for the request sent
+	-- SDL returns UNSUPPORTED_RESOURCE code for the request sent
+
+	function Test:UnsubscribeWayPoints_UNSUPPORTED_RESOURCE()
+		
+		commonTestCases:DelayedExp(2000)
+		
+		--mobile side: send UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
+
+		--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+
+		:Do(function(_,data)
+			--hmi side: sending UI.AddCommand response
+			self.hmiConnection:SendError(data.id, data.method, "UNSUPPORTED_RESOURCE", "")
+		  end)
+
+		EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "UNSUPPORTED_RESOURCE"})
+
+		EXPECT_NOTIFICATION("OnHashChange")
+		:Times(0)
+
+	 end
+
+	--8. SDL must respond with "GENERIC_ERROR" in case HMI does NOT respond during <DefaultTimeout>
+
+	function Test:UnsubscribeWayPoints_HMI_does_not_respond()
+		
+		commonTestCases:DelayedExp(2000)
+		
+		--mobile side: send UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
+
+		--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+
+		--mobile side: UnsubscribeWayPoints response
+		EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+
+		EXPECT_NOTIFICATION("OnHashChange")
+		:Times(0)
+
+	end
+  
+  
+	--9.Verification criteria: Several response to one request
+			
+	function Test:UnsubscibeWayPoints_Response_SeveralResponseToOneRequest()
+
+		commonTestCases:DelayedExp(2000)
 	
     --mobile side: send UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
-
-    --hmi side: expected UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-
-    :Do(function(_,data)
-        --hmi side: sending UI.AddCommand response
-        self.hmiConnection:SendError(data.id, data.method, "UNSUPPORTED_RESOURCE", "")
-      end)
-
-    EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "UNSUPPORTED_RESOURCE"})
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(0)
-
-  end
-
-  --Description: Checking "GENERIC_ERROR" result code in case HMI does NOT respond during <DefaultTimeout>
-  --Requirement id in JIRA:
-  -- APPLINK-21641, APPLINK-17008
-
-  --Verification criteria: SDL must respond with "GENERIC_ERROR, success:false" in case HMI does NOT respond during <DefaultTimeout>
-
-  function Test:UnsubscribeWayPoints_HMI_does_not_respond()
+	 local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
+		
+			--hmi side: expected UnsubscribeWayPoints request
+		EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")		
+		:Do(function(exp,data)
 	
-	commonTestCases:DelayedExp(2000)
+			self.hmiConnection:SendResponse(data.id, data.method, "INVALID_DATA", {})
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+			
+		end)
+							
+		--mobile side: expect response 
+		EXPECT_RESPONSE(CorIdSWP, { success = false, resultCode = "INVALID_DATA"})
+		
+	end					
+  
+	--10.Verification criteria: Missed parameters in response
+	function Test:UnsubscibeWayPoints_Response_IsMissedAllPArameters()	
 	
-    --mobile side: send UnsubscribeWayPoints request
-    local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints", {})
-
-    --hmi side: expected UnsubscribeWayPoints request
-    EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
-
-    --mobile side: UnsubscribeWayPoints response
-    EXPECT_RESPONSE("UnsubscribeWayPoints", {success = false , resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
-
-    EXPECT_NOTIFICATION("OnHashChange")
-    :Times(0)
-
-  end
+		--mobile side: send UnsubscribeWayPoints request
+		local CorIdSWP = self.mobileSession:SendRPC("UnsubscribeWayPoints",{})
+		
+			--hmi side: expect the request
+			EXPECT_HMICALL("Navigation.UnsubscribeWayPoints")
+			:Do(function(_,data)
+				--hmi side: sending Navigation.UnsubscribeWayPoints" response
+				 -- self.hmiConnection:Send('{"id":'..tostring(data.id)..',"jsonrpc":"2.0","result":{"code":0, "method":"Navigation.UnsubscribeWayPoints"}}')
+				self.hmiConnection:Send('{}')
+			end)
+			
+			--mobile side: expect the response
+			EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR"})
+		:Timeout(13000)
+		
+	end
 end
 
 SpecialNotificationChecks()	
@@ -917,7 +894,7 @@ local function ResultCodeChecks()
 	
 end
 
-ResultCodeChecks()
+--ResultCodeChecks()
 
 --End Test case ResultCodeChecks
 
@@ -947,7 +924,7 @@ ResultCodeChecks()
 	
 --]]
 
-commonFunctions:newTestCasesGroup("******************************Test suite VII: Different HMI Level Checks ******************************")
+commonFunctions:newTestCasesGroup("Test suite VII: Different HMI Level Checks")
 
 local function DifferentHMIlevelChecks()
 	--Postcondition

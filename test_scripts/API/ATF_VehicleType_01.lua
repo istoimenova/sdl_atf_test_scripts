@@ -1,4 +1,33 @@
-Test = require('connecttest_1')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_VT.lua
+os.execute(  'cp ./modules/connecttest.lua  ./user_modules/connecttest_VT.lua')
+
+f = assert(io.open('./user_modules/connecttest_VT.lua', "r"))
+
+  fileContent = f:read("*all")
+  f:close()
+
+ -- update hmiCapabilities in UI.GetLanguage
+    local pattern1 = 'ExpectRequest%s-%(%s-"%s-VehicleInfo.GetVehicleType%s-".-%{.-%}%s-%)'
+    local ResultPattern2 = fileContent:match(pattern1)
+
+    if ResultPattern2 == nil then 
+        print(" \27[31m ExpectRequest UI.GetLanguage call is not found in /user_modules/connecttest_VT.lua \27[0m ")
+    else
+        fileContent  =  string.gsub(fileContent, pattern1, "")
+    end
+
+f = assert(io.open('./user_modules/connecttest_VT.lua', "w"))
+f:write(fileContent)
+f:close()
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_VT')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -13,7 +42,10 @@ local config = require('config')
 -- connecttest.lua should be placed in "modules" folder
 
 
-
+-- Precondition: removing user_modules/connecttest_VT.lua
+function Test:Precondition_remove_user_connecttest()
+  os.execute( "rm -f ./user_modules/connecttest_VT.lua" )
+end
 
 -- Preconditional part for updating PT with VehicleType information
 

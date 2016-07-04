@@ -1,7 +1,56 @@
 -- Script is developed by Byanova Irina
 -- for ATF version 2.2
 
-Test = require('user_modules/connecttest_QDB_initialization')
+--------------------------------------------------------------------------------
+-- Preconditions before ATF start
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_QDB_initial.lua
+commonPreconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp("connecttest_QDB_initial.lua", true)
+
+f = assert(io.open('./user_modules/connecttest_QDB_initial.lua', "r"))
+
+fileContent = f:read("*all")
+f:close()
+
+ 	local pattern1 = "require%s-%(%s-'%s-testbase%s-'%s-%)"
+  	local pattern1Result = fileContent:match(pattern1)
+
+  	if pattern1Result == nil then 
+    	print(" \27[31m require('testbase') is not found in /user_modules/connecttest_QDB_initial.lua \27[0m ")
+  	else
+    	fileContent  =  string.gsub(fileContent, pattern1, "require('user_modules/testbase_QDB_initial')")
+  	end
+
+f = assert(io.open('./user_modules/connecttest_QDB_initial.lua', "w"))
+f:write(fileContent)
+f:close()
+
+-- update testbase
+os.execute(  'cp ./modules/testbase.lua  ./user_modules/testbase_QDB_initial.lua')
+
+f_test = assert(io.open('./user_modules/testbase_QDB_initial.lua', "r"))
+
+fileContent_test = f_test:read("*all")
+f_test:close()
+
+	local pattern1 = "critical%(SDL.exitOnCrash%)"
+  	local pattern1Result = fileContent_test:match(pattern1)
+
+  	if pattern1Result == nil then 
+    	print(" \27[31m critical(SDL.exitOnCrash) is not found in /user_modules/testbase_QDB_initial.lua \27[0m ")
+  	else
+    	fileContent_test  =  string.gsub(fileContent_test, pattern1, "")
+  	end
+f_test = assert(io.open('./user_modules/testbase_QDB_initial.lua', "w"))
+f_test:write(fileContent_test)
+f_test:close()
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_QDB_initial')
 require('cardinalities')
 require('user_modules/AppTypes')
 
@@ -66,6 +115,12 @@ local function SetNewValuesInIniFile(self, paramName, value)
 	else
 		commonFunctions:userPrint(31, "File smartDeviceLink.ini is not opened.")
 	end
+end
+
+-- Precondition: removing user connecttest ant testbase
+function Test:Precondition_remove_user_connecttest_testbase()
+ 	os.execute( "rm -f ./user_modules/connecttest_QDB_initial.lua" )
+ 	os.execute( "rm -f ./user_modules/testbase_QDB_initial.lua" )
 end
 
 function Test:StopSDL()

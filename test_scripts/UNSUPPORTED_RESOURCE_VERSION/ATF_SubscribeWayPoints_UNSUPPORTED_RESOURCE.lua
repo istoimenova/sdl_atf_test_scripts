@@ -1,4 +1,16 @@
-Test = require('user_modules/connecttest_Navigation_Unsupported')
+--------------------------------------------------------------------------------
+-- Preconditions
+--------------------------------------------------------------------------------
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+
+--------------------------------------------------------------------------------
+--Precondition: preparation connecttest_Navigation_isReady_unavailable.lua
+commonPreconditions:Connecttest_Navigation_IsReady_available_false("connecttest_Navigation_isReady_unavailable.lua", true)
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
+Test = require('user_modules/connecttest_Navigation_isReady_unavailable')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
@@ -11,7 +23,6 @@ local file_connection  = require('file_connection')
 ---------------------------------------------------------------------------------------------
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
-local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 require('user_modules/AppTypes')
@@ -26,10 +37,16 @@ APIName = "SubscribeWayPoints"
 	--1. Delete app_info.dat, logs and policy table
 	commonSteps:DeleteLogsFileAndPolicyTable()
 
-	--2. Activation App by sending SDL.ActivateApp
+	--2 Removing user_modules/connecttest_Navigation_isReady_unavailable.lua, restore hmi_capabilities
+	function Test:Precondition_remove_user_connecttest_restore_preloaded()
+	 	os.execute( "rm -f ./user_modules/connecttest_Navigation_isReady_unavailable.lua" )
+	 	commonPreconditions:RestoreFile("sdl_preloaded_pt.json")
+	end
+
+	--3. Activation App by sending SDL.ActivateApp
 	commonSteps:ActivationApp()
 
-	--3. Update policy to allow request
+	--4. Update policy to allow request
 	policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FULL", "LIMITED", "NONE"})
 
 
@@ -62,11 +79,6 @@ APIName = "SubscribeWayPoints"
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Postcondition-------------------------------------
 ---------------------------------------------------------------------------------------------
-
-
-	--Restore sdl_preloaded_pt.json
-	policyTable:Restore_preloaded_pt()
-
 
 
  return Test
