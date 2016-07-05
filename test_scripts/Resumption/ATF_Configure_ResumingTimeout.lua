@@ -1,15 +1,15 @@
---------------------------------------------------------------------------------
--- Preconditions
---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+-----------------------------Required Shared Libraries---------------------------------------
+---------------------------------------------------------------------------------------------
 local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
---------------------------------------------------------------------------------
---Precondition: preparation connecttest_resumption.lua
+---------------------------------------------------------------------------------------------
+-------------------------------------------Preconditions-------------------------------------
+---------------------------------------------------------------------------------------------
+--Preparation connecttest_resumption.lua
 commonPreconditions:Connecttest_without_ExitBySDLDisconnect("connecttest_resumption.lua")
-
 commonPreconditions:Connecttest_adding_timeOnReady("connecttest_resumption.lua")
-
---------------------------------------------------------------------------------
 -- creation dummy connection for new device
 os.execute("ifconfig lo:1 192.168.100.199")
 
@@ -28,6 +28,9 @@ end
 
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
 
+---------------------------------------------------------------------------------------------
+-------------------------------------------Common functions----------------------------------
+---------------------------------------------------------------------------------------------
 --ToDo: shall be removed when APPLINK-16610 is fixed
 config.defaultProtocolVersion = 2
 
@@ -500,13 +503,15 @@ local function RestartSDL(self, prefix, ApplicationResumingTimeoutValueToReplace
   end
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing session
 -- covers TC_Configure_ResumingTimeout_01 - APPLINK-15887
 -- Check that resuming HMI level starts after 3 second if no apps registered.
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 function Test:ActivateApp(...)
+   userPrint(33, "===================TC1:Preconditions===================")
   -- body
   HMIAppID = self.applications[config.application1.registerAppInterfaceParams.appName]
   self.hmiLevel = "FULL"
@@ -514,19 +519,12 @@ function Test:ActivateApp(...)
 end
 
 function Test:ActivateAppAndPerfromDisconnect()
-  -- 1st time has registered default App from modules/config.lua - config.application1
   SetAppToTargetLevelAndPerfromDisconnect(self, self.mobileSession, "FULL", HMIAppID)
-  -- self.mobileSession:Stop()
-  -- EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered", {unexpectedDisconnect = true})
 end
 
---======================================================================================--
---Resumption of FULL hmiLevel
---======================================================================================--
-
 --Precondition: Set ApplicationResumingTimeout = 3000 in .ini file
+   RestartSDL(self, "prefix", 3000)
 
-RestartSDL(self, "prefix", 3000)
 
 function Test:StartSession()
   self.mobileSession = mobile_session.MobileSession(
@@ -535,9 +533,9 @@ function Test:StartSession()
     config.application1.registerAppInterfaceParams)
 end
 
+--Resumption of FULL hmiLevel
 function Test:CheckAppResumesToFullIn_3Sec()
-  userPrint(34, "=================== Test Case ===================")
-
+  userPrint(34, "TC1:App resumes to FULL in 3 sec:")
   self.mobileSession:StartService(7)
   :Do(function(_,data)
       RegisterAppAfterDisconnect(self, "FULL", nil, self.mobileSession, 3000)
@@ -549,25 +547,17 @@ function Test:Postcondition_UnregisterApp_Gracefully()
   UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
 end
 
-
-
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing session
 -- covers TC_Configure_ResumingTimeout_02 - APPLINK-15890
 -- Check that resuming HMI level starts after 6 second if no apps registered.
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 6000 in .ini file
-
-RestartSDL(self, "prefix", 6000)
-
--- function Test:StartSession()
---   self.mobileSession = mobile_session.MobileSession(
---     self,
---     self.mobileConnection,
---     config.application1.registerAppInterfaceParams)
--- end
-
+function Test:RestartSDL2() 
+  	userPrint(33, "===================TC2:Preconditions===================")
+	RestartSDL(self, "prefix", 6000)
+end
 
 function Test:StartSession()
   self:startSession()
@@ -593,12 +583,8 @@ function Test:StartSession()
 
 end
 
---======================================================================================--
---Resumption of FULL hmiLevel
---======================================================================================--
 function Test:CheckAppResumesToFullIn_6Sec()
-  userPrint(34, "=================== Test Case ===================")
-
+  userPrint(34, "TC2:App resumes to FULL in 6 sec:")
   self.mobileSession:StartService(7)
   :Do(function(_,data)
     os.execute("sleep 0.3")
@@ -611,20 +597,20 @@ function Test:Postcondition_UnregisterApp_Gracefully()
   UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_03 - APPLINK-15891
 -- Check that resuming HMI levels of 3 apps starts after 3 second if no apps registered before. (Non-media =Full, Media = Background, Media = Limited)
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 3000 in .ini file
-
-RestartSDL(self, "prefix", 3000)
-
+function Test:RestartSDL3() 
+  	userPrint(33, "=================TC3:Preconditions==================")
+	RestartSDL(self, "prefix", 3000)
+end
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -738,7 +724,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_FULLnonmedia_LIMITEDmedia_NONEmedia_3_sec()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC3:Resuming FULL non-media, LIMITED media and NONE media in 3sec:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -838,20 +824,20 @@ function Test:CloseSession3()
   self.mobileSession3:Stop()
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_04 - APPLINK-15892
 -- Check that resuming HMI levels of 3 apps starts after 6 second if no apps registered before (Non-media =Full, Media = Background, Media = Limited)
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 6000 in .ini file
-
-RestartSDL(self, "prefix", 6000)
-
+function Test:RestartSDL4()
+        userPrint(33, "=================TC4:Precondition==================")
+	RestartSDL(self, "prefix", 6000)
+end
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -965,7 +951,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_FULLnonmedia_LIMITEDmedia_NONEmedia_6_sec()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC4:Resuming FULL non-media, LIMITED media and NONE media in 6sec:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -1068,18 +1054,18 @@ function Test:CloseSession3()
   self.mobileSession3:Stop()
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_05 - APPLINK-15893
 -- Check that resuming HMI level starts after 3 second if some app already registered
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 3000 in .ini file
-
-RestartSDL(self, "prefix", 3000)
-
+function Test:RestartSDL5()
+    userPrint(33, "=================TC5:Precondition==================")
+    RestartSDL(self, "prefix", 3000)
+end
 function Test:StartSession1()
-  userPrint(35, "================= Precondition TC_Configure_ResumingTimeout_05 ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -1142,7 +1128,7 @@ function Test:RegisterMediaApp1()
 end
 
 function Test:Resumption_FULL_Some_App_already_registered_3_sec()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC5:Resuming FULL in 3sec if some App already registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDMediaApp1})
   :Do(function(_,data)
@@ -1198,19 +1184,20 @@ function Test:Postcondition_UnregisterApps_Gracefully()
 
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_06 - APPLINK-15894
 -- Check that resuming HMI level starts after 6 seconds if some app already registered
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 6000 in .ini file
-
-RestartSDL(self, "prefix", 6000)
+function Test:RestartSDL6()
+    userPrint(33, "=================TC6:Precondition==================")
+    RestartSDL(self, "prefix", 6000)
+end
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
-  self.mobileSession1 = mobile_session.MobileSession(
+   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
     applicationData.mediaApp1)
@@ -1274,7 +1261,7 @@ function Test:RegisterMediaApp1()
 end
 
 function Test:Resumption_FULL_Some_App_already_registered_6_sec()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC6:Resuming FULL in 6sec if some App already registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDMediaApp1})
   :Do(function(_,data)
@@ -1330,20 +1317,21 @@ function Test:Postcondition_UnregisterApps_Gracefully()
 
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_07 - APPLINK-15895
 -- Check that resuming HMI levels of 3 apps starts after 3 seconds if some app registered before (App1=Full, app2=Background, app3=Limited).
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 3000 in .ini file
-
-RestartSDL(self, "prefix", 3000)
+function Test:RestartSDL7()
+    userPrint(33, "=================TC7:Precondition==================")
+    RestartSDL(self, "prefix", 3000)
+end
 
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -1476,7 +1464,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_FULLnonmedia_LIMITEDmedia_NONEmedia_3_sec_Some_App_registered()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC7:Resuming 3 Apps in 3sec if some App registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -1592,20 +1580,22 @@ function Test:CloseConnection2()
   self.mobileConnection2:Close()
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by closing connection
 -- covers TC_Configure_ResumingTimeout_08 - APPLINK-15896
 -- Check that resuming HMI levels of 3 apps starts after 6 seconds if some app registered before (App1=Full, app2=Background, app3=Limited).
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 6000 in .ini file
 
-RestartSDL(self, "prefix", 6000)
+function Test:RestartSDL8()
+    userPrint(33, "=================TC8:Precondition==================")
+    RestartSDL(self, "prefix", 6000)
+end
 
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -1738,7 +1728,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_FULLnonmedia_LIMITEDmedia_NONEmedia_6_sec_Some_App_registered()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC8:Resuming 3 Apps in 6sec if some App registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -1857,20 +1847,22 @@ function Test:CloseConnection2()
   self.mobileConnection2:Close()
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by Ignition off
 -- covers TC_Configure_ResumingTimeout_09 - APPLINK-15897
 -- Check that resuming HMI levels of 3 apps starts after 3 second if some app registered after IGN_CYCLE (App1=Full, app2=Background, app3=Limited)
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 3000 in .ini file
 
-RestartSDL(self, "prefix", 3000)
+function Test:RestartSDL9()
+    userPrint(33, "=================TC9:Precondition==================")
+    RestartSDL(self, "prefix", 3000)
+end
 
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -2016,7 +2008,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_3_apps_IGN_OFF_3_sec_Some_App_registered()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC9:Resuming 3 apps after IGN_OFF in 3sec with App registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -2132,20 +2124,22 @@ function Test:CloseConnection2()
   self.mobileConnection2:Close()
 end
 
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 --Resumption of HMIlevel by Ignition off
 -- covers TC_Configure_ResumingTimeout_10 - APPLINK-15898
 -- Check that resuming HMI levels of 3 apps starts after 6 second if some app registered after IGN_CYCLE (App1=Full, app2=Background, app3=Limited)
---////////////////////////////////////////////////////////////////////////////////////////////--
+--////////////////////////////////////////////////////////////////////////////////////////////
 
 --Precondition: Set ApplicationResumingTimeout = 6000 in .ini file
 
-RestartSDL(self, "prefix", 6000)
+function Test:RestartSDL10()
+    userPrint(33, "=================TC10:Precondition==================")
+    RestartSDL(self, "prefix", 6000)
+end
 
 -- Registration and activation of apps
 
 function Test:StartSession1()
-  userPrint(35, "================= Precondition ==================")
   self.mobileSession1 = mobile_session.MobileSession(
     self,
     self.mobileConnection,
@@ -2291,7 +2285,7 @@ function Test:RegisterNonMedia()
 end
 
 function Test:Resumption_3_apps_IGN_OFF_6_sec_Some_App_registered()
-  userPrint(34, "=================== Test Case ===================")
+  userPrint(34, "TC10: Resuming 3 apps after IGN_OFF in 6sec with App registered:")
 
   EXPECT_HMICALL("BasicCommunication.ActivateApp",{appID = HMIAppIDNonMediaApp})
   :Do(function(_,data)
@@ -2354,6 +2348,182 @@ function Test:Resumption_3_apps_IGN_OFF_6_sec_Some_App_registered()
 
   DelayedExp(1000)
 
+end
+
+--////////////////////////////////////////////////////////////////////////////////////////////
+--Negative checks:
+--ApplicationResumingTimeout = 0 in .ini file: SDL should use default value = 3sec
+--ApplicationResumingTimeout =   in .ini file (value missing): SDL should use default value = 3sec
+--ApplicationResumingTimeout = -3000  in .ini file (wrong value): SDL should use default value = 3sec
+--ApplicationResumingTimeout is missing in .ini file: SDL should use default value = 3sec
+--////////////////////////////////////////////////////////////////////////////////////////////
+
+function Test:RestartSDL11() 
+  	userPrint(33, "===================TC11:Preconditions===================")
+        RestartSDL(self, "prefix", 0)
+end
+
+function Test:StartSession()
+  self:startSession()
+end
+
+function Test:ActivateApp(...)
+  -- body
+  HMIAppID = self.applications[config.application1.registerAppInterfaceParams.appName]
+  print("HMI appID: " .. tostring(HMIAppID))
+  ActivationApp(self, self.mobileSession, HMIAppID, AppValuesOnHMIStatusFULL)
+end
+
+function Test:ActivateAppAndPerfromDisconnect()
+  SetAppToTargetLevelAndPerfromDisconnect(self, self.mobileSession, "FULL", HMIAppID)
+end
+
+function Test:StartSession()
+  self.mobileSession = mobile_session.MobileSession(
+    self,
+    self.mobileConnection,
+    config.application1.registerAppInterfaceParams)
+end
+
+--Resumption of FULL hmiLevel
+function Test:CheckAppResumesIfTimeoutIsZero()
+  userPrint(34, "TC11:Negative check: ApplicationResumingTimeout = 0 in .ini:")
+  self.mobileSession:StartService(7)
+  :Do(function(_,data)
+  os.execute("sleep 0.3")
+      RegisterAppAfterDisconnect(self, "FULL", nil, self.mobileSession, 3000)
+    end)
+
+end
+
+function Test:Postcondition_UnregisterApp_Gracefully()
+  UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
+end
+
+
+----------------------------------------------------------------------------------------------
+
+function Test:ActivateApp(...)
+   userPrint(33, "===================TC12:Preconditions===================")
+  -- body
+  HMIAppID = self.applications[config.application1.registerAppInterfaceParams.appName]
+  self.hmiLevel = "FULL"
+  ActivationApp(self, self.mobileSession, HMIAppID, AppValuesOnHMIStatusFULL)
+end
+
+function Test:ActivateAppAndPerfromDisconnect()
+  SetAppToTargetLevelAndPerfromDisconnect(self, self.mobileSession, "FULL", HMIAppID)
+end
+
+--Precondition: Set ApplicationResumingTimeout =  in .ini file
+   RestartSDL(self, "prefix",'')
+
+
+function Test:StartSession()
+  self.mobileSession = mobile_session.MobileSession(
+    self,
+    self.mobileConnection,
+    config.application1.registerAppInterfaceParams)
+end
+
+--Resumption of FULL hmiLevel
+function Test:CheckAppResumesIfTimeoutIsEmptyValue()
+  userPrint(34, "TC12:Negative check:ApplicationResumingTimeout =  (empty value) in .ini:")
+  self.mobileSession:StartService(7)
+  :Do(function(_,data)
+      RegisterAppAfterDisconnect(self, "FULL", nil, self.mobileSession, 3000)
+    end)
+
+end
+
+function Test:Postcondition_UnregisterApp_Gracefully()
+  UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
+end
+
+----------------------------------------------------------------------------------------------
+
+function Test:ActivateApp(...)
+   userPrint(33, "===================TC13:Preconditions===================")
+  -- body
+  HMIAppID = self.applications[config.application1.registerAppInterfaceParams.appName]
+  self.hmiLevel = "FULL"
+  ActivationApp(self, self.mobileSession, HMIAppID, AppValuesOnHMIStatusFULL)
+end
+
+function Test:ActivateAppAndPerfromDisconnect()
+  SetAppToTargetLevelAndPerfromDisconnect(self, self.mobileSession, "FULL", HMIAppID)
+end
+
+--Precondition: Set ApplicationResumingTimeout = -3000 in .ini file
+   RestartSDL(self, "prefix", -3000)
+
+
+function Test:StartSession()
+  self.mobileSession = mobile_session.MobileSession(
+    self,
+    self.mobileConnection,
+    config.application1.registerAppInterfaceParams)
+end
+
+--Resumption of FULL hmiLevel
+function Test:CheckAppResumesIfTimeoutIsWrongValue()
+  userPrint(34, "TC13:Negative check:ApplicationResumingTimeout is wrong value in .ini:")
+  self.mobileSession:StartService(7)
+  :Do(function(_,data)
+      RegisterAppAfterDisconnect(self, "FULL", nil, self.mobileSession, 3000)
+    end)
+
+end
+
+function Test:Postcondition_UnregisterApp_Gracefully()
+  UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
+end
+
+----------------------------------------------------------------------------------------------
+
+function Test:ActivateApp(...)
+   userPrint(33, "===================TC14:Preconditions===================")
+  -- body
+  HMIAppID = self.applications[config.application1.registerAppInterfaceParams.appName]
+  self.hmiLevel = "FULL"
+  ActivationApp(self, self.mobileSession, HMIAppID, AppValuesOnHMIStatusFULL)
+end
+
+function Test:ActivateAppAndPerfromDisconnect()
+  SetAppToTargetLevelAndPerfromDisconnect(self, self.mobileSession, "FULL", HMIAppID)
+end
+
+--Precondition: Remove ApplicationResumingTimeout param from .ini file
+   RestartSDL(self, "prefix", nil)
+
+
+function Test:StartSession()
+  self.mobileSession = mobile_session.MobileSession(
+    self,
+    self.mobileConnection,
+    config.application1.registerAppInterfaceParams)
+end
+
+--Resumption of FULL hmiLevel
+function Test:CheckAppResumesToFullIfTimeoutIsNil()
+  userPrint(34, "TC13:Negative check:ApplicationResumingTimeout param is missing in .ini:")
+  self.mobileSession:StartService(7)
+  :Do(function(_,data)
+      RegisterAppAfterDisconnect(self, "FULL", nil, self.mobileSession, 3000)
+    end)
+
+end
+
+function Test:Postcondition_UnregisterApp_Gracefully()
+  UnregisterAppInterface_Success(self, self.mobileSession, self.applications)
+end
+
+---------------------------------------------------------------------------------------------
+-------------------------------------------Postconditions-------------------------------------
+---------------------------------------------------------------------------------------------
+
+function Test:Postconditions() 
+	userPrint(33, "===================Postconditions===================")
 end
 
 function Test:Postcondition_UnregisterApps_Gracefully()
