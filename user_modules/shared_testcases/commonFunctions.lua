@@ -357,7 +357,7 @@ function commonFunctions:verify_Unsuccess_Case(self, Request, ResultCode)
 
 	--mobile side: expect the response
 	EXPECT_RESPONSE(cid, { success = false, resultCode = ResultCode })
-	:Timeout(50)
+	:Timeout(2000)
 
 	messageflag = true
 end
