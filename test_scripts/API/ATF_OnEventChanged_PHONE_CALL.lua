@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------------------------
---These TCs are created by APPLINK-15427, APPLINK-15164, APPLINK-9891 and APPLINK-18854. APPLINK-15164 is not implemeted now
+--These TCs are created by APPLINK-15427, APPLINK-15164, APPLINK-9891 and APPLINK-18854.
+-- TODO: Please uncomment in TCs relates to APPLINK-15164 when it is implemented
 --ATF version 2.2
 ----------------------------------------------------------------------------------------------------------
 Test = require('connecttest')
@@ -149,7 +150,7 @@ function Test:registerAppInterface3()
 end
 ------------------------------------------------------------------------------------------------
 
-function Test: bring_App_To_LIMITED()
+function Test:bring_App_To_LIMITED()
 	local cid = self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated",
 				{
 					appID = self.applications[config.application1.registerAppInterfaceParams.appName]
@@ -259,7 +260,6 @@ function Test:send_Alert(hmiLevel)
 	:Times(2)
 end
 
-
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ end
 	commonFunctions:newTestCasesGroup("Preconditions")
 
 	--Delete app_info.dat, logs and policy table
-	commonSteps:DeleteLogsFileAndPolicyTable()
+	commonSteps:DeletePolicyTable()
 
 	--1.Unregister app
 	commonSteps:UnregisterApplication()
@@ -285,7 +285,7 @@ end
 	end
 
 	--4.Create third session
-	function Test:Precondition_SecondSession()
+	function Test:Precondition_ThirdSession()
 		self.mobileSession2 = mobile_session.MobileSession(
 		self,
 		self.mobileConnection)
@@ -315,7 +315,9 @@ end
 ---- 1."isActive" is true/false
 ---- 2.Without "isActive" value
 ---- 3.With "isActive" is invalid/not existed/empty/wrongtype
-
+	commonSteps:RegisterAppInterface()
+	commonSteps:UnregisterApplication("Unregister_2")
+	
 	commonFunctions:newTestCasesGroup("Check normal cases of HMI notification")
 
 	--After receiving BasicCommunication.OnEventChanged(PHONE_CALL,true) from HMI, SDL deactivates Navigation app from (FULL, AUDIBLE) to (LIMITED, NOT_AUDIBLE)
@@ -334,7 +336,7 @@ end
 
 		local function App_IsFull_PhoneCall_IsOn()
 
-		    Test["Change_App1_Params_To" .. testData[i].app .."_CaseAppIsFULL_isActiveIsValid"] = function(self)
+		    Test["Change_App1_Params_To_" .. testData[i].app .."_CaseAppIsFULL_isActiveIsValid"] = function(self)
 				self:change_App_Params(1,testData[i].appType,testData[i].isMedia)
 			end
 
@@ -365,7 +367,7 @@ end
 
 		local function App_IsFull_PhoneCall_IsOn()
 
-			 Test["Change_App1_Params_To" .. testData[i].app .."_CaseAppIsLIMITED_isActiveIsValid"] = function(self)
+			 Test["Change_App1_Params_To_" .. testData[i].app .."_CaseAppIsLIMITED_isActiveIsValid"] = function(self)
 				self:change_App_Params(1,testData[i].appType,testData[i].isMedia)
 			end
 
@@ -1164,12 +1166,12 @@ commonFunctions:newTestCasesGroup("****************************** TEST BLOCK IV:
 	commonSteps:RegisterAppInterface("Register_Navigation_App")
 	commonSteps:ActivationApp(_,"Activate_Navigation_App")
 
-	function Test: Register_Communication_App()
+	function Test:Register_Communication_App()
 		self:change_App_Params(2,{"COMMUNICATION"},false)
 		self:registerAppInterface2()
 	end
 
-	function Test: Activate_Communication_App()
+	function Test:Activate_Communication_App()
 
 		local rid = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application2.registerAppInterfaceParams.appName]})
 
@@ -1185,12 +1187,12 @@ commonFunctions:newTestCasesGroup("****************************** TEST BLOCK IV:
 
 	end
 
-	function Test: Register_Media_App()
+	function Test:Register_Media_App()
 		self:change_App_Params(3,{"MEDIA"},true)
 		self:registerAppInterface3()
 	end
 
-	function Test: Activate_Media_App()
+	function Test:Activate_Media_App()
 		local rid = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application3.registerAppInterfaceParams.appName]})
 
 		EXPECT_HMIRESPONSE(rid)
@@ -1204,7 +1206,7 @@ commonFunctions:newTestCasesGroup("****************************** TEST BLOCK IV:
 		self.mobileSession2:ExpectNotification("OnHMIStatus",{hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
 	end
 
-	function Test: Bring_MediaApp_To_LIMITED()
+	function Test:Bring_MediaApp_To_LIMITED()
 		local cid = self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated",
 		{
 			appID = self.applications[config.application3.registerAppInterfaceParams.appName]
@@ -1219,7 +1221,7 @@ commonFunctions:newTestCasesGroup("****************************** TEST BLOCK IV:
 	end
 
 	--NOTE: This step only can run after APPLINK-15164 is DONE
-	-- function Test: CaseAppsAreLIMITED_Activate_Navigation_App_During_PHONE_CALL()
+	-- function Test:CaseAppsAreLIMITED_Activate_Navigation_App_During_PHONE_CALL()
 		-- local rid = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
 
 		-- EXPECT_HMIRESPONSE(rid)
