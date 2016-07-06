@@ -46,6 +46,9 @@ atf_build_dir = work_dir + "atf_build/"
 
 scripts_clone_dir = work_dir + "sdl_atf_test_scripts/"
 
+# test_scripts_dir is dir where atomatic tool will search test scripts for running
+test_scripts_dir = scripts_clone_dir + "test_scripts/"
+
 test_run_dir = work_dir + "test_run/"
 reports_dir = test_run_dir + "reports/"
 

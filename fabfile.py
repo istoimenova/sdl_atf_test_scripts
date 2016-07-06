@@ -154,7 +154,7 @@ def tests_run():
     if not exists(config.test_run_dir):
         print("{} does not exists".format(config.test_run_dir))
     with cd(config.test_run_dir):
-        output = run('ls test_scripts')
+        output = run('find {} -name "*.lua"'.format(config.test_scripts_dir))
         scripts = output.split()
         known_issues = run("cat KnownIssues.md")
         known_issues = get_known_issues(known_issues)
@@ -164,7 +164,7 @@ def tests_run():
             print("Execute {}".format(script))
             with settings(warn_only=True):
                 output = run('''./start.sh --storeFullSDLLogs \
-                             --sdl_core=./SDL_bin/ test_scripts/{} |\
+                             --sdl_core=./SDL_bin/ {} |\
                              tee console_output'''.format(script))
                 script_reports_dir = "{}/{}".format(config.reports_dir, script)
                 run("mkdir -p {}".format(script_reports_dir))
