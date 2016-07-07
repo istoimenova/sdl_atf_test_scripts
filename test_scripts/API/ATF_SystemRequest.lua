@@ -26,7 +26,6 @@ local stringParameter = require('user_modules/shared_testcases/testCasesForStrin
 require('user_modules/AppTypes')
 
 local appIDAndDeviceMac = config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
-local strAppFolder = config.SDLStoragePath..appIDAndDeviceMac
 local strIvsu_cacheFolder = "/tmp/fs/mp/images/ivsu_cache/"
 
 APIName = "SystemRequest" -- set API name
