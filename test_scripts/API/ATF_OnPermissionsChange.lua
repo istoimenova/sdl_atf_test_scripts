@@ -2039,7 +2039,7 @@ local function SequenceOnPemissionsChange()
 		function Test:APPLINK_19918_Pre_CreationNewSession()
 			-- Connected expectation
 			self.mobileSession1 = mobile_session.MobileSession(
-				self.expectations_list,
+				self,
 				self.mobileConnection)
 			self.mobileSession1:StartService(7)
 		end
