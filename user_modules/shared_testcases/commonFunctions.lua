@@ -220,6 +220,13 @@ function commonFunctions:setValueForParameter(Request, Parameter, Value)
 
 	temp[Parameter[#Parameter]] = Value
 
+-- Due to Lua specific empty array defines as empty structure (APPLINK-15292). For testing addressLines in GetWayPoints (CRQ APPLINK-21610) response use next condition.
+	if  Value == nil and Parameter[#Parameter-1] == "addressLines" then 
+print("Check success response in SDL logs. Due to APPLINK-15292 ATF fails next case")
+
+		temp[Parameter[#Parameter]] = json.EMPTY_ARRAY 
+	end
+
 	--[=[print request if parameter matches Debug value
 	if Debug ~= {} then
 		if #Debug == #Parameter then
@@ -357,7 +364,7 @@ function commonFunctions:verify_Unsuccess_Case(self, Request, ResultCode)
 
 	--mobile side: expect the response
 	EXPECT_RESPONSE(cid, { success = false, resultCode = ResultCode })
-	:Timeout(2000)
+	:Timeout(50)
 
 	messageflag = true
 end
@@ -642,7 +649,7 @@ end
 
 ---------------------------------------------------------------------------------------------
 --10. Functions for updated .ini file
-
+---------------------------------------------------------------------------------------------
 -- !!! Do not update fucntion without necessity. In case of updating check all scripts where function is used.
 function commonFunctions:SetValuesInIniFile(FindExpression, parameterName, ValueToUpdate )
 	local SDLini = config.pathToSDL .. "smartDeviceLink.ini"
@@ -679,7 +686,6 @@ end
 function commonFunctions:SetValuesInIniFile_PendingRequestsAmount(ValueToUpdate)
 	commonFunctions:SetValuesInIniFile("%p?PendingRequestsAmount%s?=%s-[%d]-%s-\n", "PendingRequestsAmount", ValueToUpdate)
 end
-
 ---------------------------------------------------------------------------------------------
 --12. Functions array of structures
 ---------------------------------------------------------------------------------------------
@@ -696,8 +702,6 @@ function commonFunctions:createArrayStruct(size, Struct)
 
 	return temp
 
-
 end
-
 
 return commonFunctions

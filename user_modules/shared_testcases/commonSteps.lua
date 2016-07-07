@@ -360,8 +360,8 @@ function commonSteps:RegisterAppInterface(TestCaseName)
 		{
 			syncMsgVersion = 
 			{
-				majorVersion = 3,
-				minorVersion = 1
+				majorVersion = 4,
+				minorVersion = 0
 			}
 		})
 		:Timeout(12000)
