@@ -16,7 +16,7 @@ local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 
 APIName = "SetAppIcon" -- use for above required scripts.
-
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
 local appIDAndDeviceMac = config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 config.SDLStoragePath = config.pathToSDL .. "storage/"
 local strAppFolder = config.SDLStoragePath..appIDAndDeviceMac
