@@ -1,7 +1,7 @@
 
---------------------------------------------------------------------------------
--- Preconditions
---------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------
+-------------------------------------------Preconditions-------------------------------------
+---------------------------------------------------------------------------------------------
 local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 
 --------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ local HMIAppID
 
 local DefaulthmiLevel = "NONE"
 
-local notificationState = {VRSession = false, EmergencyEvent = false, PhoneCall = false}
+local notificationState = {VRSession = false, EmergencyEvent = false, PhoneCall = false, DeactivateHMI = false}
 
 local timeFromRequestToNot = 0
 
@@ -162,10 +162,13 @@ local function ActivationApp(self)
       self.hmiConnection:SendNotification("VR.Stopped", {})
   elseif 
     notificationState.EmergencyEvent == true then
-      self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+      self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
   elseif
     notificationState.PhoneCall == true then
-      self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+      self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
+ elseif
+    notificationState.DeactivateHMI == true then
+      self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="DEACTIVATE_HMI"})
   end
 
     --hmi side: sending SDL.ActivateApp request
@@ -943,11 +946,11 @@ function Test:ResumptionHMIlevelFULL_VRsessionStartedAfterRAIResponse_VRStoppedB
       end)
 end
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came in 3 seconds after registration
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came in 3 seconds after registration
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -956,7 +959,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEven
 function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseIn3sec()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -998,7 +1001,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseIn3sec()
                end
 
             elseif exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
               return true
           end
@@ -1011,7 +1014,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseIn3sec()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -1020,7 +1023,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEven
 function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -1042,7 +1045,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseAfter30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -1086,7 +1089,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseAfter30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -1095,7 +1098,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEven
 function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -1117,7 +1120,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseBefore30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -1161,13 +1164,13 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_falseBefore30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came in seconds after RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came in seconds after RAI request
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseIn3sec")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseIn3sec")
 
-function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseIn3sec()
+function Test:ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseIn3sec()
 
   userPrint(34, "=================== Test Case ===================")
 
@@ -1212,10 +1215,10 @@ function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseIn3se
 
           elseif exp.occurences == 1 then
             if exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
               local function to_run()
-                self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
               end
 
@@ -1233,13 +1236,13 @@ function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseIn3se
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseAfter30seconds")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseAfter30seconds")
 
-function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseAfter30seconds()
+function Test:ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -1258,10 +1261,10 @@ function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseAfter
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
             local function to_run()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -1306,13 +1309,13 @@ end
 
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseBefore30seconds")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseBefore30seconds")
 
-function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseBefore30seconds()
+function Test:ResumptionHMIlevelFULL_EmergencyEventAfterRAIResponse_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -1331,12 +1334,12 @@ function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseBefor
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -1379,22 +1382,23 @@ function Test:ResumptionHMIlevelFULL_OnEmergencyEventAfterRAIResponse_falseBefor
       end)
 end
 
+
 --======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
+--Resumption with postponing because of OnEventChanged(DEACTIVATE_HMI)
 --======================================================================================--
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came in 3 seconds after RAI request
+--Resumption with postponing: OnEventChanged(DEACTIVATE_HMI=true) came before RAI request, OnEventChanged(DEACTIVATE_HMI=false) came in 3 seconds after RAI request after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallActive_falseIn3sec")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionFULL_DeactivateHMIActiveAndfalseIn3sec")
 
-function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseIn3sec()
+function Test:ResumptionFULL_DeactivateHMIActiveAndfalseIn3sec()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
-	 notificationState.PhoneCall = true
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="DEACTIVATE_HMI"})
+	notificationState.DeactivateHMI = true
 
    self.mobileSession:StartService(7)
     :Do(function(_,data)
@@ -1436,7 +1440,288 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseIn3sec()
             end
 
           elseif exp.occurences == 1 then
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="DEACTIVATE_HMI"})
+	             notificationState.DeactivateHMI = false
+            return true
+        end
+        end)
+        :Do(function(_,data)
+          self.hmiLevel = data.payload.hmiLevel
+        end)
+      :Times(2)
+
+    end)
+end
+
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChanged(DEACTIVATE_HMI=true) came before RAI request, OnEventChanged(DEACTIVATE_HMI=false) came after 30 seconds after IGNITION_OFF
+------------------------------------------------------------------------------------------
+
+-- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionFULL_DeactivateHMIActiveAndfalseAfter30sec")
+
+function Test:ResumptionFULL_DeactivateHMIActiveAndfalseAfter30sec()
+  userPrint(34, "=================== Test Case ===================")
+
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="DEACTIVATE_HMI"})
+	 notificationState.DeactivateHMI = true
+
+   self.mobileSession:StartService(7)
+      :Do(function(_,data)
+         local correlationId = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+         --got time after RAI request
+         local time =  timestamp()
+
+         local RAIAfterOnReady = time - self.timeOnReady
+          userPrint( 33, "Time of sending RAI request after OnReady notification " ..tostring(RAIAfterOnReady))
+
+         EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", {application = { appID = HMIAppID }})
+            :Do(function(_,data)
+               self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+            end)
+
+      self.mobileSession:ExpectResponse(correlationId, { success = true })
+         :Do(function(_,data)
+            local timeRAIResponse = timestamp()
+            local function to_run()
+              timeFromRequestToNot = timeRAIResponse - time
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="DEACTIVATE_HMI"})
+	             notificationState.DeactivateHMI = false
+            end
+
+            RUN_AFTER(to_run, 45000)
+         end)
+
+      EXPECT_HMICALL("BasicCommunication.ActivateApp")
+         :Do(function(_,data)
+            --hmi side: sending BasicCommunication.ActivateApp response
+               self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+         end)
+        :Timeout(47000)
+
+
+      if 
+         config.application1.registerAppInterfaceParams.isMediaApplication == true then
+          EXPECT_NOTIFICATION("OnHMIStatus", 
+            {hmiLevel = DefaultHMILevel, systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE" },
+            {hmiLevel = "FULL", systemContext = "MAIN", audioStreamingState = "AUDIBLE"})
+            :ValidIf(function(exp,data)
+               if exp.occurences == 2 then 
+               local time2 =  timestamp()
+               local timeToresumption = time2 - time
+                  if timeToresumption >= 44700 and
+                   timeToresumption < 46000 + timeFromRequestToNot then
+                    userPrint(33, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~" .. tostring(45000+timeFromRequestToNot) ) 
+                     return true
+                  else 
+                     userPrint(31, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~" .. tostring(45000+timeFromRequestToNot) )
+                     return false
+                  end
+
+               elseif exp.occurences == 1 then
+                  return true
+            end
+            end)
+          :Do(function(_,data)
+            self.hmiLevel = data.payload.hmiLevel
+          end)
+         :Times(2)
+         :Timeout(47000)
+
+      elseif
+            config.application1.registerAppInterfaceParams.isMediaApplication == false then
+           EXPECT_NOTIFICATION("OnHMIStatus", 
+              {hmiLevel = DefaultHMILevel, systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE" },
+              {hmiLevel = "FULL", systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE"})
+              :ValidIf(function(exp,data)
+                if  exp.occurences == 2 then 
+                local time2 =  timestamp()
+                local timeToresumption = time2 - time
+                  if timeToresumption >= 3000 and
+                   timeToresumption < 3500 then
+                    userPrint(33, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " ) 
+                    return true
+                  else 
+                    userPrint(31, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " )
+                    return false
+                  end
+
+                elseif exp.occurences == 1 then
+                  return true
+              end
+              end)
+            :Do(function(_,data)
+              self.hmiLevel = data.payload.hmiLevel
+            end)
+              :Times(2)
+      end
+
+      end)
+end
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChanged(DEACTIVATE_HMI=true) came before RAI request, OnEventChanged(DEACTIVATE_HMI=false) came before 30 seconds after IGNITION_OFF
+------------------------------------------------------------------------------------------
+
+-- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionFULL_DeactivateHMIActiveAndfalseBefore30sec")
+
+function Test:ResumptionFULL_DeactivateHMIActiveAndfalseBefore30sec()
+  userPrint(34, "=================== Test Case ===================")
+
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="DEACTIVATE_HMI"})
+	   notificationState.DeactivateHMI = true
+
+   self.mobileSession:StartService(7)
+      :Do(function(_,data)
+         local correlationId = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+         --got time after RAI request
+         local time =  timestamp()
+
+        local RAIAfterOnReady = time - self.timeOnReady
+        userPrint( 33, "Time of sending RAI request after OnReady notification " ..tostring(RAIAfterOnReady))
+
+         EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", {application = { appID = HMIAppID }})
+            :Do(function(_,data)
+               self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+            end)
+
+      self.mobileSession:ExpectResponse(correlationId, { success = true })
+         :Do(function(_,data)
+            local timeRAIResponse = timestamp()
+            local function to_run()
+              timeFromRequestToNot = timeRAIResponse - time
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="DEACTIVATE_HMI"})
+	             notificationState.DeactivateHMI = false
+            end
+
+            RUN_AFTER(to_run, 15000)
+         end)
+
+      EXPECT_HMICALL("BasicCommunication.ActivateApp")
+         :Do(function(_,data)
+            --hmi side: sending BasicCommunication.ActivateApp response
+               self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+         end)
+        :Timeout(17000)
+
+         if config.application1.registerAppInterfaceParams.isMediaApplication == true then
+            EXPECT_NOTIFICATION("OnHMIStatus", 
+               {hmiLevel = DefaultHMILevel, systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE" },
+               {hmiLevel = "FULL", systemContext = "MAIN", audioStreamingState = "AUDIBLE"})
+               :ValidIf(function(exp,data)
+                  if exp.occurences == 2 then 
+                  local time2 =  timestamp()
+                  local timeToresumption = time2 - time
+                     if timeToresumption >= 14700 and
+                      timeToresumption < 16000 + timeFromRequestToNot then
+                        userPrint(33, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~" .. tostring(15000+timeFromRequestToNot) )
+                        return true
+                     else 
+                        userPrint(31, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~" .. tostring(15000+timeFromRequestToNot) )
+                        return false
+                     end
+
+                  elseif exp.occurences == 1 then
+                     return true
+                end
+               end)
+            :Do(function(_,data)
+              self.hmiLevel = data.payload.hmiLevel
+            end)
+            :Times(2)
+            :Timeout(17000)
+       elseif
+         config.application1.registerAppInterfaceParams.isMediaApplication == false then
+
+            EXPECT_NOTIFICATION("OnHMIStatus", 
+              {hmiLevel = DefaultHMILevel, systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE" },
+              {hmiLevel = "FULL", systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE"})
+              :ValidIf(function(exp,data)
+                if  exp.occurences == 2 then 
+                local time2 =  timestamp()
+                local timeToresumption = time2 - time
+                  if timeToresumption >= 3000 and
+                   timeToresumption < 3500 then
+                    userPrint(33, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " ) 
+                    return true
+                  else 
+                    userPrint(31, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " )
+                    return false
+                  end
+                elseif exp.occurences == 1 then
+                  return true
+                end
+              end)
+            :Do(function(_,data)
+              self.hmiLevel = data.payload.hmiLevel
+            end)
+              :Times(2)
+      end
+
+      end)
+end
+
+
+--======================================================================================--
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
+--======================================================================================--
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came in 3 seconds after RAI request after IGNITION_OFF
+------------------------------------------------------------------------------------------
+
+-- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallActive_falseIn3sec")
+
+function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseIn3sec()
+  userPrint(34, "=================== Test Case ===================")
+
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
+	notificationState.PhoneCall = true
+
+   self.mobileSession:StartService(7)
+    :Do(function(_,data)
+      local correlationId = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+      --got time after RAI request
+      local time =  timestamp()
+
+      local RAIAfterOnReady = time - self.timeOnReady
+      userPrint( 33, "Time of sending RAI request after OnReady notification " ..tostring(RAIAfterOnReady))
+
+      EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+        :Do(function(_,data)
+          HMIAppID = data.params.application.appID
+          self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+        end)
+
+      self.mobileSession:ExpectResponse(correlationId, { success = true })
+
+      EXPECT_HMICALL("BasicCommunication.ActivateApp")
+        :Do(function(_,data)
+          --hmi side: sending BasicCommunication.ActivateApp response
+              self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+        end)
+
+      EXPECT_NOTIFICATION("OnHMIStatus", 
+        {hmiLevel = DefaultHMILevel, systemContext = "MAIN", audioStreamingState = "NOT_AUDIBLE" },
+        AppValuesOnHMIStatusFULL)
+        :ValidIf(function(exp,data)
+          if  exp.occurences == 2 then 
+          local time2 =  timestamp()
+          local timeToresumption = time2 - time
+            if timeToresumption >= 3000 and
+             timeToresumption < 3500 then 
+              userPrint(33, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " )
+              return true
+            else 
+              userPrint(31, "Time to HMI level resumption is " .. tostring(timeToresumption) ..", expected ~3000 " )
+              return false
+            end
+
+          elseif exp.occurences == 1 then
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             return true
         end
@@ -1451,7 +1736,7 @@ end
 
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -1460,7 +1745,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallActi
 function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	 notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -1482,7 +1767,7 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseAfter30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -1557,7 +1842,7 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseAfter30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -1566,7 +1851,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallActi
 function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	   notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -1588,7 +1873,7 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseBefore30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -1660,13 +1945,13 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_falseBefore30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came in 3 seconds after RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false) came in 3 seconds after RAI request after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falsein3sec")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falsein3sec")
 
-function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falsein3sec()
+function Test:ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falsein3sec()
 
    userPrint(34, "=================== Test Case ===================")
 
@@ -1711,10 +1996,11 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falsein3sec()
 
           elseif exp.occurences == 1 then
             if exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
+
 	             notificationState.PhoneCall = true
               local function to_run()
-                self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
               end
 
@@ -1732,14 +2018,14 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falsein3sec()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30seconds")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falseAfter30seconds")
 
 
-function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30seconds()
+function Test:ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falseAfter30seconds()
 
   userPrint(34, "=================== Test Case ===================")
 
@@ -1762,7 +2048,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30sec
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -1795,7 +2081,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30sec
                      end
 
                   elseif exp.occurences == 1 then
-                    self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                    self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                      return true
                 end
@@ -1824,7 +2110,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30sec
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -1839,13 +2125,13 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseAfter30sec
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false)) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseBefore30seconds")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falseBefore30seconds")
 
-function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseBefore30seconds()
+function Test:ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -1867,7 +2153,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseBefore30se
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -1901,7 +2187,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseBefore30se
                   end
 
                elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                   return true
               end
@@ -1930,7 +2216,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse_falseBefore30se
                 end
 
               elseif exp.occurences == 1 then
-                self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                 return true
               end
@@ -1946,19 +2232,19 @@ end
 
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true), BC.OnEmergencyEvent(true), VR.Started, BC.OnPhoneCall(false) at the same time
+--Resumption with postponing: OnEventChange(PHONE_CALL=true), OnEventChanged(EMERGENCY_EVENT=true), VR.Started, OnEventChange(PHONE_CALL=false) at the same time
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_IGN_OFF")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallEmergencyEventVRStarted_IGN_OFF")
 
-function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_IGN_OFF()
+function Test:ResumptionHMIlevelFULL_PhoneCallEmergencyEventVRStarted_IGN_OFF()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
      notificationState.PhoneCall = true
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
     notificationState.EmergencyEvent = true
 
   self.hmiConnection:SendNotification("VR.Started", {})
@@ -1982,9 +2268,9 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_IGN_OF
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
             local timeRAIResponse = timestamp()
-            local function to_run_OnPhoneCall()
+            local function to_run_PhoneCall()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                notificationState.PhoneCall = false
             end
 
@@ -1993,14 +2279,14 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_IGN_OF
                 notificationState.VRSession = false
             end
 
-            local function to_run_OnEmergencyEvent()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            local function to_run_EmergencyEvent()
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                notificationState.EmergencyEvent = false
             end
 
           RUN_AFTER(to_run_VRStopped, 5000)
-          RUN_AFTER(to_run_OnPhoneCall, 10000)
-          RUN_AFTER(to_run_OnEmergencyEvent, 15000)
+          RUN_AFTER(to_run_PhoneCall, 10000)
+          RUN_AFTER(to_run_EmergencyEvent, 15000)
          end)
 
       EXPECT_HMICALL("BasicCommunication.ActivateApp")
@@ -2547,11 +2833,11 @@ function Test:ResumptionHMIlevelLIMITED_VRsessionStartedAfterRAIResponse_VRStopp
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came in 3 seconds after registration
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came in 3 seconds after registration
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -2560,7 +2846,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyE
 function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseIn3sec()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	  notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -2598,7 +2884,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseIn3sec()
                end
 
             elseif exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
               return true
           end
@@ -2611,7 +2897,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseIn3sec()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -2620,7 +2906,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyE
 function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	  notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -2642,7 +2928,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseAfter30seconds
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -2682,7 +2968,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseAfter30seconds
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request, BC.OnEmergencyEvent(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request, OnEventChanged(EMERGENCY_EVENT=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -2691,7 +2977,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyE
 function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	  notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -2713,7 +2999,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseBefore30second
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -2753,13 +3039,13 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_falseBefore30second
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came in seconds after RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false came in seconds after RAI request
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseIn3sec", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseIn3sec", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseIn3sec()
+function Test:ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseIn3sec()
 
   userPrint(34, "=================== Test Case ===================")
 
@@ -2800,10 +3086,10 @@ function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseIn
 
           elseif exp.occurences == 1 then
             if exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
               local function to_run()
-                self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
               end
 
@@ -2822,13 +3108,13 @@ end
 
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseAfter30seconds", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseAfter30seconds", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseAfter30seconds()
+function Test:ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -2847,10 +3133,10 @@ function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseAf
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
             local function to_run()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -2890,13 +3176,13 @@ function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseAf
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseBefore30seconds", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseBefore30seconds", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseBefore30seconds()
+function Test:ResumptionHMIlevelLIMITED_EmergencyEventAfterRAIResponse_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -2915,12 +3201,12 @@ function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseBe
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
            notificationState.EmergencyEvent = true
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
             end
 
@@ -2960,11 +3246,11 @@ function Test:ResumptionHMIlevelLIMITED_OnEmergencyEventAfterRAIResponse_falseBe
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
 --======================================================================================--
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came in 3 seconds after RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came in 3 seconds after RAI request
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -2973,7 +3259,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallA
 function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseIn3sec()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	 notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -3012,7 +3298,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseIn3sec()
             end
 
           elseif exp.occurences == 1 then
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             return true
         end
@@ -3026,7 +3312,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseIn3sec()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -3035,7 +3321,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallA
 function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseAfter30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	 notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -3058,7 +3344,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseAfter30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -3129,7 +3415,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseAfter30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -3138,7 +3424,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallA
 function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	 notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -3161,7 +3447,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseBefore30seconds()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -3229,13 +3515,13 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_falseBefore30seconds()
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came in 3 seconds after RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false) came in 3 seconds after RAI request
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falsein3sec", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falsein3sec", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falsein3sec()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falsein3sec()
 
    userPrint(34, "=================== Test Case ===================")
 
@@ -3276,10 +3562,10 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falsein3sec(
 
           elseif exp.occurences == 1 then
             if exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
               local function to_run()
-                self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
               end
 
@@ -3297,14 +3583,14 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falsein3sec(
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came after 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false) came after 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30seconds", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falseAfter30seconds", "LIMITED")
 
 
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30seconds()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falseAfter30seconds()
 
   userPrint(34, "=================== Test Case ===================")
 
@@ -3327,7 +3613,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -3356,7 +3642,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30
                      end
 
                   elseif exp.occurences == 1 then
-                    self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                    self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                      return true
                 end
@@ -3385,7 +3671,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                 self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -3400,13 +3686,13 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseAfter30
 end
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request, BC.OnPhoneCall(false) came before 30 seconds after IGNITION_OFF
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request, OnEventChange(PHONE_CALL=false) came before 30 seconds after IGNITION_OFF
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore30seconds", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falseBefore30seconds", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore30seconds()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse_falseBefore30seconds()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -3428,7 +3714,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore3
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
             end
 
@@ -3458,7 +3744,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore3
                   end
 
                elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                   return true
               end
@@ -3487,7 +3773,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore3
                 end
 
               elseif exp.occurences == 1 then
-                self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = true
                 return true
               end
@@ -3501,14 +3787,15 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse_falseBefore3
       end)
   end
 
+
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true), BC.OnEmergencyEvent(true), VR.Started, BC.OnPhoneCall(false) at the same time
+--Resumption with postponing: OnEventChange(PHONE_CALL=true), OnEventChanged(EMERGENCY_EVENT=true), VR.Started, OnEventChange(PHONE_CALL=false) at the same time
 ------------------------------------------------------------------------------------------
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_IGN_OFF", "LIMITED")
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallEmergencyEventVRStarted_IGN_OFF", "LIMITED")
 
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_IGN_OFF()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallEmergencyEventVRStarted_IGN_OFF()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -3528,9 +3815,9 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_IGN
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
             local timeRAIResponse = timestamp()
-            local function to_run_OnPhoneCall()
+            local function to_run_PhoneCall()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                notificationState.PhoneCall = false
             end
 
@@ -3539,14 +3826,14 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_IGN
                 notificationState.VRSession = false
             end
 
-            local function to_run_OnEmergencyEvent()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            local function to_run_EmergencyEvent()
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                notificationState.EmergencyEvent = false
             end
 
           RUN_AFTER(to_run_VRStopped, 5000)
-          RUN_AFTER(to_run_OnPhoneCall, 10000)
-          RUN_AFTER(to_run_OnEmergencyEvent, 15000)
+          RUN_AFTER(to_run_PhoneCall, 10000)
+          RUN_AFTER(to_run_EmergencyEvent, 15000)
          end)
 
       EXPECT_HMINOTIFICATION("BasicCommunication.OnResumeAudioSource", {appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
@@ -3569,10 +3856,10 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_IGN
                   end
 
                elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
                   notificationState.PhoneCall = true
 
-                  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
                   notificationState.EmergencyEvent = true
 
                   self.hmiConnection:SendNotification("VR.Started", {})
@@ -3646,13 +3933,13 @@ function Test:ActivationApp()
   end
 
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "Resumption_FULL_disconnect")
-
 --======================================================================================--
 --Resumption without postponing
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "Resumption_FULL_disconnect")
+-----------------------------------------------------------------------------------------
 
 function Test:Resumption_FULL_disconnect() 
   userPrint(34, "=================== Test Case ===================")
@@ -3705,13 +3992,13 @@ function Test:Resumption_FULL_disconnect()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionActive")
 
 --======================================================================================--
 --Resumption with postponing because of VR.Started 
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionActive")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came before RAI request
@@ -3779,13 +4066,14 @@ function Test:ResumptionHMIlevelFULL_Disconnect_VRsessionActive()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterRAIResponse")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came after RAI request
 ------------------------------------------------------------------------------------------
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterRAIResponse")
+-----------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
@@ -3849,13 +4137,14 @@ function Test:ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterRAIResponse
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterDefaultHMILevel_VRStoppedIn3sec")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came after RAI request, VR.Stopped in 3 seconds after RAI request
 ------------------------------------------------------------------------------------------
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterDefaultHMILevel_VRStoppedIn3sec")
+-----------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_VRsessionStartedAfterDefaultHMILevel_VRStoppedIn3sec()
   userPrint(34, "=================== Test Case ===================")
@@ -3921,21 +4210,20 @@ end
 
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
------------------------------------------------------------------------------------------
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive")
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	notificationState.EmergencyEvent = true
 
   self.mobileSession:StartService(7)
@@ -3952,7 +4240,7 @@ function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
           end
 
@@ -3994,16 +4282,15 @@ function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive()
     end)
 end
 
------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse")
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_EmergencyEventAfterRAIResponse")
+-----------------------------------------------------------------------------------------
 
-
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request
-------------------------------------------------------------------------------------------
-
-function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse()
+function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
 
   self.mobileSession:StartService(7)
@@ -4019,10 +4306,10 @@ function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
-          self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+          self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
           end
 
@@ -4065,16 +4352,17 @@ function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse
     end)
 end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request, OnEventChanged(EMERGENCY_EVENT=false) came in seconds after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse_falseIn3sec")
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_EmergencyEventAfterRAIResponse_falseIn3sec")
 
+-----------------------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request, BC.OnEmergencyEvent(false) came in seconds after RAI request
-------------------------------------------------------------------------------------------
-
-function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse_falseIn3sec()
+function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventAfterRAIResponse_falseIn3sec()
 
   userPrint(34, "=================== Test Case ===================")
 
@@ -4119,10 +4407,10 @@ function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse
 
           elseif exp.occurences == 1 then
             if exp.occurences == 1 then
-              self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+              self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
               notificationState.EmergencyEvent = true
               local function to_run()
-                self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+                self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                 notificationState.EmergencyEvent = false
               end
 
@@ -4139,23 +4427,22 @@ function Test:ResumptionHMIlevelFULL_Disconnect_OnEmergencyEventAfterRAIResponse
     end)
 end
 
------------------------------------------------------------------------------------------
+
+
+--======================================================================================--
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
+--======================================================================================--
+
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_PhoneCallActive")
-
-
---======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
---======================================================================================--
-
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	notificationState.PhoneCall = true
 
   self.mobileSession:StartService(7)
@@ -4172,7 +4459,7 @@ function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
           end
 
@@ -4245,18 +4532,20 @@ function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive()
     end)
 end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request, OnEventChange(PHONE_CALL=false) came in 3 seconds after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_falseIn3sec")
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request, BC.OnPhoneCall(false) came in 3 seconds after RAI request
-------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_falseIn3sec()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
   notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -4299,7 +4588,7 @@ function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_falseIn3sec()
             end
 
           elseif exp.occurences == 1 then
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
             notificationState.PhoneCall = false
             return true
         end
@@ -4312,15 +4601,16 @@ function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_falseIn3sec()
     end)
 end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true)) came after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse")
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse")
+-----------------------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request
-------------------------------------------------------------------------------------------
-
-function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse()
+function Test:ResumptionHMIlevelFULL_PhoneCallAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
 
   self.mobileSession:StartService(7)
@@ -4337,7 +4627,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
           end
 
@@ -4370,7 +4660,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse()
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -4399,7 +4689,7 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse()
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -4413,21 +4703,23 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallAfterRAIResponse()
     end)
 end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true), OnEventChanged(EMERGENCY_EVENT=true), VR.Started, OnEventChange(PHONE_CALL=false) at the same time
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_Disconnect")
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_PhoneCallEmergencyEventVRStarted_Disconnect")
+-----------------------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true), BC.OnEmergencyEvent(true), VR.Started, BC.OnPhoneCall(false) at the same time
-------------------------------------------------------------------------------------------
 
-function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_Disconnect()
+function Test:ResumptionHMIlevelFULL_PhoneCallEmergencyEventVRStarted_Disconnect()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
      notificationState.PhoneCall = true
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
     notificationState.EmergencyEvent = true
 
   self.hmiConnection:SendNotification("VR.Started", {})
@@ -4448,9 +4740,9 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_Discon
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
             local timeRAIResponse = timestamp()
-            local function to_run_OnPhoneCall()
+            local function to_run_PhoneCall()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                notificationState.PhoneCall = false
             end
 
@@ -4459,14 +4751,14 @@ function Test:ResumptionHMIlevelFULL_OnPhoneCallOnEmergencyEventVRStarted_Discon
                 notificationState.VRSession = false
             end
 
-            local function to_run_OnEmergencyEvent()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            local function to_run_EmergencyEvent()
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                notificationState.EmergencyEvent = false
             end
 
           RUN_AFTER(to_run_VRStopped, 5000)
-          RUN_AFTER(to_run_OnPhoneCall, 10000)
-          RUN_AFTER(to_run_OnEmergencyEvent, 15000)
+          RUN_AFTER(to_run_PhoneCall, 10000)
+          RUN_AFTER(to_run_EmergencyEvent, 15000)
          end)
 
       EXPECT_HMICALL("BasicCommunication.ActivateApp")
@@ -4588,13 +4880,13 @@ function Test:Resumption_LIMITED_disconnect()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive", "LIMITED")
 
 --======================================================================================--
 --Resumption with postponing because of VR.Started 
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive", "LIMITED")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came before RAI request
@@ -4659,13 +4951,14 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionStartedAfterRAIResponse", "LIMITED")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came after RAI request
 ------------------------------------------------------------------------------------------
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionStartedAfterRAIResponse", "LIMITED")
+-----------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelLIMITED_Disconnect_VRsessionStartedAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
@@ -4728,21 +5021,20 @@ end
 
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
------------------------------------------------------------------------------------------
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive", "LIMITED")
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	notificationState.EmergencyEvent = true
 
   self.mobileSession:StartService(7)
@@ -4760,7 +5052,7 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
           end
 
@@ -4798,15 +5090,15 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive()
     end)
 end
 
------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_OnEmergencyEventAfterRAIResponse", "LIMITED")
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventAfterRAIResponse", "LIMITED")
+-----------------------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came after RAI request
-------------------------------------------------------------------------------------------
-
-function Test:ResumptionHMIlevelLIMITED_Disconnect_OnEmergencyEventAfterRAIResponse()
+function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
 
   self.mobileSession:StartService(7)
@@ -4823,10 +5115,10 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_OnEmergencyEventAfterRAIRespo
 
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
-          self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+          self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = true
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
 	             notificationState.EmergencyEvent = false
           end
 
@@ -4865,22 +5157,22 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_OnEmergencyEventAfterRAIRespo
     end)
 end
 
------------------------------------------------------------------------------------------
+
+--======================================================================================--
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
+--======================================================================================--
+
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive", "LIMITED")
 
---======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
---======================================================================================--
-
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	 notificationState.PhoneCall = true
 
   self.mobileSession:StartService(7)
@@ -4898,7 +5190,7 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
           end
 
@@ -4967,15 +5259,16 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive()
     end)
 end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came after RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse", "LIMITED")
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse", "LIMITED")
+-----------------------------------------------------------------------------------------
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came after RAI request
-------------------------------------------------------------------------------------------
-
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallAfterRAIResponse()
   userPrint(34, "=================== Test Case ===================")
 
   self.mobileSession:StartService(7)
@@ -4993,7 +5286,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse()
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
 	             notificationState.PhoneCall = false
           end
 
@@ -5022,7 +5315,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse()
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -5051,7 +5344,7 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse()
                   end
 
                 elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
 	                 notificationState.PhoneCall = true
                   return true
                 end
@@ -5065,15 +5358,17 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallAfterRAIResponse()
     end)
   end
 
------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true), OnEventChanged(EMERGENCY_EVENT=true), VR.Started, OnEventChange(PHONE_CALL=false) at the same time
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_Disconnect", "LIMITED")
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_PhoneCallEmergencyEventVRStarted_Disconnect", "LIMITED")
 
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true), BC.OnEmergencyEvent(true), VR.Started, BC.OnPhoneCall(false) at the same time
-------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------
 
-function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_Disconnect()
+function Test:ResumptionHMIlevelLIMITED_PhoneCallEmergencyEventVRStarted_Disconnect()
   userPrint(34, "=================== Test Case ===================")
 
    self.mobileSession:StartService(7)
@@ -5090,9 +5385,9 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_Dis
       self.mobileSession:ExpectResponse(correlationId, { success = true })
          :Do(function(_,data)
             local timeRAIResponse = timestamp()
-            local function to_run_OnPhoneCall()
+            local function to_run_PhoneCall()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                notificationState.PhoneCall = false
             end
 
@@ -5101,14 +5396,14 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_Dis
                 notificationState.VRSession = false
             end
 
-            local function to_run_OnEmergencyEvent()
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            local function to_run_EmergencyEvent()
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                notificationState.EmergencyEvent = false
             end
 
           RUN_AFTER(to_run_VRStopped, 5000)
-          RUN_AFTER(to_run_OnPhoneCall, 10000)
-          RUN_AFTER(to_run_OnEmergencyEvent, 15000)
+          RUN_AFTER(to_run_PhoneCall, 10000)
+          RUN_AFTER(to_run_EmergencyEvent, 15000)
          end)
 
       EXPECT_HMINOTIFICATION("BasicCommunication.OnResumeAudioSource", {appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
@@ -5131,10 +5426,10 @@ function Test:ResumptionHMIlevelLIMITED_OnPhoneCallOnEmergencyEventVRStarted_Dis
                   end
 
                elseif exp.occurences == 1 then
-                  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
                   notificationState.PhoneCall = true
 
-                  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+                  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
                   notificationState.EmergencyEvent = true
 
                   self.hmiConnection:SendNotification("VR.Started", {})
@@ -5314,12 +5609,15 @@ end
 
   end
 
--- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
-IGN_OFF_START_SDL_CONNECTION_SESSION(self, "Resumption_FULL_is_absent_AppIsDisconnectedInMoreThen30SecAfterIGNOFF")
 
 --======================================================================================--
 --Resumption is absent because App is disconnected in more than 30 seconds after IGNITION_OFF
 --======================================================================================--
+
+-- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
+IGN_OFF_START_SDL_CONNECTION_SESSION(self, "Resumption_FULL_is_absent_AppIsDisconnectedInMoreThen30SecAfterIGNOFF")
+------------------------------------------------------------------------------------------
+
 function Test:Resumption_FULL_is_absent_AppIsDisconnectedInMoreThen30SecAfterIGNOFF() 
   userPrint(34, "=================== Test Case ===================")
 
@@ -5931,7 +6229,7 @@ end
 
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -5940,7 +6238,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_EmergencyEven
 function Test:ResumptionHMIlevelFULL_EmergencyEventActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
     notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -5962,7 +6260,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_withRegisteredApp()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                 notificationState.EmergencyEvent = false
             end
 
@@ -6006,7 +6304,7 @@ function Test:ResumptionHMIlevelFULL_EmergencyEventActive_withRegisteredApp()
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
 --======================================================================================--
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -6015,7 +6313,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelFULL_PhoneCallActi
 function Test:ResumptionHMIlevelFULL_PhoneCallActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
     notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -6037,7 +6335,7 @@ function Test:ResumptionHMIlevelFULL_PhoneCallActive_withRegisteredApp()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                 notificationState.PhoneCall = false
             end
 
@@ -6276,7 +6574,7 @@ function Test:ResumptionHMIlevelLIMITED_VRsessionActive_withRegisteredApp()
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -6286,7 +6584,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_EmergencyE
 function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
     notificationState.EmergencyEvent = true
 
    self.mobileSession:StartService(7)
@@ -6308,7 +6606,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_withRegisteredApp()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
                 notificationState.EmergencyEvent = false
             end
 
@@ -6348,7 +6646,7 @@ function Test:ResumptionHMIlevelLIMITED_EmergencyEventActive_withRegisteredApp()
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
 --======================================================================================--
 
 -- Precondition:IGN_OFF, start SDL, HMI initialization, start mobile connection, session
@@ -6357,7 +6655,7 @@ IGN_OFF_START_SDL_CONNECTION_SESSION(self, "ResumptionHMIlevelLIMITED_PhoneCallA
 function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-   self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+   self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
     notificationState.PhoneCall = true
 
    self.mobileSession:StartService(7)
@@ -6379,7 +6677,7 @@ function Test:ResumptionHMIlevelLIMITED_PhoneCallActive_withRegisteredApp()
             local timeRAIResponse = timestamp()
             local function to_run()
               timeFromRequestToNot = timeRAIResponse - time
-               self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+               self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
                 notificationState.PhoneCall = false
             end
 
@@ -6507,14 +6805,13 @@ function Test:ActivationApp()
   end
 
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "Resumption_FULL_disconnect_withRegisteredApp")
-
-
 --======================================================================================--
 --Resumption without postponing
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "Resumption_FULL_disconnect_withRegisteredApp")
+-----------------------------------------------------------------------------------------
 
 function Test:Resumption_FULL_disconnect_withRegisteredApp() 
   userPrint(34, "=================== Test Case ===================")
@@ -6569,13 +6866,13 @@ function Test:Resumption_FULL_disconnect_withRegisteredApp()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionActive_withRegisteredApp")
 
 --======================================================================================--
 --Resumption with postponing because of VR.Started 
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_VRsessionActive_withRegisteredApp")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came before RAI request
@@ -6645,21 +6942,20 @@ function Test:ResumptionHMIlevelFULL_Disconnect_VRsessionActive_withRegisteredAp
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
------------------------------------------------------------------------------------------
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive_withRegisteredApp")
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
   notificationState.EmergencyEvent = true
 
   self.mobileSession:StartService(7)
@@ -6677,7 +6973,7 @@ function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive_withRegiste
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
             notificationState.EmergencyEvent = false
           end
 
@@ -6720,22 +7016,21 @@ function Test:ResumptionHMIlevelFULL_Disconnect_EmergencyEventActive_withRegiste
 end
 
 
------------------------------------------------------------------------------------------
+--======================================================================================--
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
+--======================================================================================--
+
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_withRegisteredApp")
 
---======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
---======================================================================================--
-
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
   notificationState.PhoneCall = true
 
   self.mobileSession:StartService(7)
@@ -6753,7 +7048,7 @@ function Test:ResumptionHMIlevelFULL_Disconnect_PhoneCallActive_withRegisteredAp
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
             notificationState.PhoneCall = false
           end
 
@@ -6831,7 +7126,8 @@ if
   Test.appHMITypes["NAVIGATION"] == true or
   Test.appHMITypes["COMMUNICATION"] == true then
 
-  --======================================================================================--
+
+--======================================================================================--
 --Resumption without postponing
 --======================================================================================--
 function Test:Precondition_DeactivateToLimited_ResumptionByTMDisconnect()
@@ -6912,14 +7208,13 @@ function Test:Resumption_LIMITED_disconnect_withRegisteredApp()
     end)
 end
 
------------------------------------------------------------------------------------------
---Precondition:Close, creation session
-CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive_withRegisteredApp", "LIMITED")
-
 
 --======================================================================================--
 --Resumption with postponing because of VR.Started 
 --======================================================================================--
+
+--Precondition:Close, creation session
+CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive_withRegisteredApp", "LIMITED")
 
 ------------------------------------------------------------------------------------------
 --Resumption with postponing: VR.Started came before RAI request
@@ -6985,21 +7280,20 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_VRsessionActive_withRegistere
 end
 
 --======================================================================================--
---Resumption with postponing because of BC.OnEmergencyEvent
+--Resumption with postponing because of OnEventChanged(EMERGENCY_EVENT)
 --======================================================================================--
 
------------------------------------------------------------------------------------------
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive_withRegisteredApp", "LIMITED")
 
 ------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnEmergencyEvent(true) came before RAI request
+--Resumption with postponing: OnEventChanged(EMERGENCY_EVENT=true) came before RAI request
 ------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="EMERGENCY_EVENT"})
   notificationState.EmergencyEvent = true
 
   self.mobileSession:StartService(7)
@@ -7017,7 +7311,7 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive_withRegi
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="EMERGENCY_EVENT"})
             notificationState.EmergencyEvent = false
           end
 
@@ -7055,22 +7349,22 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_EmergencyEventActive_withRegi
     end)
 end
 
------------------------------------------------------------------------------------------
+--======================================================================================--
+--Resumption with postponing because of OnEventChange(PHONE_CALL)
+--======================================================================================--
+
+------------------------------------------------------------------------------------------
+--Resumption with postponing: OnEventChange(PHONE_CALL=true) came before RAI request
+------------------------------------------------------------------------------------------
+
 --Precondition:Close, creation session
 CloseSessionStartSession(self, "ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive_withRegisteredApp", "LIMITED")
 
---======================================================================================--
---Resumption with postponing because of BC.OnPhoneCall
---======================================================================================--
-
-------------------------------------------------------------------------------------------
---Resumption with postponing: BC.OnPhoneCall(true) came before RAI request
-------------------------------------------------------------------------------------------
 
 function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive_withRegisteredApp()
   userPrint(34, "=================== Test Case ===================")
 
-  self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = true})
+  self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= true, eventName="PHONE_CALL"})
   notificationState.PhoneCall = true
 
   self.mobileSession:StartService(7)
@@ -7088,7 +7382,7 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive_withRegistere
       self.mobileSession:ExpectResponse(correlationId, { success = true })
         :Do(function(_,data)
           local function to_run()
-            self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+            self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged",{isActive= false, eventName="PHONE_CALL"})
             notificationState.PhoneCall = false
           end
 
@@ -7157,6 +7451,10 @@ function Test:ResumptionHMIlevelLIMITED_Disconnect_PhoneCallActive_withRegistere
     end)
   end
 end
+
+---------------------------------------------------------------------------------------------
+-------------------------------------------Postcondition-------------------------------------
+---------------------------------------------------------------------------------------------
 
 function Test:Postcondition_RestoreIniFile()
   commonPreconditions:RestoreFile("smartDeviceLink.ini")
