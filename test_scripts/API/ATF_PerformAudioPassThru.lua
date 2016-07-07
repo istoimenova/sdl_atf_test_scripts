@@ -425,10 +425,6 @@ end
 	--2. Activate application
 	commonSteps:ActivationApp()
 
-	--3. Update policy to allow request
-	policyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_OmittedPerformAudioPassThru.json", "files/PTU_ForPerformAudioPassThru.json")
-
-
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
 --CommonRequestCheck: Check of mandatory/conditional request's parameters (mobile protocol)--
@@ -8631,20 +8627,6 @@ end
 	APPLINK_16126()
 
 	--End Test suit DifferentHMIlevel
-
-
----------------------------------------------------------------------------------------------
--------------------------------------------Postcondition-------------------------------------
----------------------------------------------------------------------------------------------
-
-	--Print new line to separate Postconditions
-	commonFunctions:newTestCasesGroup("Postconditions")
-
-
-	--Restore sdl_preloaded_pt.json
-	policyTable:Restore_preloaded_pt()
-
-
 
  return Test
 
