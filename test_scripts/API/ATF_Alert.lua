@@ -6,7 +6,11 @@ local mobile_session = require('mobile_session')
 
 require('user_modules/AppTypes')
 
-local imageValues = {"a", "icon.png", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"}
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+--ToDo: shall be removed when APPLINK-16610 is fixed
+config.defaultProtocolVersion = 2
+
+local imageValues = {"action.png", "a", "icon.png", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"}
 local imageTypes ={"STATIC", "DYNAMIC"}
 
 local function ExpectOnHMIStatusWithAudioStateChanged(self, request, timeout, level)
@@ -87,150 +91,261 @@ end
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
 	--Begin Precondition.1
-	--Description: Activation off application
-	
-	function Test:ActivationApp()
+	--Description: Allow GetVehicleData in all levels
+	function Test:StopSDLToBackUpPreloadedPt( ... )
+		-- body
+		StopSDL()
+		DelayedExp(1000)
+	end
 
-		--hmi side: sending SDL.ActivateApp request
-	  	local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
+	function Test:BackUpPreloadedPt()
+		-- body
+		os.execute('cp ' .. config.pathToSDL .. 'sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+		os.execute('rm ' .. config.pathToSDL .. 'policy.sqlite')
+	end
 
-	  	--hmi side: expect SDL.ActivateApp response
-		EXPECT_HMIRESPONSE(RequestId)
-			:Do(function(_,data)
-				--In case when app is not allowed, it is needed to allow app
-		    	if
-		        	data.result.isSDLAllowed ~= true then
+	function Test:ModifyPreloadedPt(pathToFile)
+		-- body
+		pathToFile = config.pathToSDL .. 'sdl_preloaded_pt.json'
+		local file  = io.open(pathToFile, "r")
+		local json_data = file:read("*all") -- may be abbreviated to "*a";
+		file:close()
 
-		        		--hmi side: sending SDL.GetUserFriendlyMessage request
-		            	local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", 
-									        {language = "EN-US", messageCodes = {"DataConsent"}})
+		local json = require("modules/json")
+		 
+		local data = json.decode(json_data)
+		for k,v in pairs(data.policy_table.functional_groupings) do
+			if (data.policy_table.functional_groupings[k].rpcs == nil) then
+			    --do
+			    data.policy_table.functional_groupings[k] = nil
+			else
+			    --do
+			    local count = 0
+			    for _ in pairs(data.policy_table.functional_groupings[k].rpcs) do count = count + 1 end
+			    if (count < 30) then
+			        --do
+					data.policy_table.functional_groupings[k] = nil
+			    end
+			end
+		end
 
-		            	--hmi side: expect SDL.GetUserFriendlyMessage response
-	    			  	--TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-							EXPECT_HMIRESPONSE(RequestId)
-							:Do(function(_,data)
+		data.policy_table.functional_groupings.AlertGroup = {}
+		data.policy_table.functional_groupings.AlertGroup.rpcs = {}
+		data.policy_table.functional_groupings.AlertGroup.rpcs.Alert = {}
+		data.policy_table.functional_groupings.AlertGroup.rpcs.Alert.hmi_levels = {'FULL', 'LIMITED', 'BACKGROUND'}
 
-			    			    --hmi side: send request SDL.OnAllowSDLFunctionality
-			    			    self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", 
-			    			    	{allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+		data.policy_table.app_policies.default.keep_context = true
+		data.policy_table.app_policies.default.steal_focus = true
+		data.policy_table.app_policies.default.priority = "NORMAL"
+		data.policy_table.app_policies.default.groups = {"Base-4", "AlertGroup"}
+		
+		data = json.encode(data)
+		-- print(data)
+		-- for i=1, #data.policy_table.app_policies.default.groups do
+		-- 	print(data.policy_table.app_policies.default.groups[i])
+		-- end
+		file = io.open(pathToFile, "w")
+		file:write(data)
+		file:close()
+	end
 
-			    			    --hmi side: expect BasicCommunication.ActivateApp request
-					            EXPECT_HMICALL("BasicCommunication.ActivateApp")
-					            	:Do(function(_,data)
+	local function StartSDLAfterChangePreloaded()
+		-- body
 
-					            		--hmi side: sending BasicCommunication.ActivateApp response
-							          	self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+		Test["Precondition_StartSDL"] = function(self)
+			StartSDL(config.pathToSDL, config.ExitOnCrash)
+			DelayedExp(1000)
+		end
 
-							        end)
-							        :Times(2)
-			              	end)
+		Test["Precondition_InitHMI_1"] = function(self)
+			self:initHMI()
+		end
 
-				end
-		      end)
+		Test["Precondition_InitHMI_onReady_1"] = function(self)
+			self:initHMI_onReady()
+		end
 
-		--mobile side: expect OnHMIStatus notification
-	  	EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"})	
+		Test["Precondition_ConnectMobile_1"] = function(self)
+			self:connectMobile()
+		end
+
+		Test["Precondition_StartSession_1"] = function(self)
+			self.mobileSession = mobile_session.MobileSession(self, self.mobileConnection)
+		end
 
 	end
 
+	StartSDLAfterChangePreloaded()
+
+	function Test:RestorePreloadedPt()
+		-- body
+		os.execute('cp ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'sdl_preloaded_pt.json')
+		os.execute('rm ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+	end
 	--End Precondition.1
 
 	--Begin Precondition.2
-	--Description: Update Policy with Alert softButtons are true
-	function Test:Precondition_PolicyUpdate()
-		--hmi side: sending SDL.GetURLS request
-		local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-		
-		--hmi side: expect SDL.GetURLS response from HMI
-		EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-		:Do(function(_,data)
-			--print("SDL.GetURLS response is received")
-			--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-			self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-				{
-					requestType = "PROPRIETARY",
-					fileName = "filename"
-				}
-			)
-			--mobile side: expect OnSystemRequest notification 
-			EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-			:Do(function(_,data)
-				--print("OnSystemRequest notification is received")
-				--mobile side: sending SystemRequest request 
-				local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-					{
-						fileName = "PolicyTableUpdate",
-						requestType = "PROPRIETARY"
-					},
-				"files/PTU_AlertSoftButtonsTrue.json")
-				
-				local systemRequestId
-				--hmi side: expect SystemRequest request
-				EXPECT_HMICALL("BasicCommunication.SystemRequest")
-				:Do(function(_,data)
-					systemRequestId = data.id
-					--print("BasicCommunication.SystemRequest is received")
-					
-					--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-					self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-						{
-							policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-						}
-					)
-					function to_run()
-						--hmi side: sending SystemRequest response
-						self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-					end
-					
-					RUN_AFTER(to_run, 500)
-				end)
-				
-				--hmi side: expect SDL.OnStatusUpdate
-				EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-				:ValidIf(function(exp,data)
-					if 
-						exp.occurences == 1 and
-						data.params.status == "UP_TO_DATE" then
-							return true
-					elseif
-						exp.occurences == 1 and
-						data.params.status == "UPDATING" then
-							return true
-					elseif
-						exp.occurences == 2 and
-						data.params.status == "UP_TO_DATE" then
-							return true
-					else 
-						if 
-							exp.occurences == 1 then
-								print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-						elseif exp.occurences == 2 then
-								print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-						end
-						return false
-					end
-				end)
-				:Times(Between(1,2))
-				
-				--mobile side: expect SystemRequest response
-				EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-				:Do(function(_,data)
-					--print("SystemRequest is received")
-					--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-					local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-					
-					--hmi side: expect SDL.GetUserFriendlyMessage response
-					-- TODO: update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-					EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage)
-					:Do(function(_,data)
-						print("SDL.GetUserFriendlyMessage is received")			
-					end)
-				end)
-				
-			end)
+	--Description: Activation application			
+	local GlobalVarAppID = 0
+	function RegisterApplication(self)
+		-- body
+		local corrID = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+
+		EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+		:Do(function (_, data)
+			-- body
+			GlobalVarAppID = data.params.application.appID
+		end)
+
+		EXPECT_RESPONSE(corrID, {success = true})
+
+		-- delay - bug of ATF - it is not wait for UpdateAppList and later
+		-- line appID = self.applications["Test Application"]} will not assign appID
+		DelayedExp(1000)
+	end
+
+	function Test:RegisterApp()
+		-- body
+		self.mobileSession:StartService(7)
+		:Do(function (_, data)
+			-- body
+			RegisterApplication(self)
 		end)
 	end
 	--End Precondition.2
+
+	--Begin Precondition.1
+	--Description: Activation application		
+		function Test:ActivationApp()			
+			--hmi side: sending SDL.ActivateApp request
+			-- local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
+			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = GlobalVarAppID})
+			EXPECT_HMIRESPONSE(RequestId)
+			:Do(function(_,data)
+				if
+					data.result.isSDLAllowed ~= true then
+					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+					
+					--hmi side: expect SDL.GetUserFriendlyMessage message response
+					 --TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+					EXPECT_HMIRESPONSE(RequestId)
+					:Do(function(_,data)						
+						--hmi side: send request SDL.OnAllowSDLFunctionality
+						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+						--hmi side: expect BasicCommunication.ActivateApp request
+						EXPECT_HMICALL("BasicCommunication.ActivateApp")
+						:Do(function(_,data)
+							--hmi side: sending BasicCommunication.ActivateApp response
+							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+						end)
+						:Times(2)
+					end)
+
+				end
+			end)
+			
+			--mobile side: expect notification
+			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
+		end
+	--End Precondition.1
+
+	-- --Begin Precondition.2
+	-- --Description: Update Policy with Alert softButtons are true
+	-- function Test:Precondition_PolicyUpdate()
+	-- 	--hmi side: sending SDL.GetURLS request
+	-- 	local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
+		
+	-- 	--hmi side: expect SDL.GetURLS response from HMI
+	-- 	EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
+	-- 	:Do(function(_,data)
+	-- 		--print("SDL.GetURLS response is received")
+	-- 		--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
+	-- 		self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
+	-- 			{
+	-- 				requestType = "PROPRIETARY",
+	-- 				fileName = "filename"
+	-- 			}
+	-- 		)
+	-- 		--mobile side: expect OnSystemRequest notification 
+	-- 		EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
+	-- 		:Do(function(_,data)
+	-- 			--print("OnSystemRequest notification is received")
+	-- 			--mobile side: sending SystemRequest request 
+	-- 			local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
+	-- 				{
+	-- 					fileName = "PolicyTableUpdate",
+	-- 					requestType = "PROPRIETARY"
+	-- 				},
+	-- 			"files/PTU_AlertSoftButtonsTrue.json")
+				
+	-- 			local systemRequestId
+	-- 			--hmi side: expect SystemRequest request
+	-- 			EXPECT_HMICALL("BasicCommunication.SystemRequest")
+	-- 			:Do(function(_,data)
+	-- 				systemRequestId = data.id
+	-- 				--print("BasicCommunication.SystemRequest is received")
+					
+	-- 				--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
+	-- 				self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
+	-- 					{
+	-- 						policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
+	-- 					}
+	-- 				)
+	-- 				function to_run()
+	-- 					--hmi side: sending SystemRequest response
+	-- 					self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
+	-- 				end
+					
+	-- 				RUN_AFTER(to_run, 500)
+	-- 			end)
+				
+	-- 			--hmi side: expect SDL.OnStatusUpdate
+	-- 			EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
+	-- 			:ValidIf(function(exp,data)
+	-- 				if 
+	-- 					exp.occurences == 1 and
+	-- 					data.params.status == "UP_TO_DATE" then
+	-- 						return true
+	-- 				elseif
+	-- 					exp.occurences == 1 and
+	-- 					data.params.status == "UPDATING" then
+	-- 						return true
+	-- 				elseif
+	-- 					exp.occurences == 2 and
+	-- 					data.params.status == "UP_TO_DATE" then
+	-- 						return true
+	-- 				else 
+	-- 					if 
+	-- 						exp.occurences == 1 then
+	-- 							print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
+	-- 					elseif exp.occurences == 2 then
+	-- 							print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
+	-- 					end
+	-- 					return false
+	-- 				end
+	-- 			end)
+	-- 			:Times(Between(1,2))
+				
+	-- 			--mobile side: expect SystemRequest response
+	-- 			EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
+	-- 			:Do(function(_,data)
+	-- 				--print("SystemRequest is received")
+	-- 				--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
+	-- 				local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
+					
+	-- 				--hmi side: expect SDL.GetUserFriendlyMessage response
+	-- 				-- TODO: update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
+	-- 				EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage)
+	-- 				:Do(function(_,data)
+	-- 					print("SDL.GetUserFriendlyMessage is received")			
+	-- 				end)
+	-- 			end)
+				
+	-- 		end)
+	-- 	end)
+	-- end
+	-- --End Precondition.2
 
 	--Begin Precondition.3
 	--Description: PutFile with file names "a", "icon.png", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"
@@ -422,7 +537,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -445,10 +561,10 @@ end
 							return false
 						end
 					end)
-			 
 
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				ExpectOnHMIStatusWithAudioStateChanged(self)
 
@@ -1130,7 +1246,8 @@ end
 											type = "TEXT",
 										}
 									},
-									speakType = "ALERT"
+									speakType = "ALERT",
+									playTone = true
 								})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -1154,9 +1271,9 @@ end
 						end
 					end)
 			 
-
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -1732,7 +1849,8 @@ end
 													type = "TEXT"
 												}
 											},
-											speakType = "ALERT"
+											speakType = "ALERT",
+											playTone = true
 										})
 							:Do(function(_,data)
 								self.hmiConnection:SendNotification("TTS.Started")
@@ -1756,9 +1874,9 @@ end
 								end
 							end)
 						 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -3100,7 +3218,8 @@ end
 									type = "TEXT",
 								}, 
 							}, 
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -3124,9 +3243,9 @@ end
 							end
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -3999,7 +4118,8 @@ end
 									type = "TEXT",
 								}, 
 							},
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -4023,9 +4143,9 @@ end
 							end
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -5195,7 +5315,8 @@ end
 									type = "TEXT",
 								}, 
 							},
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -5219,9 +5340,9 @@ end
 							end
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -5362,7 +5483,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = false
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -5378,10 +5500,10 @@ end
 
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
-						:Times(0)
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
+						-- :Times(0)
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -5433,8 +5555,11 @@ end
 							RUN_AFTER(alertResponse, 2000)
 						end)
 
+						EXPECT_HMICALL("TTS.Speak", {playTone = true})
+
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT" , appID = self.applications["Test Application"]})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT" , appID = self.applications["Test Application"]})
 
 						--mobile side:Alert response
 					  	self.mobileSession:ExpectResponse(self.mobileSession.correlationId, { success = true, resultCode = "SUCCESS" })
@@ -5488,7 +5613,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -5504,10 +5630,10 @@ end
 
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT", appID = self.applications["Test Application"]})
-						:Times(1)
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT", appID = self.applications["Test Application"]})
+						-- :Times(1)
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -5886,7 +6012,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -5910,9 +6037,9 @@ end
 							end
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self,_,12000)
@@ -9260,7 +9387,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -9279,8 +9407,9 @@ end
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
 
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 					    --hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: Alert response
 						EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "ABORTED", info = "Alert is aborted" })	
@@ -9449,7 +9578,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -9468,8 +9598,9 @@ end
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
 
+					    -- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 					    --hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: Alert response
 						EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "ABORTED", info = "Alert is ABORTED" })	
@@ -11319,44 +11450,44 @@ end
 				end
            --]]
 
-			function Test:Alert_UserDisallowedSuccessFalse() 
+			-- function Test:Alert_UserDisallowedSuccessFalse() 
 
-						 --mobile side: Alert request 	
-						local CorIdAlert = self.mobileSession:SendRPC("Alert",
-						{
+			-- 			 --mobile side: Alert request 	
+			-- 			local CorIdAlert = self.mobileSession:SendRPC("Alert",
+			-- 			{
 						  	 
-							alertText1 = "alertText1",
-							ttsChunks = 
-							{ 
+			-- 				alertText1 = "alertText1",
+			-- 				ttsChunks = 
+			-- 				{ 
 								
-								{ 
-									text = "TTSChunk",
-									type = "TEXT",
-								}, 
-							}, 
-							duration = 3000,
-							softButtons = 
-							{ 
+			-- 					{ 
+			-- 						text = "TTSChunk",
+			-- 						type = "TEXT",
+			-- 					}, 
+			-- 				}, 
+			-- 				duration = 3000,
+			-- 				softButtons = 
+			-- 				{ 
 								
-								{ 
-									type = "IMAGE",
-									 image = 
+			-- 					{ 
+			-- 						type = "IMAGE",
+			-- 						 image = 
 						
-									{ 
-										value = "icon.png",
-										imageType = "STATIC",
-									}, 
-									softButtonID = 1171,
-									systemAction = "DEFAULT_ACTION",
-								}, 
-							}, 
+			-- 						{ 
+			-- 							value = "icon.png",
+			-- 							imageType = "STATIC",
+			-- 						}, 
+			-- 						softButtonID = 1171,
+			-- 						systemAction = "DEFAULT_ACTION",
+			-- 					}, 
+			-- 				}, 
 						
-						}) 
+			-- 			}) 
 					 
-					    --mobile side: Alert response
-					    self.mobileSession:ExpectResponse(CorIdAlert, { success = false, resultCode = "USER_DISALLOWED" })
+			-- 		    --mobile side: Alert response
+			-- 		    self.mobileSession:ExpectResponse(CorIdAlert, { success = false, resultCode = "USER_DISALLOWED" })
 
-			end
+			-- end
 		--End Test case ResultCodeCheck.8
 
 		--Begin Test case ResultCodeCheck.9
@@ -11366,12 +11497,195 @@ end
 
 			--Verification criteria: SDL must return "DISALLOWED, success:false" fo Alert RPC to mobile app IN CASE Alert RPC contains softButton with SystemAction disallowed by policies assigned to this mobile app.
 
-			function Test:Precondition_DisallowedsoftButtons()
-				--hmi side: sending SDL.OnAppPermissionConsent
-				self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = idGroup, name = "AlertGroup"}}, source = "GUI"})
-				-- end)
-				EXPECT_NOTIFICATION("OnPermissionsChange")
+			-- function Test:Precondition_DisallowedsoftButtons()
+			-- 	--hmi side: sending SDL.OnAppPermissionConsent
+			-- 	self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = idGroup, name = "AlertGroup"}}, source = "GUI"})
+			-- 	-- end)
+			-- 	EXPECT_NOTIFICATION("OnPermissionsChange")
+			-- end
+
+			--Begin Precondition.1
+			--Description: Allow GetVehicleData in all levels
+			function Test:StopSDLToBackUpPreloadedPt( ... )
+				-- body
+				StopSDL()
+				DelayedExp(1000)
 			end
+
+			function Test:BackUpPreloadedPt()
+				-- body
+				os.execute('cp ' .. config.pathToSDL .. 'sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+				os.execute('rm ' .. config.pathToSDL .. 'policy.sqlite')
+			end
+
+			function Test:ModifyPreloadedPtAgain(pathToFile)
+				-- body
+				pathToFile = config.pathToSDL .. 'sdl_preloaded_pt.json'
+				local file  = io.open(pathToFile, "r")
+				local json_data = file:read("*all") -- may be abbreviated to "*a";
+				file:close()
+
+				local json = require("modules/json")
+				 
+				local data = json.decode(json_data)
+				for k,v in pairs(data.policy_table.functional_groupings) do
+					if (data.policy_table.functional_groupings[k].rpcs == nil) then
+					    --do
+					    data.policy_table.functional_groupings[k] = nil
+					else
+					    --do
+					    local count = 0
+					    for _ in pairs(data.policy_table.functional_groupings[k].rpcs) do count = count + 1 end
+					    if (count < 30) then
+					        --do
+							data.policy_table.functional_groupings[k] = nil
+					    end
+					end
+				end
+
+				data.policy_table.functional_groupings.AlertGroup = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs.Alert = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs.Alert.hmi_levels = {'FULL', 'LIMITED', 'BACKGROUND'}
+
+				data.policy_table.app_policies.default.keep_context = false
+				data.policy_table.app_policies.default.steal_focus = false
+				data.policy_table.app_policies.default.groups = {"Base-4", "AlertGroup"}
+				
+				data = json.encode(data)
+				-- print(data)
+				-- for i=1, #data.policy_table.app_policies.default.groups do
+				-- 	print(data.policy_table.app_policies.default.groups[i])
+				-- end
+				file = io.open(pathToFile, "w")
+				file:write(data)
+				file:close()
+			end
+
+			local function StartSDLAfterChangePreloaded()
+				-- body
+
+				Test["Precondition_StartSDL"] = function(self)
+					StartSDL(config.pathToSDL, config.ExitOnCrash)
+					DelayedExp(1000)
+				end
+
+				Test["Precondition_InitHMI_1"] = function(self)
+					self:initHMI()
+				end
+
+				Test["Precondition_InitHMI_onReady_1"] = function(self)
+					self:initHMI_onReady()
+				end
+
+				Test["Precondition_ConnectMobile_1"] = function(self)
+					self:connectMobile()
+				end
+
+				Test["Precondition_StartSession_1"] = function(self)
+					self.mobileSession = mobile_session.MobileSession(self, self.mobileConnection)
+				end
+
+			end
+
+			StartSDLAfterChangePreloaded()
+
+			function Test:RestorePreloadedPt()
+				-- body
+				os.execute('cp ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'sdl_preloaded_pt.json')
+				os.execute('rm ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+			end
+			--End Precondition.1
+
+			--Begin Precondition.2
+			--Description: Activation application			
+			GlobalVarAppID = 0
+			function RegisterApplication(self)
+				-- body
+				local corrID = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+
+				EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+				:Do(function (_, data)
+					-- body
+					GlobalVarAppID = data.params.application.appID
+				end)
+
+				EXPECT_RESPONSE(corrID, {success = true})
+
+				-- delay - bug of ATF - it is not wait for UpdateAppList and later
+				-- line appID = self.applications["Test Application"]} will not assign appID
+				DelayedExp(1000)
+			end
+
+			function Test:RegisterApp()
+				-- body
+				self.mobileSession:StartService(7)
+				:Do(function (_, data)
+					-- body
+					RegisterApplication(self)
+				end)
+			end
+			--End Precondition.2
+
+			--Begin Precondition.1
+			--Description: Activation application		
+				function Test:ActivationApp()			
+					--hmi side: sending SDL.ActivateApp request
+					-- local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
+					local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = GlobalVarAppID})
+					EXPECT_HMIRESPONSE(RequestId)
+					:Do(function(_,data)
+						if
+							data.result.isSDLAllowed ~= true then
+							local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+							
+							--hmi side: expect SDL.GetUserFriendlyMessage message response
+							 --TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+							EXPECT_HMIRESPONSE(RequestId)
+							:Do(function(_,data)						
+								--hmi side: send request SDL.OnAllowSDLFunctionality
+								self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+								--hmi side: expect BasicCommunication.ActivateApp request
+								EXPECT_HMICALL("BasicCommunication.ActivateApp")
+								:Do(function(_,data)
+									--hmi side: sending BasicCommunication.ActivateApp response
+									self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+								end)
+								:Times(2)
+							end)
+
+						end
+					end)
+					
+					--mobile side: expect notification
+					EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
+				end
+			--End Precondition.1
+
+			--Begin Precondition.3
+			--Description: PutFile with file names "a", "icon.png", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"
+			
+				for i=1,#imageValues do
+					Test["Precondition_" .. "PutImage" .. tostring(imageValues[i])] = function(self)
+
+						--mobile request
+						local CorIdPutFile = self.mobileSession:SendRPC(
+												"PutFile",
+												{
+													syncFileName =imageValues[i],
+													fileType = "GRAPHIC_PNG",
+													persistentFile = false,
+													systemFile = false,	
+												}, "files/icon.png")
+
+						--mobile response
+						EXPECT_RESPONSE(CorIdPutFile, { success = true, resultCode = "SUCCESS"})
+							:Timeout(12000)
+					 
+					end
+				end
+			--End Precondition.
 
 			-- Begin Test case ResultCodeCheck.9.1
 			-- Description: Check Disallowed resultCode by receiving Alert request with softButton systemAction = "KEEP_CONTEXT"
@@ -11423,10 +11737,61 @@ end
 										}
 									
 									})
+				
+				local AlertId
+				EXPECT_HMICALL("UI.Alert")
+				:Do(function(_,data)
+					SendOnSystemContext(self,"ALERT")
+					AlertId = data.id
 
+					local function alertResponse()
+						self.hmiConnection:SendResponse(AlertId, "UI.Alert", "SUCCESS", { })
 
+						SendOnSystemContext(self,"MAIN")
+					end
+
+					RUN_AFTER(alertResponse, 3000)
+				end)
+
+				local SpeakId
+				--hmi side: TTS.Speak request 
+				EXPECT_HMICALL("TTS.Speak", 
+							{	
+								ttsChunks = 
+								{ 
+									
+									{ 
+										text = "TTSChunk",
+										type = "TEXT"
+									}
+								},
+								speakType = "ALERT",
+								playTone = true
+							})
+					:Do(function(_,data)
+						self.hmiConnection:SendNotification("TTS.Started")
+						SpeakId = data.id
+
+						local function speakResponse()
+							self.hmiConnection:SendResponse(SpeakId, "TTS.Speak", "SUCCESS", { })
+
+							self.hmiConnection:SendNotification("TTS.Stopped")
+						end
+
+						RUN_AFTER(speakResponse, 2000)
+
+					end)
+					:ValidIf(function(_,data)
+						if #data.params.ttsChunks == 1 then
+							return true
+						else
+							print("ttsChunks array in TTS.Speak request has wrong element number. Expected 1, actual "..tostring(#data.params.ttsChunks))
+							return false
+						end
+					end)
+					
 			    --mobile side: Alert response
-			    EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "DISALLOWED" })
+			    EXPECT_RESPONSE(CorIdAlert, { success = true, resultCode = "SUCCESS" })
 			
 			
 			end
@@ -11486,10 +11851,61 @@ end
 										}
 									
 									})
+				
+				local AlertId
+				EXPECT_HMICALL("UI.Alert")
+				:Do(function(_,data)
+					SendOnSystemContext(self,"ALERT")
+					AlertId = data.id
 
+					local function alertResponse()
+						self.hmiConnection:SendResponse(AlertId, "UI.Alert", "SUCCESS", { })
+
+						SendOnSystemContext(self,"MAIN")
+					end
+
+					RUN_AFTER(alertResponse, 3000)
+				end)
+
+				local SpeakId
+				--hmi side: TTS.Speak request 
+				EXPECT_HMICALL("TTS.Speak", 
+							{	
+								ttsChunks = 
+								{ 
+									
+									{ 
+										text = "TTSChunk",
+										type = "TEXT"
+									}
+								},
+								speakType = "ALERT",
+								playTone = true
+							})
+					:Do(function(_,data)
+						self.hmiConnection:SendNotification("TTS.Started")
+						SpeakId = data.id
+
+						local function speakResponse()
+							self.hmiConnection:SendResponse(SpeakId, "TTS.Speak", "SUCCESS", { })
+
+							self.hmiConnection:SendNotification("TTS.Stopped")
+						end
+
+						RUN_AFTER(speakResponse, 2000)
+
+					end)
+					:ValidIf(function(_,data)
+						if #data.params.ttsChunks == 1 then
+							return true
+						else
+							print("ttsChunks array in TTS.Speak request has wrong element number. Expected 1, actual "..tostring(#data.params.ttsChunks))
+							return false
+						end
+					end)
 
 			    --mobile side: Alert response
-			    EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "DISALLOWED" })
+			    EXPECT_RESPONSE(CorIdAlert, { success = true, resultCode = "SUCCESS" })
 			
 			end
 
@@ -11562,98 +11978,196 @@ end
 					end)
 
 					--mobile side: OnHMIStatus notifications
-					ExpectOnHMIStatusWithAudioStateChanged(self, "alert")
+					-- ExpectOnHMIStatusWithAudioStateChanged(self, "alert")
 
 			    --mobile side: Alert response
 			    EXPECT_RESPONSE(CorIdAlert, { success = true, resultCode = "SUCCESS" })
 			
 			end
 
-			function Test:Postcondition_PolicyUpdatesoftButtonsTrue()
-					--hmi side: sending SDL.GetURLS request
-					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-					
-					--hmi side: expect SDL.GetURLS response from HMI
-					EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-					:Do(function(_,data)
-						--print("SDL.GetURLS response is received")
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-							{
-								requestType = "PROPRIETARY",
-								fileName = "filename"
-							}
-						)
-						--mobile side: expect OnSystemRequest notification 
-						EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-						:Do(function(_,data)
-							--print("OnSystemRequest notification is received")
-							--mobile side: sending SystemRequest request 
-							local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-								{
-									fileName = "PolicyTableUpdate",
-									requestType = "PROPRIETARY"
-								},
-							"files/PTU_AlertSoftBottonsTrue.json")
-							
-							local systemRequestId
-							--hmi side: expect SystemRequest request
-							EXPECT_HMICALL("BasicCommunication.SystemRequest")
-							:Do(function(_,data)
-								systemRequestId = data.id
-								--print("BasicCommunication.SystemRequest is received")
-								
-								--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-								self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-									{
-										policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-									}
-								)
-								function to_run()
-									--hmi side: sending SystemRequest response
-									self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-								end
-								
-								RUN_AFTER(to_run, 500)
-							end)
-							
-							--hmi side: expect SDL.OnStatusUpdate
-							EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-							:ValidIf(function(exp,data)
-								if 
-									exp.occurences == 1 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								elseif
-									exp.occurences == 1 and
-									data.params.status == "UPDATING" then
-										return true
-								elseif
-									exp.occurences == 2 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								else 
-									if 
-										exp.occurences == 1 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-									elseif exp.occurences == 2 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-									end
-									return false
-								end
-							end)
-							:Times(Between(1,2))
-							
-							--mobile side: expect SystemRequest response
-							EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-							:Do(function(_,data)
-								print("SystemRequest is received")
-							end)
-							
-						end)
-					end)
+			--Begin Precondition.1
+			--Description: Allow GetVehicleData in all levels
+			function Test:StopSDLToBackUpPreloadedPt( ... )
+				-- body
+				StopSDL()
+				DelayedExp(1000)
+			end
+
+			function Test:BackUpPreloadedPt()
+				-- body
+				os.execute('cp ' .. config.pathToSDL .. 'sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+				os.execute('rm ' .. config.pathToSDL .. 'policy.sqlite')
+			end
+
+			function Test:ModifyPreloadedPtAgainAgain(pathToFile)
+				-- body
+				pathToFile = config.pathToSDL .. 'sdl_preloaded_pt.json'
+				local file  = io.open(pathToFile, "r")
+				local json_data = file:read("*all") -- may be abbreviated to "*a";
+				file:close()
+
+				local json = require("modules/json")
+				 
+				local data = json.decode(json_data)
+				for k,v in pairs(data.policy_table.functional_groupings) do
+					if (data.policy_table.functional_groupings[k].rpcs == nil) then
+					    --do
+					    data.policy_table.functional_groupings[k] = nil
+					else
+					    --do
+					    local count = 0
+					    for _ in pairs(data.policy_table.functional_groupings[k].rpcs) do count = count + 1 end
+					    if (count < 30) then
+					        --do
+							data.policy_table.functional_groupings[k] = nil
+					    end
+					end
 				end
-			--End Test case ResultCodeCheck.9.3
+
+				data.policy_table.functional_groupings.AlertGroup = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs.Alert = {}
+				data.policy_table.functional_groupings.AlertGroup.rpcs.Alert.hmi_levels = {'FULL', 'LIMITED', 'BACKGROUND'}
+
+				data.policy_table.app_policies.default.keep_context = true
+				data.policy_table.app_policies.default.steal_focus = true
+				data.policy_table.app_policies.default.priority = "NORMAL"
+				data.policy_table.app_policies.default.groups = {"Base-4", "AlertGroup"}
+				
+				data = json.encode(data)
+				-- print(data)
+				-- for i=1, #data.policy_table.app_policies.default.groups do
+				-- 	print(data.policy_table.app_policies.default.groups[i])
+				-- end
+				file = io.open(pathToFile, "w")
+				file:write(data)
+				file:close()
+			end
+
+			local function StartSDLAfterChangePreloaded()
+				-- body
+
+				Test["Precondition_StartSDL"] = function(self)
+					StartSDL(config.pathToSDL, config.ExitOnCrash)
+					DelayedExp(1000)
+				end
+
+				Test["Precondition_InitHMI_1"] = function(self)
+					self:initHMI()
+				end
+
+				Test["Precondition_InitHMI_onReady_1"] = function(self)
+					self:initHMI_onReady()
+				end
+
+				Test["Precondition_ConnectMobile_1"] = function(self)
+					self:connectMobile()
+				end
+
+				Test["Precondition_StartSession_1"] = function(self)
+					self.mobileSession = mobile_session.MobileSession(self, self.mobileConnection)
+				end
+
+			end
+
+			StartSDLAfterChangePreloaded()
+
+			function Test:RestorePreloadedPt()
+				-- body
+				os.execute('cp ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json' .. ' ' .. config.pathToSDL .. 'sdl_preloaded_pt.json')
+				os.execute('rm ' .. config.pathToSDL .. 'backup_sdl_preloaded_pt.json')
+			end
+			--End Precondition.1
+
+			--Begin Precondition.2
+			--Description: Activation application			
+			GlobalVarAppID = 0
+			function RegisterApplication(self)
+				-- body
+				local corrID = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+
+				EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+				:Do(function (_, data)
+					-- body
+					GlobalVarAppID = data.params.application.appID
+				end)
+
+				EXPECT_RESPONSE(corrID, {success = true})
+
+				-- delay - bug of ATF - it is not wait for UpdateAppList and later
+				-- line appID = self.applications["Test Application"]} will not assign appID
+				DelayedExp(1000)
+			end
+
+			function Test:RegisterApp()
+				-- body
+				self.mobileSession:StartService(7)
+				:Do(function (_, data)
+					-- body
+					RegisterApplication(self)
+				end)
+			end
+			--End Precondition.2
+
+			--Begin Precondition.1
+			--Description: Activation application		
+				function Test:ActivationApp()			
+					--hmi side: sending SDL.ActivateApp request
+					-- local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
+					local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = GlobalVarAppID})
+					EXPECT_HMIRESPONSE(RequestId)
+					:Do(function(_,data)
+						if
+							data.result.isSDLAllowed ~= true then
+							local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+							
+							--hmi side: expect SDL.GetUserFriendlyMessage message response
+							 --TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+							EXPECT_HMIRESPONSE(RequestId)
+							:Do(function(_,data)						
+								--hmi side: send request SDL.OnAllowSDLFunctionality
+								self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+								--hmi side: expect BasicCommunication.ActivateApp request
+								EXPECT_HMICALL("BasicCommunication.ActivateApp")
+								:Do(function(_,data)
+									--hmi side: sending BasicCommunication.ActivateApp response
+									self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+								end)
+								:Times(2)
+							end)
+
+						end
+					end)
+					
+					--mobile side: expect notification
+					EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
+				end
+			--End Precondition.1
+
+			--Begin Precondition.3
+			--Description: PutFile with file names "a", "icon.png", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png"
+			
+				for i=1,#imageValues do
+					Test["Precondition_" .. "PutImage" .. tostring(imageValues[i])] = function(self)
+
+						--mobile request
+						local CorIdPutFile = self.mobileSession:SendRPC(
+												"PutFile",
+												{
+													syncFileName =imageValues[i],
+													fileType = "GRAPHIC_PNG",
+													persistentFile = false,
+													systemFile = false,	
+												}, "files/icon.png")
+
+						--mobile response
+						EXPECT_RESPONSE(CorIdPutFile, { success = true, resultCode = "SUCCESS"})
+							:Timeout(12000)
+					 
+					end
+				end
+			--End Precondition.
 
 		--End Test case ResultCodeCheck.9
 
@@ -13130,7 +13644,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -13154,9 +13669,9 @@ end
 						end
 					end)
 			 
-
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -13330,7 +13845,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -13354,9 +13870,9 @@ end
 						end
 					end)
 			 
-
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -13461,7 +13977,8 @@ end
 										type = "TEXT",
 									} 
 								},
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = true
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -13485,9 +14002,9 @@ end
 							end
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -13544,7 +14061,8 @@ end
 						--hmi side: TTS.Speak request 
 						EXPECT_HMICALL("TTS.Speak", 
 						{	
-							speakType = "ALERT"
+							speakType = "ALERT",
+							playTone = false
 						})
 						:Do(function(_,data)
 							self.hmiConnection:SendNotification("TTS.Started")
@@ -13560,10 +14078,10 @@ end
 
 						end)
 					 
-
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
-						:Times(0)
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
+						-- :Times(0)
 
 						--mobile side: OnHMIStatus notifications
 						ExpectOnHMIStatusWithAudioStateChanged(self)
@@ -13616,8 +14134,11 @@ end
 								RUN_AFTER(alertResponse, 2000)
 							end)
 
+						EXPECT_HMICALL("TTS.Speak", {playTone = true})
+
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
 
 
 						--mobile side: OnHMIStatus notifications
@@ -13671,9 +14192,12 @@ end
 								RUN_AFTER(alertResponse, 2000)
 							end)
 
+						EXPECT_HMICALL("TTS.Speak", {playTone = false})
+
+						-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 						--hmi side: BC.PalayTone request 
-						EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
-							:Times(0)
+						-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone")
+						-- :Times(0)
 
 
 						--mobile side: OnHMIStatus notifications
@@ -16930,7 +17454,8 @@ end
 											text = "Hello!",
 											type = "TEXT",
 										} 
-									}
+									},
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -16962,8 +17487,9 @@ end
 			    		end
 			    	end)
 
+			    -- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 			    --hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 			    --mobile side: Alert response
 			    EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "ABORTED" })
@@ -17125,7 +17651,8 @@ end
 											text = "Hello!",
 											type = "TEXT",
 										} 
-									}
+									},
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -17160,8 +17687,9 @@ end
 			    		end
 			    	end)
 
+			    -- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 			    --hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 			    --mobile side: Alert response
 			    EXPECT_RESPONSE(CorIdAlert, { success = false, resultCode = "ABORTED" })
@@ -17343,7 +17871,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -17367,9 +17896,9 @@ end
 						end
 					end)
 			 
-
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				EXPECT_NOTIFICATION("OnHMIStatus",
@@ -17593,7 +18122,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -17617,9 +18147,9 @@ end
 						end
 					end)
 			 
-
+			 	-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				self.mobileSession1:ExpectNotification("OnHMIStatus",
@@ -17788,7 +18318,8 @@ end
 										type = "TEXT"
 									}
 								},
-								speakType = "ALERT"
+								speakType = "ALERT",
+								playTone = true
 							})
 					:Do(function(_,data)
 						self.hmiConnection:SendNotification("TTS.Started")
@@ -17812,9 +18343,9 @@ end
 						end
 					end)
 			 
-
+				-- due to CRQ APPLINK-17388 this notification is commented out, playTone parameter is moved to TTS.Speak
 				--hmi side: BC.PalayTone request 
-				EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
+				-- EXPECT_HMINOTIFICATION("BasicCommunication.PlayTone",{ methodName = "ALERT"})
 
 				--mobile side: OnHMIStatus notifications
 				ExpectOnHMIStatusWithAudioStateChanged(self,_,_,"BACKGROUND")
