@@ -10,6 +10,10 @@ local SDLConfig = require('user_modules/shared_testcases/SmartDeviceLinkConfigur
 
 ----------------------------------------------------------------------------
 
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+--ToDo: shall be removed when APPLINK-16610 is fixed
+config.defaultProtocolVersion = 2
+
 --local pathToIconFolder =  config.SDLStoragePath .. config.application1.registerAppInterfaceParams.appID .. "_" .. config.deviceMAC
 local storagePath = config.pathToSDL .. SDLConfig:GetValue("AppStorageFolder") .. "/" .. tostring(config.application1.registerAppInterfaceParams.appID .. "_" .. tostring(config.deviceMAC) .. "/")
 
