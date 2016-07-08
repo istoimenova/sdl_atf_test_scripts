@@ -10,6 +10,8 @@ local tcp = require('tcp_connection')
 local file_connection  = require('file_connection') 
 
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+--ToDo: shall be removed when APPLINK-16610 is fixed
+config.defaultProtocolVersion = 2
 config.preloaded = config.pathToSDL .. 'sdl_preloaded_pt.json'
 local defaultSection = "\t\"default\": {\n\t\"keep_context\": false,\n\t\"steal_focus\": false,\n\t\"priority\": \"NONE\",\n\t\"default_hmi\": \"NONE\",\n\t\"groups\": [\"Base-4\", \"Location-1\"]\n\t}"
 local preDataSection = "\t\"pre_DataConsent\": {\n\t\"keep_context\": false,\n\t\"steal_focus\": false,\n\t\"priority\": \"NONE\",\n\t\"default_hmi\": \"NONE\",\n\t\"groups\": [\"BaseBeforeDataConsent\", \"Location-1\"]\n\t}"
