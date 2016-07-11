@@ -158,36 +158,37 @@ end
 		--Description: different conditions of correlationID parameter (invalid, several the same etc.)
 				
 			--Begin Test case CommonRequestCheck.4.1
-			--Description: Check request with correlationID = wrong type			
-				
-				function Test:GenericResponse_InvalidCorrelationID_WrongType__INVALID_DATA()
-				
-					--mobile side: sending not existing request id
-					self.mobileSession.correlationId = self.mobileSession.correlationId + 1
+			--Description: Check request with correlationID = wrong type
 
-					local msg = 
-					{
-						serviceType      = 7,
-						frameInfo        = 0,
-						rpcType          = 0,
-						rpcFunctionId    = 0x0fffffff, 
-						rpcCorrelationId = tostring(self.mobileSession.correlationId),
-						payload          = '{}'
-					}
-					self.mobileSession:Send(msg)
+				-- TODO: need to clarify about ATF usage
+				-- function Test:GenericResponse_InvalidCorrelationID_WrongType__INVALID_DATA()
+				
+				-- 	--mobile side: sending not existing request id
+				-- 	self.mobileSession.correlationId = self.mobileSession.correlationId + 1
+
+				-- 	local msg = 
+				-- 	{
+				-- 		serviceType      = 7,
+				-- 		frameInfo        = 0,
+				-- 		rpcType          = 0,
+				-- 		rpcFunctionId    = 0x0fffffff, 
+				-- 		rpcCorrelationId = tostring(self.mobileSession.correlationId),
+				-- 		payload          = '{}'
+				-- 	}
+				-- 	self.mobileSession:Send(msg)
 					
 					
-					--mobile side: expect GenericResponse response
-					EXPECT_RESPONSE(self.mobileSession.correlationId, { success = false, resultCode = "INVALID_DATA", info = nil })	
-					:ValidIf(function(_,data)
-						if data.rpcFunctionId == GenericResponseID then 
-							return true
-						else
-							print("Response is not correct. Expected: ".. GenericResponseID .." (GenericResponseID), actual: "..tostring(data.rpcFunctionId))
-							return false
-						end
-					end)					
-				end		
+				-- 	--mobile side: expect GenericResponse response
+				-- 	EXPECT_RESPONSE(self.mobileSession.correlationId, { success = false, resultCode = "INVALID_DATA", info = nil })	
+				-- 	:ValidIf(function(_,data)
+				-- 		if data.rpcFunctionId == GenericResponseID then 
+				-- 			return true
+				-- 		else
+				-- 			print("Response is not correct. Expected: ".. GenericResponseID .." (GenericResponseID), actual: "..tostring(data.rpcFunctionId))
+				-- 			return false
+				-- 		end
+				-- 	end)					
+				-- end		
 
 			--End Test case CommonRequestCheck.4.1
 
