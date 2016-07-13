@@ -1213,7 +1213,7 @@ local applicationData =
 		end
 	end
 
-	local function CheckNoDataInAppInfoDat(self)
+	local function CheckNoDataInAppInfoDat(self,ign_cycle)
 		--Requirement id in JAMA/or Jira ID: APPLINK-15991
 		--[Data Resumption] Persistance Data clean up trigger 
 
@@ -1295,7 +1295,7 @@ local applicationData =
 				if( ign_cycle  <= 3) then
 					CheckSavedDataInAppInfoDat(self, ign_cycle)
 				else
-					CheckNoDataInAppInfoDat(self)
+					CheckNoDataInAppInfoDat(self, ign_cycle)
 				end
 			end
 

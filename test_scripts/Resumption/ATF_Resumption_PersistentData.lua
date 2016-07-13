@@ -426,18 +426,19 @@ local json = require("json")
 			isSubscribed = true, 
 			name = btnName
 		})
-
-		--mobile side: expect SubscribeButton response
-		EXPECT_RESPONSE(cid, {success = true, resultCode = "SUCCESS"})
 		:Do(function(_,data)
-			
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
-			EXPECT_NOTIFICATION("OnHashChange")
-			:Do(function(_, data)
-				self.currentHashID = data.payload.hashID
+																		--mobile side: expect SubscribeButton response
+			EXPECT_RESPONSE(cid, {success = true, resultCode = "SUCCESS"})
+			:Do(function(_,data)
+				--Requirement id in JAMA/or Jira ID: APPLINK-15682
+				--[Data Resumption]: OnHashChange
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Do(function(_, data)
+					self.currentHashID = data.payload.hashID
+				end)
 			end)
 		end)
+			
 	end
  
 	local function SubscribleVehicleData(self, requestParam)
@@ -672,17 +673,20 @@ local json = require("json")
 		)
 
 		EXPECT_HMINOTIFICATION("Buttons.OnButtonSubscription", {name = btnName, isSubscribed = false})
-
-		--mobile side: expect SubscribeButton response
-		EXPECT_RESPONSE(cid, {success = true, resultCode = "SUCCESS"})
 		:Do(function(_,data)
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
-			EXPECT_NOTIFICATION("OnHashChange")
-			:Do(function(_, data)
-				self.currentHashID = data.payload.hashID
+			--mobile side: expect SubscribeButton response
+			EXPECT_RESPONSE(cid, {success = true, resultCode = "SUCCESS"})
+			:Do(function(_,data)
+				--Requirement id in JAMA/or Jira ID: APPLINK-15682
+				--[Data Resumption]: OnHashChange
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Do(function(_, data)
+					self.currentHashID = data.payload.hashID
+				end)
 			end)
 		end)
+
+		
 	end
 
 	local function UnsubscribeVehicleData(self, requestParam)
