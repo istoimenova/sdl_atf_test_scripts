@@ -1,6 +1,23 @@
-local Preconditions = {}
 --------------------------------------------------------------------------------------------------------
--- Precondition for SendLocation script execution: Because of APPLINK-17511 SDL defect hmi_capabilities.json need to be updated : added textfields locationName, locationDescription, addressLines, phoneNumber.
+-- List of functions:
+--1. Precondition for SendLocation script execution: Because of APPLINK-17511 SDL defect hmi_capabilities.json need to be updated : added textfields locationName, locationDescription, addressLines, phoneNumber.
+--2. function to update config.lua
+--3. make reserve copy of file (FileName) in /bin folder
+--4. restore origin of file (FileName) in /bin folder
+--5. Updating user connecttest: removing from start app registration and remove closing script after SDL disconnect
+--6. Updating user connecttest: removing initial app registration and start session and closing script after SDL disconnect
+--7. Updating user connecttest: removing closing script after SDL disconnect
+--8. Updating user connecttest: adding self.timeOnReady = timestamp() string to connecttest
+--9. Updating user connecttest: sending Navigation.IsReady{ available = false } from HMI
+--10. Updating user connecttest: adding Buttons.OnButtonSubscription
+--11. Updating user connecttest: adding languages in language array
+--12. Updating user connecttest: removing InitHMI_onReady call
+--------------------------------------------------------------------------------------------------------
+
+local Preconditions = {}
+
+--------------------------------------------------------------------------------------------------------
+--1. Precondition for SendLocation script execution: Because of APPLINK-17511 SDL defect hmi_capabilities.json need to be updated : added textfields locationName, locationDescription, addressLines, phoneNumber.
 --------------------------------------------------------------------------------------------------------
 -- Precondition function is added needed fields.
 
@@ -69,7 +86,7 @@ end
 
 
 --------------------------------------------------------------------------------------------------------
--- function to update config.lua
+--2. function to update config.lua
 function Preconditions:UpdateConfig(paramName, valueToSet)
 
   local PathToConfig = "./modules/config.lua"
@@ -101,19 +118,19 @@ end
 
 
 ----------------------------------------------------------------------------------------------
--- make reserve copy of file (FileName) in /bin folder
+--3. make reserve copy of file (FileName) in /bin folder
 function Preconditions:BackupFile(FileName)
   os.execute(" cp " .. config.pathToSDL .. FileName .. " " .. config.pathToSDL .. FileName .. "_origin" )
 end
 
--- restore origin of file (FileName) in /bin folder
+--4. restore origin of file (FileName) in /bin folder
 function Preconditions:RestoreFile(FileName)
   os.execute(" cp " .. config.pathToSDL .. FileName .. "_origin " .. config.pathToSDL .. FileName )
   os.execute( " rm -f " .. config.pathToSDL .. FileName .. "_origin" )
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: removing from start app registration and remove closing script after SDL disconnect
+--5. Updating user connecttest: removing from start app registration and remove closing script after SDL disconnect
 function Preconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnectionRegisterApp(FileName)
 	-- copy initial connecttest.lua to FileName
 	os.execute(  'cp ./modules/connecttest.lua  ./user_modules/'  .. tostring(FileName))
@@ -155,7 +172,7 @@ function Preconditions:Connecttest_without_ExitBySDLDisconnect_WithoutOpenConnec
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: removing close connection  and closing script after SDL disconnect
+--6. Updating user connecttest: removing initial app registration and start session and closing script after SDL disconnect
 function Preconditions:Connecttest_without_ExitBySDLDisconnect_OpenConnection(FileName)
 	-- copy initial connecttest.lua to FileName
 	os.execute(  'cp ./modules/connecttest.lua  ./user_modules/'  .. tostring(FileName))
@@ -189,7 +206,7 @@ function Preconditions:Connecttest_without_ExitBySDLDisconnect_OpenConnection(Fi
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: removing closing script after SDL disconnect
+--7. Updating user connecttest: removing closing script after SDL disconnect
 function Preconditions:Connecttest_without_ExitBySDLDisconnect(FileName)
 	-- copy initial connecttest.lua to FileName
 	os.execute(  'cp ./modules/connecttest.lua  ./user_modules/'  .. tostring(FileName))
@@ -214,7 +231,7 @@ function Preconditions:Connecttest_without_ExitBySDLDisconnect(FileName)
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: adding self.timeOnReady = timestamp() string to connect test
+--8. Updating user connecttest: adding self.timeOnReady = timestamp() string to connecttest
 function Preconditions:Connecttest_adding_timeOnReady(FileName, createFile)
 	if createFile == true then
 		-- copy initial connecttest.lua to FileName
@@ -245,7 +262,7 @@ function Preconditions:Connecttest_adding_timeOnReady(FileName, createFile)
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: sending Navigation.IsReady{ available = false } from HMI
+--9. Updating user connecttest: sending Navigation.IsReady{ available = false } from HMI
 function Preconditions:Connecttest_Navigation_IsReady_available_false(FileName, createFile)
 	if createFile == true then
 		-- copy initial connecttest.lua to FileName
@@ -276,7 +293,7 @@ function Preconditions:Connecttest_Navigation_IsReady_available_false(FileName, 
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: adding Buttons.OnButtonSubscription
+--10. Updating user connecttest: adding Buttons.OnButtonSubscription
 function Preconditions:Connecttest_OnButtonSubscription(FileName, createFile)
 	if createFile == true then
 		-- copy initial connecttest.lua to FileName
@@ -309,7 +326,7 @@ function Preconditions:Connecttest_OnButtonSubscription(FileName, createFile)
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: adding languages in language array
+--11. Updating user connecttest: adding languages in language array
 function Preconditions:Connecttest_Languages_update(FileName, createFile)
 	if createFile == true then
 		-- copy initial connecttest.lua to FileName
@@ -414,7 +431,7 @@ function Preconditions:Connecttest_Languages_update(FileName, createFile)
 end
 
 --------------------------------------------------------------------------------------------------------
--- Updating user connect test: removing InitHMI_onReady call
+--12. Updating user connecttest: removing InitHMI_onReady call
 function Preconditions:Connecttest_InitHMI_onReady_call(FileName, createFile)
 	if createFile == true then
 		-- copy initial connecttest.lua to FileName

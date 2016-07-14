@@ -9,6 +9,11 @@
 --8. Register application
 --9. StartSession
 --10. DeleteLogsFileAndPolicyTable
+--11. Check file existence
+--12. Respore original .ini file from appMain
+--13. Check SDL path
+--14. delete PT
+--15. Restoring file from appMain folder
 ---------------------------------------------------------------------------------------------
 
 local commonSteps = {}
@@ -455,7 +460,7 @@ function commonSteps:RestoreIniFile()
 
 end
 
---13. delete PT
+--13. Check SDL path
 function commonSteps:CheckSDLPath()
 	--Verify config.pathToSDL
 	findresultFirstCharacters = string.match (config.pathToSDL, '^%.%/')
@@ -493,7 +498,7 @@ function commonSteps:DeletePolicyTable()
 	
 end
 
--- 14. Restoring file from appMain folder
+-- 15. Restoring file from appMain folder
 function commonSteps:RestoreFileFromAppMainFolder(fileName)
 
 	self:CheckSDLPath()

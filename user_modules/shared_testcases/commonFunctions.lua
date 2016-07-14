@@ -13,6 +13,7 @@ local json = require('json4lua/json/json')
 ------------------------------------------ Functions ----------------------------------------
 ---------------------------------------------------------------------------------------------
 --List of group functions:
+--0. Common finctions: check application type, print with some set color
 --1. Functions for String
 --2. Functions for Table
 --3. Functions for Test Case
@@ -23,8 +24,12 @@ local json = require('json4lua/json/json')
 --8. Functions for Notification
 --9. Functions for checking the existence
 --10. Functions for updated .ini file
+--11. Function for updating PendingRequestsAmount in .ini file to test TOO_MANY_PENDING_REQUESTS resultCode
+--12. Functions array of structures
 ---------------------------------------------------------------------------------------------
 
+--0. Common finctions
+---------------------------------------------------------------------------------------------
 --return true if app is media or navigation
 function commonFunctions:isMediaApp()
 
@@ -39,6 +44,7 @@ function commonFunctions:isMediaApp()
 
 end
 
+-- print with some set color
 function commonFunctions:userPrint( color, message)
   print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
 end
