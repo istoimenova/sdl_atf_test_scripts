@@ -7,6 +7,9 @@ local commonPreconditions = require('user_modules/shared_testcases/commonPrecond
 --Precondition: preparation connecttest_Navigation_isReady_unavailable.lua
 commonPreconditions:Connecttest_Navigation_IsReady_available_false("connecttest_Navigation_isReady_unavailable.lua", true)
 
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+--ToDo: shall be removed when APPLINK-16610 is fixed
+config.defaultProtocolVersion = 2
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
