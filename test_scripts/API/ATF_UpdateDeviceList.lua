@@ -24,6 +24,7 @@ local mobile  = require('mobile_connection')
 
 require('user_modules/AppTypes')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
+local SDLConfig = require('user_modules/shared_testcases/SmartDeviceLinkConfigurations')
 
 ----------------------------------------------------------------------------
 -- Postcondition: removing user_modules/connecttest_UpdateDeviceList.lua
@@ -145,6 +146,14 @@ local Connections = {
 local deviceListArray = {}
 
 
+-- Storage path
+local StoragePath = SDLConfig:GetValue("AppStorageFolder")
+if 
+	not StoragePath or
+	StoragePath == "" then
+	StoragePath = 'storage'
+end
+
 ---------------------------------------------------------------------------------------------
 ------------------------------------------Common functions-----------------------------------
 ---------------------------------------------------------------------------------------------
@@ -168,23 +177,20 @@ end
 
 -- Check direcrory existence 
 local function Directory_exist(DirectoryPath)
-	local returnValue
-
-	local Command = assert( io.popen(  "[ -d " .. tostring(DirectoryPath) .. " ] && echo \"Exist\" || echo \"NotExist\"" , 'r'))
-	local CommandResult = tostring(Command:read( '*l' ))
-
-	if 
-		CommandResult == "NotExist" then
-			returnValue = false
-	elseif 
-		CommandResult == "Exist" then
-		returnValue =  true
-	else 
-		commonFunctions:userPrint(31," Some unexpected result in Directory_exist function, CommandResult = " .. tostring(CommandResult))
-		returnValue = false
-	end
-
-	return returnValue
+    if type( DirectoryPath ) ~= 'string' then
+            error('Directory_exist : Input parameter is not string : ' .. type(DirectoryPath) )
+            return false
+    else
+        local response = os.execute( 'cd ' .. DirectoryPath .. " 2> /dev/null" )
+        -- ATf returns as result of 'os.execute' boolean value, lua interp returns code. if conditions process result as for lua enterp and for ATF.
+        if response == nil or response == false then
+            return false
+        end
+        if response == true then
+            return true
+        end
+        return response == 0;
+    end
 end
 
 
@@ -197,14 +203,14 @@ local function RestartSDL(prefix, DeleteStorageFolder)
 
 	if DeleteStorageFolder then
 		Test["DeleteStorageFolder_" .. tostring(prefix)] = function(self)
-			local ExistDirectoryResult = Directory_exist( tostring(config.pathToSDL .. "storage"))
+			local ExistDirectoryResult = Directory_exist( tostring(config.pathToSDL .. StoragePath))
 			if ExistDirectoryResult == true then
-				local RmFolder  = assert( os.execute( "rm -rf " .. tostring(config.pathToSDL .. "storage" )))
+				local RmFolder  = assert( os.execute( "rm -rf " .. tostring(config.pathToSDL .. StoragePath )))
 				if RmFolder ~= true then
-					commonFunctions:userPrint(31, "Folder 'storage' is not deleted")
+					commonFunctions:userPrint(31, "Folder '" .. StoragePath .. "' is not deleted")
 				end
 			else
-				commonFunctions:userPrint(33, "Folder 'storage' is absent")
+				commonFunctions:userPrint(33, "Folder '" .. StoragePath .. "' is absent")
 			end
 		end
 	end
@@ -250,29 +256,33 @@ function ConsentDevice(self, allowedValue, idValue, nameValue)
 		end)
 end
 
+--DB query
+local function Exec(cmd) 
+    local function trim(s)
+      return s:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+    local aHandle = assert(io.popen(cmd , 'r'))
+    local output = aHandle:read( '*a' )
+    return trim(output)
+end
+
 local function DataBaseQuery(self,  DBQueryV)
-	local i = 0
-	local DBQueryValue
-	repeat
-	 	i= i+1
-		os.execute(" sleep 1 ")
-		local DBQuery = "sqlite3 " .. tostring(config.pathToSDL) .. "storage/policy.sqlite \"" .. tostring(DBQueryV) .. "\""
 
-		local aHandle = assert( io.popen( DBQuery , 'r'))
-
-		DBQueryValue = aHandle:read( '*l' )
-
-		if i == 10 then
-			break
-		end
-	until DBQueryValue ~= "" or DBQueryValue ~= " "
-
-	if
-		DBQueryValue == "" or DBQueryValue == " " then
-		return false
-	else
-		return DBQueryValue
-	end
+    local function query_success(output)
+        if output == "" or DBQueryValue == " " then return false end
+        local f, l = string.find(output, "Error:")
+        if f == 1 then return false end
+        return true;
+    end
+    for i=1,10 do 
+        local DBQuery = 'sqlite3 ' .. config.pathToSDL .. StoragePath .. '/policy.sqlite "' .. tostring(DBQueryV) .. '"'
+        DBQueryValue = Exec(DBQuery)
+        if query_success(DBQueryValue) then
+            return DBQueryValue
+        end
+        os.execute(" sleep 1 ")
+    end
+    return false
 end
 
 local function CheckArrayValues(elementValue)
