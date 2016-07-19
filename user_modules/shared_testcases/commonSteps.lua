@@ -14,6 +14,8 @@
 --13. Check SDL path
 --14. delete PT
 --15. Restoring file from appMain folder
+--16. Check directory existence
+--17. DB query
 ---------------------------------------------------------------------------------------------
 
 local commonSteps = {}
@@ -510,6 +512,63 @@ function commonSteps:RestoreFileFromAppMainFolder(fileName)
 	OriginalIniFile = PathToSDLWihoutBin .. "src/appMain/" .. tostring(fileName)
 
 	os.execute( " cp " .. tostring(OriginalIniFile) .. " " .. tostring(config.pathToSDL) .. "" )
+end
+
+-- 16. Check directory existence 
+function commonSteps:Directory_exist(DirectoryPath)
+    if type( DirectoryPath ) ~= 'string' then
+            error('Directory_exist : Input parameter is not string : ' .. type(DirectoryPath) )
+            return false
+    else
+        local response = os.execute( 'cd ' .. DirectoryPath .. " 2> /dev/null" )
+        -- ATf returns as result of 'os.execute' boolean value, lua interp returns code. if conditions process result as for lua enterp and for ATF.
+        if response == nil or response == false then
+            return false
+        end
+        if response == true then
+            return true
+        end
+        return response == 0;
+    end
+end
+
+-- 17. DB query
+local function Exec(cmd) 
+    local function trim(s)
+      return s:gsub("^%s+", ""):gsub("%s+$", "")
+    end
+    local aHandle = assert(io.popen(cmd , 'r'))
+    local output = aHandle:read( '*a' )
+    return trim(output)
+end
+
+function commonSteps:DataBaseQuery(DBQueryV)
+
+    self:CheckSDLPath()
+
+    -- Storage path
+	local StoragePath = SDLConfig:GetValue("AppStorageFolder")
+	if 
+		not StoragePath or
+		StoragePath == "" then
+		StoragePath = 'storage'
+	end
+
+    local function query_success(output)
+        if output == "" or DBQueryValue == " " then return false end
+        local f, l = string.find(output, "Error:")
+        if f == 1 then return false end
+        return true;
+    end
+    for i=1,10 do 
+        local DBQuery = 'sqlite3 ' .. config.pathToSDL .. StoragePath .. '/policy.sqlite "' .. tostring(DBQueryV) .. '"'
+        DBQueryValue = Exec(DBQuery)
+        if query_success(DBQueryValue) then
+            return DBQueryValue
+        end
+        os.execute(" sleep 1 ")
+    end
+    return false
 end
 
 return commonSteps
