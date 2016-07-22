@@ -21,10 +21,8 @@ local stringParameterInResponse = require('user_modules/shared_testcases/testCas
 	--7. IsInvalidCharacters
 ---------------------------------------------------------------------------------------------
 
-
 --Contains all test cases
 function testCasesForArrayStringParameterInResponse:verify_Array_Struct_Parameter(Response, Parameter, Boundary,  Struct, Mandatory)
-
 
 		--Print new line to separate new test cases group
 		commonFunctions:newTestCasesGroup(Parameter)	
@@ -36,26 +34,23 @@ function testCasesForArrayStringParameterInResponse:verify_Array_Struct_Paramete
 		else
 			resultCode = "SUCCESS"
 		end
-		--print ("verify_Array_String_Parameter__________")
-		--print_table (Response)
-		commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, resultCode)		
+		
+		if Boundary[1] ==0 then
+			commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, resultCode)		
+		end
 		
 		--2. IsLowerBound
 		local verification = "IsLowerBound"
 		if Boundary[1] > 0 then
-			verification = "IsLowerBound_IsEmpty"
 			local value = commonFunctions:createArrayStruct(Boundary[1], Struct)
 			commonFunctions:TestCaseForResponse(self, Response, Parameter, verification, value, "SUCCESS")
 		else
 			-- Boundary = 0 ==> Is covered by _element_IsMissed_
 		end
 		
-		
-		
 		--3. IsUpperBound
 		local value = commonFunctions:createArrayStruct(Boundary[2], Struct)
 		commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsUpperBound", value, "SUCCESS")
-		--print_table (Struct)
 		
 		--4. IsOutLowerBound/IsEmpty
 		if Boundary[1] ==1 then
@@ -86,7 +81,6 @@ function testCasesForArrayStringParameterInResponse:verify_Array_Struct_Paramete
 		local parameter_arrayElement = commonFunctions:BuildChildParameter(Parameter, 1) -- element #1
 
 		--stringParameterInResponse:verify_String_Parameter(TestingResponse, parameter_arrayElement, ElementBoundary, nil) --nil: not check missed element
-		
 		
 end
 ---------------------------------------------------------------------------------------------

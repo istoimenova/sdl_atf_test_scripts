@@ -697,8 +697,8 @@ end
 ---------------------------------------------------------------------------------------------
 function commonFunctions:createArrayStruct(size, Struct)
 
-	if length == nil then
-		length = 1
+	if size == nil then
+		size = 1
 	end
 
 	local temp = {}
