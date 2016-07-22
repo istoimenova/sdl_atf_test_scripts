@@ -26,11 +26,11 @@ local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 local integerParameter = require('user_modules/shared_testcases/testCasesForIntegerParameter')
 local arrayIntergerParameterInResponse = require('user_modules/shared_testcases/testCasesForArrayIntegerParameterInResponse')
-local arrayStringParameterInResponse = require('user_modules/shared_testcases/testCasesForArrayStringParameterInResponse')
 local stringParameterInResponse = require('user_modules/shared_testcases/testCasesForStringParameterInResponse')
 local arrayStructParameterInResponse = require('user_modules/shared_testcases/testCasesForArrayStructParameterInResponse')
 local doubleParameterInResponse = require('user_modules/shared_testcases/testCasesForDoubleParameterInResponse')
 local imageParameterInResponse = require('user_modules/shared_testcases/testCasesForImageParameterInResponse')
+local enumerationParameter = require('user_modules/shared_testcases/testCasesForEnumerationParameter')
 ----------------------------------------------------------------------------
 -- User required files
 require('user_modules/AppTypes')
@@ -210,8 +210,7 @@ function Test:verify_GENERIC_ERROR_Response_Case(Response)
     end)
 
   --mobile side: expect the response
-  --EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Received invalid data on HMI response" })
-  EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond" })
+  EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system" })
   :Timeout(11000)
 end
 
@@ -294,59 +293,35 @@ policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FU
 -------------------------------------------TEST BLOCK I----------------------------------------
 --------------------------------Check normal cases of Mobile request---------------------------
 -----------------------------------------------------------------------------------------------
-
+--Requirement id in JIRA:
+-- APPLINK-21532
+-- APPLINK-21892
+-- APPLINK-24150
+-- APPLINK-16739
+-- APPLINK-21516
+-- APPLINK-21519
+-- APPLINK-21521
+-- APPLINK-21884
 -----------------------------------------------------------------------------------------------
 --Common Test cases:
---1. Positive cases
---2. All parameters are lower bound
---3. All parameters are upper bound
---4. Mandatory only
-
+--1. Positive cases (check with too values of WayPointType)
+--2. IsMissed
+--3. IsWrongTypeData
+--4. IsNoneExistenValue
+--5. IsEmpty
 -----------------------------------------------------------------------------------------------
-
+-- <param name="wayPointType" type="WayPointType" defvalue="ALL" mandatory="true">
 -----------------------------------------------------------------------------------------------
+-- NhungTT was updated this testing block to cover APPLINK-24150 and APPLINK-24149
 
---Check 1.1
-local Request = {
+local WaypoinType = {
+						"ALL",
+						"DESTINATION"
+					}
 
-  wayPointType = "ALL"
-}
-function Test:GetWayPoints_Positive_wayPointType_ALL()
-  self:verify_SUCCESS_Case(Request)
-end
+local Request = {wayPointType = "ALL"}
 
---- End check 1.1
--------------------------------------------------------------------------------------------------
---Check 1.2
-
-local Request = {
-
-  wayPointType = "DESTINATION"
-
-}
-function Test:SendLocation_Positive_wayPointType_DESTINATION()
-  self:verify_SUCCESS_Case(Request)
-end
-
---- End check 1.2
------------------------------------------------------------------------------------------------------
-
------------------------------------------------------------------------------------------------
---List of test cases for Struct type parameter:
---1. IsMissed
---2. IsEmpty
---3. IsWrongType
------------------------------------------------------------------------------------------------
---Requirement id in JAMA or JIRA: APPLINK-22999, APPLINK-21892
-
---1. Test case group
-commonFunctions:newTestCasesGroup({"wayPointType"})
-
---2. IsEmpty: wihtout wayPointType
-commonFunctions:TestCase(self, Request, {"wayPointType"}, "IsEmpty", {}, "INVALID_DATA")
-
---3. IsWrongType
-commonFunctions:TestCase(self, Request, {"wayPointType"}, "IsWrongType", "123", "INVALID_DATA")
+enumerationParameter:verify_Enum_String_Parameter(Request, {"wayPointType"}, WaypoinType, true)
 
 ----------------------------------------------------------------------------------------------
 -----------------------------------------TEST BLOCK II----------------------------------------
@@ -530,14 +505,12 @@ SpecialRequestChecks()
 -------------------------------------------TEST BLOCK III--------------------------------------
 ----------------------------------Check normal cases of HMI response---------------------------
 -----------------------------------------------------------------------------------------------
---Requirement id in Jira: APPLINK-14551, APPLINK-8083, APPLINK-14765, APPLINK-21930
---Verification criteria:
--- SDL behavior: cases when SDL must transfer "info" parameter via corresponding RPC to mobile app
--- In case SDL cuts off fake parameters from response (request) that SDL should transfer to mobile app AND this response (request) is invalid SDL must respond GENERIC_ERROR (success:false, info: "Navigation component does not respond") to mobile app
+-- Requirement:
+-- -- 1. APPLINK-14551: SDL behavior: cases when SDL must transfer "info" parameter via corresponding RPC to mobile app
+-- -- 2. APPLINK-25599: [GENERIC_ERROR] Response from HMI contains wrong characters
+-- -- 3. APPLINK-25602: [GENERIC_ERROR] Response from HMI contains empty String param
+------------------------------------------------------------------------------------------------
 
------------------------------------------------------------------------------------------
-
---[[TODO: check after APPLINK-14765 is resolved
 -----------------------------------------------------------------------------------------------
 --Parameter 1: resultCode
 -----------------------------------------------------------------------------------------------
@@ -552,7 +525,7 @@ SpecialRequestChecks()
 local function verify_resultCode_parameter()
 
   --Print new line to separate new test cases group
-  commonFunctions:newTestCasesGroup(self, "TestCaseGroupForResultCodeParameter")
+  commonFunctions:newTestCasesGroup(self, "TestCaseGroupForResultCodeParameter: resultCode")
   -----------------------------------------------------------------------------------------
 
   --1. IsMissed
@@ -573,7 +546,7 @@ local function verify_resultCode_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -663,7 +636,7 @@ for i =1, #testData do
       end)
 
     --mobile side: expect GetWayPoints response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -684,7 +657,7 @@ for i =1, #testData do
       end)
 
     --mobile side: expect GetWayPoints response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
 end
@@ -706,7 +679,7 @@ verify_resultCode_parameter()
 local function verify_method_parameter()
 
   --Print new line to separate new test cases group
-  commonFunctions:newTestCasesGroup(self, "TestCaseGroupForMethodParameter")
+  commonFunctions:newTestCasesGroup(self, "TestCaseGroupForMethodParameter: method")
   -----------------------------------------------------------------------------------------
 
   --1. IsMissed
@@ -727,7 +700,7 @@ local function verify_method_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -805,7 +778,7 @@ local function verify_method_parameter()
         end)
 
       --mobile side: expect GetWayPoints response
-      EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+      EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
       :Timeout(11000)
     end
     -----------------------------------------------------------------------------------------
@@ -827,14 +800,13 @@ local function verify_method_parameter()
         end)
 
       --mobile side: expect GetWayPoints response
-      EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+      EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
       :Timeout(11000)
     end
   end
 end
 
 verify_method_parameter()
---]]
 
 -- -----------------------------------------------------------------------------------------------
 -- --Parameter 3: info Not implemented yet: APPLINK-14551
@@ -852,7 +824,7 @@ verify_method_parameter()
 -- local function verify_info_parameter()
 
 -- --Print new line to separate new test cases group
--- commonFunctions:newTestCasesGroup(self, "TestCaseGroupForInfoParameter")
+-- commonFunctions:newTestCasesGroup(self, "TestCaseGroupForInfoParameter: info")
 
 -- -----------------------------------------------------------------------------------------
 
@@ -1080,8 +1052,7 @@ verify_method_parameter()
 
 -- verify_info_parameter()
 
--- --[[TODO: check after APPLINK-14765 is resolved
--- -----------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------
 --Parameter 4: correlationID
 -----------------------------------------------------------------------------------------------
 --List of test cases:
@@ -1095,7 +1066,7 @@ verify_method_parameter()
 local function verify_correlationID_parameter()
 
   --Print new line to separate new test cases group
-  commonFunctions:newTestCasesGroup("TestCaseGroupForCorrelationIDParameter")
+  commonFunctions:newTestCasesGroup("Test Suit For Parameter: CorrelationID")
 
   -----------------------------------------------------------------------------------------
 
@@ -1116,7 +1087,7 @@ local function verify_correlationID_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -1137,7 +1108,7 @@ local function verify_correlationID_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -1159,7 +1130,7 @@ local function verify_correlationID_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   -----------------------------------------------------------------------------------------
@@ -1181,7 +1152,7 @@ local function verify_correlationID_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
 
@@ -1203,21 +1174,180 @@ local function verify_correlationID_parameter()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
 end
 
 verify_correlationID_parameter()
 
+---------------------------------------------------------------------------------------------
+-- NhungTT was updated below test cases to cover APPLINK-25599 and APPLINK-25602
+
+local Response = {}
+
+local Response = {}
+
+Response["wayPoints"] =
+{{
+
+    coordinate =
+    {
+      latitudeDegrees = 1.1,
+      longitudeDegrees = 1.1
+    },
+    locationName = "Hotel",
+    addressLines =
+    {
+      "Hotel Bora"
+    },
+    locationDescription = "VIP Hotel",
+    phoneNumber = "Phone39300434",
+    locationImage =
+    {
+      value ="icon.png",
+      imageType ="DYNAMIC",
+    },
+    searchAddress =
+    {
+      countryName = "countryName",
+      countryCode = "countryCode",
+      postalCode = "postalCode",
+      administrativeArea = "administrativeArea",
+      subAdministrativeArea = "subAdministrativeArea",
+      locality = "locality",
+      subLocality = "subLocality",
+      thoroughfare = "thoroughfare",
+      subThoroughfare = "subThoroughfare"
+    }
+
+  }
+}
+
+-- Check different conditions for array of wayPoints
+-- -- <param name="wayPoints" type="LocationDetails" mandatory="false" array="true" minsize="1" maxsize="10">	
+------------------------------------------------------------------------------------------------------------------------------------
+Test["GetWayPoints_Response_Without_Parameters_In_WayPoints_SUCCESS"] = function(self)
+
+  local Response = {}
+  Response["wayPoints"] =
+  {{}}
+
+  self:verify_SUCCESS_Response_Case(Response)
+
+end
+local Struct = Response.wayPoints[1]
+
+arrayStructParameterInResponse:verify_Array_Struct_Parameter(Response, {"wayPoints"}, {1,10}, Struct, false)
+
+-- Check different conditionds for locationName string parameter
+-- -- <param name="locationName" type="String" maxlength="500" mandatory="false">
+------------------------------------------------------------------------------------------------------------------------------------
+stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "locationName"}, {1, 500}, false,false)
+
+-- Check different conditionds for phoneNumber string parameter
+-- -- <param name="phoneNumber" type="String" maxlength="500" mandatory="false">
+------------------------------------------------------------------------------------------------------------------------------------
+stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "phoneNumber"}, {1, 500}, false,false)
+
+-- Check different conditionds for locationDescription string parameter
+-- -- <param name="locationDescription" type="String" maxlength="500" mandatory="false">
+------------------------------------------------------------------------------------------------------------------------------------
+stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "locationDescription"}, {1, 500}, false,false)
+
+-- Check for Double latitudeDegrees and longitudeDegrees parameters in coordinate structure
+-- -- <param name="coordinate" type="Coordinate" mandatory="false"> 
+-- -- -- <param name="latitudeDegrees" minvalue="-90" maxvalue="90" type="Double" mandatory="true"> 
+-- -- -- <param name="longitudeDegrees" minvalue="-180" maxvalue="180" type="Double" mandatory="true">
+---------------------------------------------------------------------------------------------------------------------------------
+local Boundary_longitudeDegrees = {-180, 180}
+local Boundary_latitudeDegrees = {-90, 90}
+
+commonFunctions:newTestCasesGroup(self, "Test Suit For Paramameter: coordinate")
+
+-- Coordinate IsWrongDataType
+commonFunctions:TestCaseForResponse(self, Response, {"wayPoints", 1, "coordinate"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+
+-- Coordiate IsEmpty
+commonFunctions:TestCaseForResponse(self, Response, {"wayPoints", 1, "coordinate"}, "IsEmpty", {}, "GENERIC_ERROR")
+
+-- Check for latitudeDegress
+doubleParameterInResponse:verify_Double_Parameter(Response, {"wayPoints", 1, "coordinate", "latitudeDegrees"}, Boundary_latitudeDegrees, true)
+
+-- Check for longtitudeDegress
+doubleParameterInResponse:verify_Double_Parameter(Response, {"wayPoints", 1, "coordinate", "longitudeDegrees"}, Boundary_longitudeDegrees, true)
+
+-- Check for value and imageType parameters of locationImage structure
+---------------------------------------------------------------------------------------------------------------------------------
+local strMaxLengthFileName255 = string.rep("a", 251) .. ".png" -- set max length file name
+imageParameterInResponse:verify_Image_Parameter(Response, {"wayPoints", 1, "locationImage"}, {"a", strMaxLengthFileName255}, false)
+
+-- Check different conditionds for addressLines string parameter
+-- -- <param name="addressLines" type="String" maxlength="500" minsize="0" maxsize="4" array="true" mandatory="false">
+------------------------------------------------------------------------------------------------------------------------------------
+
+stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "addressLines", 1}, {1, 500}, nil,false)
+
+local Struct_1 = Response.wayPoints[1].addressLines[1]
+arrayStructParameterInResponse:verify_Array_Struct_Parameter(Response, {"wayPoints", 1, "addressLines"}, {0, 4}, Struct_1, false)
+
+-- Check for strings elements of searchAddress parameter
+-- -- <param name="searchAddress" type="OASISAddress" mandatory="false">
+-- -- type="OASISAddress":
+-- -- -- <param name="countryName" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="countryCode" minlength="0" maxlength="50" type="String" mandatory="false">	
+-- -- -- <param name="postalCode" minlength="0" maxlength="16" type="String" mandatory="false">	
+-- -- -- <param name="administrativeArea" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="subAdministrativeArea" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="locality" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="subLocality" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="thoroughfare" minlength="0" maxlength="200" type="String" mandatory="false">	
+-- -- -- <param name="subThoroughfare" minlength="0" maxlength="200" type="String" mandatory="false">	
+
+-----------------------------------------------------------------------------------------------------------------------------------
+commonFunctions:newTestCasesGroup(self, "Test Suit For Paramameter: searchAddress")
+  
+-- searchAddress IsWrongType
+commonFunctions:TestCaseForResponse(self, Response, {"wayPoints", 1, "searchAddress"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+
+-- searchAddress IsEmpty
+commonFunctions:TestCaseForResponse(self, Response, {"wayPoints", 1, "searchAddress"}, "IsEmpty", {}, "SUCCESS")
+
+local Response = {}
+
+Response["wayPoints"] =
+{
+	{
+		phoneNumber = "Phone39300434",
+		searchAddress =
+		{
+
+		}
+	}
+}
+local Struct = Response.wayPoints[1].searchAddress
+local testData = {"countryName",
+  "countryCode",
+  "postalCode",
+  "administrativeArea",
+  "subAdministrativeArea",
+  "locality",
+  "subLocality",
+  "thoroughfare",
+  "subThoroughfare"
+}
+local upperBound = {200, 50, 16, 200, 200, 200, 200, 200, 200}
+
+-- Check for all sub-params
+for i =1, #testData do
+  stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "searchAddress", testData[i]}, {0, upperBound[i]}, nil,false)
+end
+
 ----------------------------------------------------------------------------------------------
 -----------------------------------------TEST BLOCK IV----------------------------------------
 ------------------------------Check special cases of HMI response-----------------------------
 ----------------------------------------------------------------------------------------------
-
---Requirement id in JAMA: APPLINK-14765
---Verification criteria: In case SDL cuts off fake parameters from response (request) that SDL should transfer to mobile app AND this response (request) is invalid SDL must respond GENERIC_ERROR (success:false, info: "Navigation component does not respond") to mobile app
-
+--Requirement: APPLINK-14765: SDL must cut off the fake parameters from requests, responses and notifications received from HMI
 -----------------------------------------------------------------------------------------------
 
 --List of test cases for:
@@ -1260,7 +1390,7 @@ local function SpecialResponseChecks()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
   end
   --End Test case NegativeResponseCheck.1
   ]]
@@ -1285,7 +1415,7 @@ local function SpecialResponseChecks()
       end)
 
     --mobile side: expect response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   --End Test case NegativeResponseCheck.2
@@ -1379,7 +1509,7 @@ local function SpecialResponseChecks()
       end)
 
     --mobile side: expect the response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
   end
   ]]
   --End NegativeResponseCheck.4
@@ -1447,7 +1577,7 @@ local function SpecialResponseChecks()
       end)
 
     --mobile side: expect response
-    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Navigation component does not respond"})
+    EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
     :Timeout(11000)
   end
   --End Test case NegativeResponseCheck.7
@@ -1457,150 +1587,6 @@ end
 
 SpecialResponseChecks()
 
----------------------------------------------------------------------------------------------
-
-local Response = {}
---Response["wayPoints"] =
-Response["wayPoints"] =
-{{
-
-    coordinate =
-    {
-      latitudeDegrees = 1.1,
-      longitudeDegrees = 1.1
-    },
-    locationName = "Hotel",
-    addressLines =
-    {
-      "Hotel Bora",
-      "Hotel 5 stars"
-    },
-    locationDescription = "VIP Hotel",
-    phoneNumber = "Phone39300434",
-    locationImage =
-    {
-      value ="icon.png",
-      imageType ="DYNAMIC",
-    },
-    searchAddress =
-    {
-      countryName = "countryName",
-      countryCode = "countryCode",
-      postalCode = "postalCode",
-      administrativeArea = "administrativeArea",
-      subAdministrativeArea = "subAdministrativeArea",
-      locality = "locality",
-      subLocality = "subLocality",
-      thoroughfare = "thoroughfare",
-      subThoroughfare = "subThoroughfare"
-    }
-
-  }
-}
-
--- Check different conditions for array of wayPoints
-------------------------------------------------------------------------------------------------------------------------------------
-local Struct = Response.wayPoints[1]
-arrayStructParameterInResponse:verify_Array_Struct_Parameter(Response, {"wayPoints"}, {1,10}, Struct, false)
-
--- Check different conditionds for locationName string parameter
-------------------------------------------------------------------------------------------------------------------------------------
-stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "locationName"}, {1, 500}, false)
-
--- Check different conditionds for phoneNumber string parameter
-------------------------------------------------------------------------------------------------------------------------------------
-stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "phoneNumber"}, {1, 500}, false)
-
--- Check different conditionds for locationDescription string parameter
-------------------------------------------------------------------------------------------------------------------------------------
-stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "locationDescription"}, {1, 500}, false)
-
--- Check different conditionds for addressLines string parameter
-------------------------------------------------------------------------------------------------------------------------------------
-stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "addressLines", 1}, {1, 500}, false)
-
--- Check different conditions for array of addressLines string parameters
-------------------------------------------------------------------------------------------------------------------------------------
-local Struct_1 = Response.wayPoints[1].addressLines[1]
-arrayStructParameterInResponse:verify_Array_Struct_Parameter(Response, {"wayPoints", 1, "addressLines"}, {1, 4}, Struct_1, false)
-
--- Check for strings elements of searchAddress parameter
------------------------------------------------------------------------------------------------------------------------------------
-local Struct = Response.wayPoints[1].searchAddress
-
-local Response = {}
---Response["wayPoints"] =
-Response["wayPoints"] =
-{{
-
-    coordinate =
-    {
-      latitudeDegrees = 1.1,
-      longitudeDegrees = 1.1
-    },
-    locationName = "Hotel",
-    addressLines =
-    {
-      "Hotel Bora",
-      "Hotel 5 stars"
-    },
-    locationDescription = "VIP Hotel",
-    phoneNumber = "Phone39300434",
-    locationImage =
-    {
-      value ="icon.png",
-      imageType ="DYNAMIC",
-    },
-    searchAddress =
-    {
-
-    }
-
-  }
-}
-
-local testData = {"countryName",
-  "countryCode",
-  "postalCode",
-  "administrativeArea",
-  "subAdministrativeArea",
-  "locality",
-  "subLocality",
-  "thoroughfare",
-  "subThoroughfare"
-}
-local upperBaund = {200, 50, 16, 200, 200, 200, 200, 200, 200}
-
-for i =1, #testData do
-
-  stringParameterInResponse:verify_String_Parameter(Response, {"wayPoints", 1, "searchAddress", testData[i]}, {0, upperBaund[i]}, false)
-end
-
--- Check for Double latitudeDegrees and longitudeDegrees parameters in coordinate structure
----------------------------------------------------------------------------------------------------------------------------------
-local Boundary_longitudeDegrees = {-180, 180}
-local Boundary_latitudeDegrees = {-90, 90}
-
-doubleParameterInResponse:verify_Double_Parameter(Response, {"wayPoints", 1, "coordinate", "latitudeDegrees"}, Boundary_latitudeDegrees, true, "latitude")
-doubleParameterInResponse:verify_Double_Parameter(Response, {"wayPoints", 1, "coordinate", "longitudeDegrees"}, Boundary_longitudeDegrees, true, "longitude")
-
--- Check for value and imageType parameters of locationImage structure
----------------------------------------------------------------------------------------------------------------------------------
-local strMaxLengthFileName255 = string.rep("a", 251) .. ".png" -- set max length file name
-imageParameterInResponse:verify_Image_Parameter(Response, {"wayPoints", 1, "locationImage"}, {"a", strMaxLengthFileName255}, false)
-
--- Check GetWayPoints response without parameters
----------------------------------------------------------------------------------------------------------------------------------
-
-Test["GetWayPoints_Without_Parameters_In_WayPoints_SUCCESS"] = function(self)
-
-  local Response = {}
-  Response["wayPoints"] =
-  {{}}
-
-  self:verify_SUCCESS_Response_Case(Response)
-
-end
 
 ----------------------------------------------------------------------------------------------
 -----------------------------------------TEST BLOCK VI----------------------------------------
