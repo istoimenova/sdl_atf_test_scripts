@@ -23,9 +23,10 @@ require('user_modules/AppTypes')
 ---------------------------------------------------------------------------------------------
 APIName = "OnDriverDistraction" -- set request name
 
---Debug = {"ecuName"} --use to print request before sending to SDL.
-Debug = {} -- empty {}: script will do not print request on console screen.
-
+local notificationState = {VRSession = false, EmergencyEvent = false, PhoneCall = false}
+local AppValuesOnHMIStatusDEFAULT = {hmiLevel = "NONE", systemContext = "MAIN"}
+local AppValuesOnHMIStatusFULL = {hmiLevel = "FULL", systemContext = "MAIN"}
+local AppValuesOnHMIStatusLIMITED = {hmiLevel = "LIMITED", systemContext = "MAIN"}
 ---------------------------------------------------------------------------------------------
 -------------------------- Overwrite These Functions For This Script-------------------------
 ---------------------------------------------------------------------------------------------
@@ -46,7 +47,17 @@ function Test:createRequest()
 end
 
 ---------------------------------------------------------------------------------------------
+function DelayedExp(time)
+  time = time or 2000
 
+  local event = events.Event()
+  event.matches = function(self, e) return self == e end
+  EXPECT_EVENT(event, "Delayed event")
+  :Timeout(time+500)
+  RUN_AFTER(function()
+              RAISE_EVENT(event, event)
+            end, time)
+end
 --This function sends a valid notification from HMI and then the notification is sent to mobile
 function Test:verify_SUCCESS_Case(Request)
 	--hmi side: sending OnDriverDistraction notification
@@ -85,6 +96,268 @@ function Test:verify_INVALID_Case(Request)
 	:Times(0)
 end
 
+--This function is used in SUSPEND function
+local function ActivationApp(self)
+
+  if 
+    notificationState.VRSession == true then
+      self.hmiConnection:SendNotification("VR.Stopped", {})
+  elseif 
+    notificationState.EmergencyEvent == true then
+      self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
+  elseif
+    notificationState.PhoneCall == true then
+      self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+  end
+
+    -- hmi side: sending SDL.ActivateApp request
+      local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
+
+    -- hmi side: expect SDL.ActivateApp response
+    EXPECT_HMIRESPONSE(RequestId)
+      	:Do(function(_,data)
+        -- In case when app is not allowed, it is needed to allow app
+          	if
+              data.result.isSDLAllowed ~= true then
+
+                -- hmi side: sending SDL.GetUserFriendlyMessage request
+                  local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", 
+                          {language = "EN-US", messageCodes = {"DataConsent"}})
+
+                -- hmi side: expect SDL.GetUserFriendlyMessage response
+                -- TODO: comment until resolving APPLINK-16094
+                -- EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+                EXPECT_HMIRESPONSE(RequestId)
+                    :Do(function(_,data)
+
+	                    -- hmi side: send request SDL.OnAllowSDLFunctionality
+	                    self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", 
+                      		{allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+	                    -- hmi side: expect BasicCommunication.ActivateApp request
+	                      EXPECT_HMICALL("BasicCommunication.ActivateApp")
+	                        :Do(function(_,data)
+
+	                          -- hmi side: sending BasicCommunication.ActivateApp response
+	                          self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+
+	                      end)
+	                      :Times(2)
+                      end)
+
+        	end
+        end)
+
+end
+
+--This function is used in RestartSDL function
+local function CreateSession( self)
+	self.mobileSession = mobile_session.MobileSession(
+        self,
+        self.mobileConnection)
+end
+
+--This function is used in RestartSDL function
+local function IGNITION_OFF(self, appNumber)
+	StopSDL()
+
+	if appNumber == nil then 
+		appNumber = 1
+	end
+
+	-- hmi side: sends OnExitAllApplications (SUSPENDED)
+	self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
+		{
+		  reason = "IGNITION_OFF"
+		})
+
+	-- hmi side: expect OnSDLClose notification
+	EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLClose")
+
+	-- hmi side: expect OnAppUnregistered notification
+	--EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered")
+		-- :Times(appNumber)
+end
+
+--This function is used in RestartSDL function
+local function SUSPEND(self, targetLevel)
+
+   if 
+      targetLevel == "FULL" and
+      self.hmiLevel ~= "FULL" then
+            ActivationApp(self)
+            EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+              :Do(function(_,data)
+                self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
+                  {
+                    reason = "SUSPEND"
+                  })
+
+                -- hmi side: expect OnSDLPersistenceComplete notification
+                EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
+
+              end)
+    elseif 
+      targetLevel == "LIMITED" and
+      self.hmiLevel ~= "LIMITED" then
+        if self.hmiLevel ~= "FULL" then
+          ActivationApp(self)
+          EXPECT_NOTIFICATION("OnHMIStatus",
+            {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"},
+            {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+            :Do(function(exp,data)
+              if exp.occurences == 2 then
+                self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
+                  {
+                    reason = "SUSPEND"
+                  })
+
+                -- hmi side: expect OnSDLPersistenceComplete notification
+                EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
+              end
+            end)
+
+            -- hmi side: sending BasicCommunication.OnAppDeactivated notification
+            self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", {appID = self.applications["Test Application"], reason = "GENERAL"})
+        else 
+            -- hmi side: sending BasicCommunication.OnAppDeactivated notification
+            self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", {appID = self.applications["Test Application"], reason = "GENERAL"})
+
+            EXPECT_NOTIFICATION("OnHMIStatus",
+            {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+            :Do(function(exp,data)
+                self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
+                  {
+                    reason = "SUSPEND"
+                  })
+
+                -- hmi side: expect OnSDLPersistenceComplete notification
+                EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
+            end)
+        end
+    elseif 
+      (targetLevel == "LIMITED" and
+      self.hmiLevel == "LIMITED") or
+      (targetLevel == "FULL" and
+      self.hmiLevel == "FULL") or
+      targetLevel == nil then
+        self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
+          {
+            reason = "SUSPEND"
+          })
+
+        -- hmi side: expect OnSDLPersistenceComplete notification
+        EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
+    end
+
+end
+
+--This function to restart SDL
+local function RestartSDL( prefix, level, appNumberForIGNOFF)
+
+	Test["Precondition_SUSPEND_" .. tostring(prefix)] = function(self)
+		SUSPEND(self, level)
+	end
+
+	Test["Precondition_IGNITION_OFF_" .. tostring(prefix)] = function(self)
+		IGNITION_OFF(self,appNumberForIGNOFF)
+	end
+
+	Test["Precondition_StartSDL_" .. tostring(prefix)] = function(self)
+		StartSDL(config.pathToSDL, config.ExitOnCrash)
+	end
+
+	Test["Precondition_InitHMI_" .. tostring(prefix)] = function(self)
+		self:initHMI()
+	end
+
+	Test["Precondition_InitHMI_onReady_" .. tostring(prefix)] = function(self)
+		self:initHMI_onReady()
+	end
+
+	Test["Precondition_ConnectMobile_" .. tostring(prefix)] = function(self)
+		self:connectMobile()
+	end
+
+	Test["Precondition_StartSession_" .. tostring(prefix)] = function(self)
+		CreateSession(self)
+	end
+end
+
+--This function to register app after restart SDL with corressponding resumption's HMI level
+local function RegisterApp_HMILevelResumption(self, HMILevel, reason)
+
+	if HMILevel == "FULL" then
+		local AppValuesOnHMIStatus = AppValuesOnHMIStatusFULL
+	elseif HMILevel == "LIMITED" then
+		local AppValuesOnHMIStatus = AppValuesOnHMIStatusLIMITED
+	end
+
+	local correlationId = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+
+
+	EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+		:Do(function(_,data)
+			HMIAppID = data.params.application.appID
+			self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+		end)
+
+	self.mobileSession:ExpectResponse(correlationId, { success = true })
+
+			
+	if HMILevel == "FULL" then
+		EXPECT_HMICALL("BasicCommunication.ActivateApp")
+			:Do(function(_,data)
+		      	self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+			end)
+	elseif HMILevel == "LIMITED" then
+		EXPECT_HMINOTIFICATION("BasicCommunication.OnResumeAudioSource", {appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
+	end
+	
+
+	EXPECT_NOTIFICATION("OnHMIStatus",AppValuesOnHMIStatusDEFAULT)
+		:Do(function(_,data)
+			if HMILevel == "FULL" then				
+				EXPECT_NOTIFICATION("OnHMIStatus", AppValuesOnHMIStatusFULL)
+			elseif HMILevel == "LIMITED" then
+				EXPECT_NOTIFICATION("OnHMIStatus", AppValuesOnHMIStatusLIMITED)
+			end
+		end)
+
+end
+
+--This function to update resuming time out value in .ini file
+local function UpdateApplicationResumingTimeoutValue(ApplicationResumingTimeoutValueToReplace)
+	findresult = string.find (config.pathToSDL, '.$')
+
+	if string.sub(config.pathToSDL,findresult) ~= "/" then
+		config.pathToSDL = config.pathToSDL..tostring("/")
+	end
+  
+	SDLStoragePath = config.pathToSDL .. "storage/"
+	
+	local SDLini = config.pathToSDL .. tostring("smartDeviceLink.ini")
+	
+  if ApplicationResumingTimeoutValueToReplace ~= nil then
+    Test["Precondition_ApplicationResumingTimeoutChange_" .. tostring(prefix)] = function(self)
+      local StringToReplace = "ApplicationResumingTimeout = " .. tostring(ApplicationResumingTimeoutValueToReplace) .. "\n"
+      f = assert(io.open(SDLini, "r"))
+      if f then
+        fileContent = f:read("*all")
+        local MatchResult = string.match(fileContent, "ApplicationResumingTimeout%s-=%s-.-%s-\n")
+        if MatchResult ~= nil then
+          fileContentUpdated = string.gsub(fileContent, MatchResult, StringToReplace)
+          f = assert(io.open(SDLini, "w"))
+          f:write(fileContentUpdated)
+        else
+          userPrint(31, "Finding of 'ApplicationResumingTimeout = value' is failed. Expect string finding and replacing of value to " .. tostring(ApplicationResumingTimeoutValueToReplace))
+        end
+        f:close()
+      end
+    end
+  end
+	
+end
 
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
@@ -603,7 +876,7 @@ end
 			end
 
 
-			--Precondition 5: Activate application to make sure HMI status of 4 apps: FULL, BACKGOUND, LIMITED and NONE
+			--Precondition 5: Activate application to make sure HMI status of 4 apps: FULL, BACKGROUND, LIMITED and NONE
 			function Test:Activate_MediaApp()
 				--hmi side: sending SDL.ActivateApp request
 				local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["MediaApp"]})
@@ -734,7 +1007,7 @@ end
 
 						end
 					end)
-				self.mobileSession4:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGOUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+				self.mobileSession4:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 				self.mobileSession5:ExpectNotification("OnHMIStatus", {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 				:Timeout(12000)
 			end
@@ -745,11 +1018,140 @@ end
 				self.hmiConnection:SendNotification("UI.OnDriverDistraction",{state = "DD_ON"})
 
 				--mobile side: expect the response
-				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})
-				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})
-				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})
+				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = LIMITED
+				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = BACKGROUND
+				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = FULL
+				self.mobileSession6:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)--App with HMI level = NONE				
 			end
+		
 		--End Test case SequenceCheck.1
+
+		--Begin Test case SequenceCheck.2
+		--Requirement: [APPLINK-23806]
+		--Description: SDL must send OnDriverDistraction to app right after this app changes HMILevel from NONE to any other
+		--Scenario:
+		--			(continue the SequenceCheck.1)
+		--			1. Activate App with HMI level = NONE (mobileSession6)
+		-- 				=> OnDriverDistraction comes to app (mobileSession6)
+		--			2. Send OnDriverDistraction
+		-- 				=> OnDriverDistraction comes to all apps
+		--			3. Exit app by app and send OnDriverDistraction to check that OnDriverDistraction comes to exited apps
+
+			--2.1. Activate App with HMI level = NONE (mobileSession6) => OnDriverDistraction comes to app (mobileSession6)
+			Test[APIName.."_SeveralApp_Active_NONE_App"] = function(self)
+			    -- hmi side: sending SDL.ActivateApp request
+				local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["NonMediaApp3"]})
+				EXPECT_HMIRESPONSE(RequestId)
+				:Do(function(_,data)
+					if
+						data.result.isSDLAllowed ~= true then
+						local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+						
+						--hmi side: expect SDL.GetUserFriendlyMessage message response
+						--TODO: update after resolving APPLINK-16094.
+						--EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+						EXPECT_HMIRESPONSE(RequestId)
+						:Do(function(_,data)						
+							--hmi side: send request SDL.OnAllowSDLFunctionality
+							--self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+							self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = deviceMAC, name = "127.0.0.1"}})
+
+							--hmi side: expect BasicCommunication.ActivateApp request
+							EXPECT_HMICALL("BasicCommunication.ActivateApp")
+							:Do(function(_,data)
+								--hmi side: sending BasicCommunication.ActivateApp response
+								self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+							end)
+							:Times(AnyNumber())
+						end)
+
+					end
+				end)
+		
+				--mobile side: expect notification
+				self.mobileSession6:ExpectNotification("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"})
+
+				--mobile side: expect the response
+				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)
+				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)			
+				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)			
+				self.mobileSession6:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})
+				
+			end
+			
+			--2.2. Sending OnDriverDistraction notification => OnDriverDistraction comes to all apps
+			Test[APIName.."_SeveralApp_Send_OnDriverDistraction_To_All_App"] = function(self)
+				--hmi side: sending OnDriverDistraction notification
+				self.hmiConnection:SendNotification("UI.OnDriverDistraction",{state = "DD_ON"})
+
+				--mobile side: expect the response
+				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = LIMITED
+				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = BACKGROUND
+				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = FULL
+				self.mobileSession6:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			--App with HMI level = NONE	has been activated			
+			end			
+			
+		
+			--2.3. Exit app by app and send OnDriverDistraction
+			Test[APIName.."SeveralApp_After_Exit_Media_App"] = function(self)
+				--hmi side: send OnExitApplication
+				self.hmiConnection:SendNotification("BasicCommunication.OnExitApplication",	{reason = "USER_EXIT", appID = self.applications["MediaApp"]})
+				
+				--hmi side: sending OnDriverDistraction notification
+				self.hmiConnection:SendNotification("UI.OnDriverDistraction",{state = "DD_ON"})
+
+				--mobile side: expect the response
+				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)
+				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			
+				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})			
+				self.mobileSession6:ExpectNotification("OnDriverDistraction",{state = "DD_ON"})				
+			end
+
+		
+			Test[APIName.."SeveralApp_After_Exit_NonMedia_App"] = function(self)
+				--hmi side: send OnExitApplication
+				self.hmiConnection:SendNotification("BasicCommunication.OnExitApplication",	{reason = "USER_EXIT", appID = self.applications["NonMediaApp1"]})
+				self.hmiConnection:SendNotification("BasicCommunication.OnExitApplication",	{reason = "USER_EXIT", appID = self.applications["NonMediaApp2"]})				
+				self.hmiConnection:SendNotification("BasicCommunication.OnExitApplication",	{reason = "USER_EXIT", appID = self.applications["NonMediaApp3"]})
+				
+				--hmi side: sending OnDriverDistraction notification
+				self.hmiConnection:SendNotification("UI.OnDriverDistraction",{state = "DD_ON"})
+
+				--mobile side: expect the response
+				self.mobileSession3:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)
+				self.mobileSession4:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)
+				self.mobileSession5:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)
+				self.mobileSession6:ExpectNotification("OnDriverDistraction",{state = "DD_ON"}):Times(0)				
+			end	
+			
+		--End Test case SequenceCheck.2
+		
+		--Postcondition: Unregister applications of Mobilesession3..6
+			Test["Unregister_Applications_Of_SeveralApp_Checking"] = function(self)		
+		
+				local cid3 = self.mobileSession3:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response				
+				self.mobileSession3:ExpectResponse(cid3, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)
+
+				local cid4 = self.mobileSession4:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response
+				self.mobileSession4:ExpectResponse(cid4, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)		
+
+				local cid5 = self.mobileSession5:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response				
+				self.mobileSession5:ExpectResponse(cid5, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)
+
+				local cid6 = self.mobileSession6:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response
+				self.mobileSession6:ExpectResponse(cid6, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)
+			
+			end 
+		--End Postcondition
+		
 	--End Test suit SequenceCheck
 
 ----------------------------------------------------------------------------------------------
@@ -770,7 +1172,7 @@ end
 			--Verification criteria:
 				-- SDL doesn't send OnDriverDistraction notification to the app when current app's HMI level is NONE.
 
-			commonSteps:DeactivateAppToNoneHmiLevel()
+			commonSteps:DeactivateAppToNoneHmiLevel("DeactivateApp_DifferentHMIlevel_1")
 
 			function Test:OnDriverDistraction_HMIStatus_NONE()
 				local request = {
@@ -780,7 +1182,7 @@ end
 			end
 
 			--Postcondition: Activate app
-			commonSteps:ActivationApp()
+			commonSteps:ActivationApp(_,"ActivationApp_Postcondition_DifferentHMIlevel_1")
 		--End Test case DifferentHMIlevel.1
 
 		-----------------------------------------------------------------------------------------
@@ -789,7 +1191,7 @@ end
 		--Description: Check OnDriverDistraction notification when HMI level is LIMITED
 			if commonFunctions:isMediaApp() then
 				--Precondition: Deactivate app to LIMITED HMI level
-				commonSteps:ChangeHMIToLimited()
+				commonSteps:ChangeHMIToLimited("ChangeHMIToLimited_DifferentHMIlevelChecks_2")
 
 				for i=1,#onDriverDistractionValue do
 					Test["OnDriverDistraction_LIMITED_State_" .. onDriverDistractionValue[i]] = function(self)
@@ -902,13 +1304,13 @@ end
 			end
 
 		elseif Test.isMediaApplication == false then
-			--Precondition: Deactivate app to BACKGOUND HMI level
+			--Precondition: Deactivate app to BACKGROUND HMI level
 			commonSteps:DeactivateToBackground(self)
 		end
 		-----------------------------------------------------------------------------------------
 
 		--Begin Test case DifferentHMIlevelChecks.3
-		--Description: Check OnDriverDistraction notification when HMI level is BACKGOUND
+		--Description: Check OnDriverDistraction notification when HMI level is BACKGROUND
 			for i=1,#onDriverDistractionValue do
 				Test["OnDriverDistraction_BACKGROUND_State_" .. onDriverDistractionValue[i]] = function(self)
 					local request = {state = onDriverDistractionValue[i]}
@@ -918,17 +1320,233 @@ end
 		--End Test case DifferentHMIlevelChecks.3
 	--End Test suit DifferentHMIlevel
 
+	--Begin Test suit App changes HMI level from NONE
+	--Requirement: [APPLINK-23806]
+	--Description: SDL must send OnDriverDistraction to app right after this app changes HMILevel from NONE to any other	
+	commonFunctions:newTestCasesGroup("Test case: SDL must sends OnDriverDistraction to app right after this app changes HMILevel from NONE to any other")	
+		--Precondition: Unregister the application on mobileSession of previous TestCase and Register a new application
+		commonSteps:UnregisterApplication("Unregister_Application_of_MobileSession_in_DifferentHMIlevelChecks")
+		function Test:AddNewSession()
+				-- Connected expectation
+				self.mobileSession = mobile_session.MobileSession(
+				self,
+				self.mobileConnection)
+
+				self.mobileSession:StartService(7)
+		end
+		commonSteps:RegisterAppInterface("RegisterAppInterface_MediaApp_for_TC_AppChangesHMILevelFromNONE")
+		commonSteps:ActivationApp(_,"ActivationApp_for_TC_AppChangesHMILevelFromNONE")
+		
+		--Begin Test case [App changes HMI level from NONE].1
+		--Description: 1 App - NONE - FULL - OnDriverDistraction -> OnDriverDistraction comes		
+		--This Test Case is already covered by Test["OnDriverDistraction_State_" .. onDriverDistractionValue[i]] in TEST BLOCK I
+			Test["Start TC1: This Test case is already covered in Suite_2"] = function(self)
+				print ("\27[33m TC1. 1 App - NONE - FULL - OnDriverDistraction -> OnDriverDistraction comes \27[0m")
+			end
+		--End Test case [App changes HMI level from NONE].1
+
+		--Begin Test case [App changes HMI level from NONE].2
+		--Description: 1 App - NONE - OnDriverDistraction - FULL -> OnDriverDistraction comes	
+			Test["Start TC2:"] = function(self)
+				print ("\27[33m TC2. 1 App - NONE - OnDriverDistraction - FULL -> OnDriverDistraction comes \27[0m")
+			end
+			
+			for i=1,#onDriverDistractionValue do
+				local request = {state = onDriverDistractionValue[i]}
+				commonSteps:DeactivateAppToNoneHmiLevel("DeactivateApp_App_changes_HMI_level_from_NONE_TC2_time:"..tostring(i))
+				Test["TC2:_"..APIName.."_1 App_NONE_OnDriverDistraction_FULL_(state:"..onDriverDistractionValue[i]..")"] = function(self)	
+					--hmi side: sending OnDriverDistraction notification
+					self.hmiConnection:SendNotification("UI.OnDriverDistraction",request)
+					
+					ActivationApp(self)
+					
+					--mobile side: expect the response
+					self.mobileSession:ExpectNotification("OnDriverDistraction", request)		
+				end
+			end
+		--End Test case [App changes HMI level from NONE].2		
+		
+			Test["Start TC3:"] = function(self)
+				print ("\27[33m TC3. 1 App - NONE - LIMITED - OnDriverDistraction -> OnDriverDistraction come (in case of Resumption) \27[0m")
+			end
+		
+		--Begin Test case [App changes HMI level from NONE].3
+		--Description: 1 App - NONE - LIMITED - OnDriverDistraction -> OnDriverDistraction come (in case of Resumption)			
+			commonSteps:ChangeHMIToLimited("ChangeHMIToLimited_TC3")
+			for i=1,#onDriverDistractionValue do
+				local request = {state = onDriverDistractionValue[i]}
+				RestartSDL( "Resumption_LIMITED_ByIGN_OFF_TC3_time:"..tostring(i), "LIMITED")				
+				Test["Resumption_LIMITED_ByIGN_OFF_AppChangesHMILevelFromNONE_TC3_time:"..tostring(i)] = function(self)
+						self.mobileSession:StartService(7)
+							:Do(function(_,data)
+								RegisterApp_HMILevelResumption(self, "LIMITED", "IGN_OFF")
+							end)
+				end
+
+				Test["TC3:_"..APIName.."1App_NONE_LIMITED_OnDriverDistraction_(state:"..onDriverDistractionValue[i]..")"] = function(self)
+					self:verify_SUCCESS_Case(request)
+				end
+
+			end
+
+		--End Test case [App changes HMI level from NONE].3	
+
+			Test["Start TC4:"] = function(self)
+				print ("\27[33m TC4. 1 App - NONE - OnDriverDistraction - LIMITED -> OnDriverDistraction come (in case of Resumption) \27[0m")
+			end		
+		
+		--Begin Test case [App changes HMI level from NONE].4
+		--Description: 1 App - NONE - OnDriverDistraction - LIMITED -> OnDriverDistraction come (in case of Resumption)
+			--Precondition: change the Timeout Value to delay the HMI level in NONE 10 seconds before change to LIMITED
+			UpdateApplicationResumingTimeoutValue(10000)
+
+			for i=1,#onDriverDistractionValue do
+				local request = {state = onDriverDistractionValue[i]}
+				RestartSDL( "Resumption_LIMITED_ByIGN_OFF_TC4_time:"..tostring(i), "LIMITED")				
+				Test["Resumption_LIMITED_ByIGN_OFF_AppChangesHMILevelFromNONE_TC4_time:"..tostring(i)] = function(self)
+					self.mobileSession:StartService(7)
+						:Do(function(_,data)
+								local correlationId = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+
+								--hmi side: sending OnAppRegistered notification
+								EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered")
+									:Do(function(_,data)
+										HMIAppID = data.params.application.appID
+										self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+									end)
+									
+								--mobile side: expect response
+								self.mobileSession:ExpectResponse(correlationId, { success = true })						
+							
+								--mobile side: expect response
+								EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "NONE"})
+									:Do(function(_,data)
+											--hmi side: sending OnDriverDistraction notification
+											self.hmiConnection:SendNotification("UI.OnDriverDistraction",request)
+									end)
+						end)								
+				end
+		
+				Test["TC4:_"..APIName.."1App_NONE_OnDriverDistraction_LIMITED_(state:"..onDriverDistractionValue[i]..")"] = function(self)	
+				
+					DelayedExp(10000)
+					
+					--mobile side: expect response
+					EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "LIMITED"})	
+
+					--mobile side: expect the response
+					EXPECT_NOTIFICATION("OnDriverDistraction", request)
+				
+				end
+			end
+
+			--Postcondition: return the Resume Timeout value
+			UpdateApplicationResumingTimeoutValue(3000)
+
+		--End Test case [App changes HMI level from NONE].4	
+
+			Test["Start TC5:"] = function(self)
+				print ("\27[33m TC5. 1 App - OnDriverDistraction - NONE - LIMITED -> OnDriverDistraction come (in case of Resumption) \27[0m")
+			end	
+		
+		--Begin Test case [App changes HMI level from NONE].5
+		--Description: 1 App - OnDriverDistraction - NONE - LIMITED -> OnDriverDistraction come (in case of Resumption)
+
+		for i=1,#onDriverDistractionValue do
+			local request = {state = onDriverDistractionValue[i]}
+			RestartSDL( "Resumption_LIMITED_ByIGN_OFF_TC5_time:"..tostring(i), "LIMITED")						
+			Test["TC5:_"..APIName.."1App_OnDriverDistraction_NONE_LIMITED_(state:"..onDriverDistractionValue[i]..")"] = function(self)				
+				self.mobileSession:StartService(7)
+				:Do(function(_,data)
+					--hmi side: sending OnDriverDistraction notification
+					self.hmiConnection:SendNotification("UI.OnDriverDistraction",request)	
+					RegisterApp_HMILevelResumption(self, "LIMITED", "IGN_OFF")
+				end)
+				--mobile side: expect the response
+				EXPECT_NOTIFICATION("OnDriverDistraction", request)
+			end
+		end
+		--End Test case [App changes HMI level from NONE].5	
+		
+			Test["Start TC6:"] = function(self)
+				print ("\27[33m TC6. 1 App - OnDriverDistraction - NONE - FULL -> OnDriverDistraction come \27[0m")
+			end	
+			
+		--Begin Test case [App changes HMI level from NONE].6
+		--Description: 1 App - OnDriverDistraction - NONE - FULL -> OnDriverDistraction come
+		for i=1,#onDriverDistractionValue do
+			local request = {state = onDriverDistractionValue[i]}
+			--Precondition: Unregister application of mobileSession and add new session
+			commonSteps:UnregisterApplication("Unregister_Application_of_previous_check_time:"..tostring(i))
+			Test["Add_New_Session_time:"..tostring(i)] = function(self)
+					-- Connected expectation
+					self.mobileSession = mobile_session.MobileSession(
+					self,
+					self.mobileConnection)
+
+					self.mobileSession:StartService(7)
+			end
+			--hmi side: sending OnDriverDistraction notification
+			Test["Send_OnDriverDistraction_state:"..onDriverDistractionValue[i]] = function(self)				
+				self.hmiConnection:SendNotification("UI.OnDriverDistraction",request)	
+			
+			end
+			commonSteps:RegisterAppInterface("RegisterAppInterface_MediaApp_for_AppChangesHMILevelFromNONE_TC6_time:"..tostring(i))
+			commonSteps:ActivationApp(_,"ActivationApp_for_TC_AppChangesHMILevelFromNONE_TC6_time:"..tostring(i))
+			Test["TC6:_"..APIName.."1App_OnDriverDistraction_NONE_FULL_(state:"..onDriverDistractionValue[i]..")"] = function(self)				
+				--mobile side: expect the response
+				EXPECT_NOTIFICATION("OnDriverDistraction", request)		
+			end
+		end
+		--End Test case [App changes HMI level from NONE].6			
+
+	--End Test suit App changes HMI level from NONE	
+	
+	--Test suite OnDriverDistraction is allowed for NONE in Policy table
+	
+		--Requirement: [APPLINK-20886]
+		--Description: Whether the app receives the notification in current HMILevel is defined by app's assigned Policies.
+		commonFunctions:newTestCasesGroup("Test case: OnDriverDistraction is allowed for NONE in Policy table")
+		--Precondition: Unregister the application on mobileSession of previous TestCase and Register a new application (HMI status = NONE)		
+		commonSteps:UnregisterApplication("Unregister_Application_of_MobileSession_OnDriverDistractionIsAllowedForNONE")
+		Test["AddNewSession_OnDriverDistractionIsAllowedForNONE"] =function(self)
+				-- Connected expectation
+				self.mobileSession = mobile_session.MobileSession(
+				self,
+				self.mobileConnection)
+
+				self.mobileSession:StartService(7)
+		end
+		commonSteps:RegisterAppInterface("RegisterAppInterface_MediaApp_for_TC_OnDriverDistractionIsAllowedForNONE")
+		--Precondition: Update Policy table
+		local PermissionLinesForBase4 = 
+[[							"OnDriverDistraction": {
+							"hmi_levels": ["BACKGROUND",
+							"FULL", 
+							"LIMITED", 
+							"NONE"
+							]
+						  }]].. ", \n"						  
+		local PermissionLinesForGroup1 = nil
+		local PermissionLinesForApplication = nil
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication, {"OnDriverDistraction"})	
+		policyTable:updatePolicy(PTName)
+	
+		for i=1,#onDriverDistractionValue do	
+			local request = {state = onDriverDistractionValue[i]}
+			Test[APIName.." is_allowed_for_NONE_in_Policy_table_(state:"..onDriverDistractionValue[i]..")"] = function(self)
+				self:verify_SUCCESS_Case(request)
+			end		
+		end
+
+	--End Test suite OnDriverDistraction is allowed for NONE in Policy table		
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Postcondition-------------------------------------
 ---------------------------------------------------------------------------------------------
 
 	--Print new line to separate Postconditions
 	commonFunctions:newTestCasesGroup("Postconditions")
-
-
-	--Restore sdl_preloaded_pt.json
-	policyTable:Restore_preloaded_pt()
-
-
-
- return Test
+	
+	Test["Stop_SDL"] = function(self)
+		StopSDL()
+	end 
