@@ -156,7 +156,7 @@
 	end
 
 	local function AddCommand(self, icmdID)
-	
+		local TimeAddCmdSuccess = 0
 		--mobile side: sending AddCommand request
 		local cid = self.mobileSession:SendRPC("AddCommand",
 		{
@@ -204,10 +204,14 @@
 		EXPECT_RESPONSE(cid, {  success = true, resultCode = "SUCCESS"  })
 		:Do(function(_,data)
 			--mobile side: expect OnHashChange notification
-			
+			if( 
+				(TimeAddCmdSuccess - TimeRAISuccess) <= 10000 and
+				TimeAddCmdSuccess > 0) then
+				userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+			else
+				self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+			end
 
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
 			EXPECT_NOTIFICATION("OnHashChange")
 			:Do(function(_, data)
 				self.currentHashID = data.payload.hashID
@@ -217,6 +221,7 @@
 	end
 
 	local function DeleteCommand(self, icmdID)
+		local TimeDeleteCmdSuccess = 0
 		--mobile side: sending DeleteCommand request
 		local cid = self.mobileSession:SendRPC("DeleteCommand",
 		{
@@ -249,8 +254,14 @@
 		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
 		:Do(function(_,data)
 		
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
+			if( 
+				(TimeDeleteCmdSuccess - TimeRAISuccess) <= 10000  and
+				(TimeDeleteCmdSuccess > 0) 	) then
+				userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+			else
+				self:FailTestCase("Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+			end
+
 			EXPECT_NOTIFICATION("OnHashChange")
 			:Do(function(_, data)
 				self.currentHashID = data.payload.hashID
@@ -1308,6 +1319,9 @@
 		--Description: Positive case with request and update of internal list with helpPrompts, vrHelp
 			--Requirement id in JIRA: APPLINK-23727; APPLINK-19474
 			--Verification criteria:
+				-- In case mobile app successfully registers and gets any HMILevel other than NONE SDL must:
+					-- create internal list with "vrHelp" and "helpPrompt" based on successfully registered AddCommands and/or DeleteCommands requests
+					-- start 10 sec timer right after app`s registration for waiting SetGlobalProperties_request from mobile app
 				-- Precondition PositiveResponseCheck.4
 					Precondition_RegisterApp("TC"..TC_Number, self)
 					for cmdCount = 1, 5 do
@@ -1319,8 +1333,22 @@
 				--Begin Test case PositiveResponseCheck.4
 					Test["SetGlobalProperties_Without_vrHelp_helpPrompt_TC" ..TC_Number] = function(self)
 						local time = timestamp()
+						local cnt_cmd = 1;
 
 						if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+							for i = 1, 10, i = i+2 do
+								SGP_helpPrompt[i] ={
+																		text = "Command" .. tostring(cnt_cmd), --menuName}
+																		type = "TEXT" }
+								SGP_helpPrompt[i + 1] ={
+																		text = "300",
+																		type = "SILENCE" }
+
+								cnt_cmd = cnt_cmd + 1
+							end
+							for i = 1, 5 do
+								SGP_vrHelp[i] = {	text = "Command" .. tostring(i), position = i }
+							end
 							
 							xmlReporter.AddMessage("Test Case " ..TC_Number )
 							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
@@ -1333,11 +1361,7 @@
 															{
 																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																-- Clarification is done in APPLINK-26638
-																vrHelp ={
-																					{
-																						text = config.application1.registerAppInterfaceParams.appName,
-																						position = 1
-																				}	},
+																vrHelp ={ SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 							:Do(function(_,data)
@@ -1349,10 +1373,7 @@
 							--hmi side: expect TTS.SetGlobalProperties request
 							EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
-																helpPrompt = 
-																						{
-																							
-																						},
+																helpPrompt = { SGP_helpPrompt },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 							:Do(function(_,data)
@@ -1373,6 +1394,8 @@
 				--End Test case PositiveResponseCheck.4
 
 				--Precondition PositiveResponseCheck.5
+					commonSteps:ActivationApp("ActivationApp_TC"..TC_Number)
+					
 					Test["Suspend_TC"..TC_Number] = function(self)
 						self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
 																									{ reason = "SUSPEND" })
@@ -1422,6 +1445,11 @@
 					end
 
 					Test["RegisterAppResumption_TC" .. TC_Number] = function (self)
+						local audiostreaming_full = "AUDIBLE"
+						if(config.application1.registerAppInterfaceParams.isMediaApplication == false) then
+							audiostreaming_full = "NOT_AUDIBLE"
+						end
+
 						self.mobileSession:StartService(7)
 						:Do(function()	
 							local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
@@ -1437,7 +1465,11 @@
 							self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
 							:Timeout(2000)
 
-							self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+							self.mobileSession:ExpectNotification("OnHMIStatus", 
+									{hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE",       systemContext = "MAIN"},
+									{hmiLevel = "FULL",       audioStreamingState = audiostreaming_full, systemContext = "MAIN"}
+							)
+							:Times(2)
 						end)
 
 						local UIAddCommandValues = {}
@@ -1466,11 +1498,24 @@
 						end)
 						:Times(5)
 					end
-		
 				--Begin Test case PositiveResponseCheck.5
 					Test["SetGlobalPropertiesAfterResumption_TC" .. TC_Number] = function(self)
 						xmlReporter.AddMessage("Test Case " ..TC_Number )
 						userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+
+						for i = 1, 10, i = i+2 do
+							SGP_helpPrompt[i] ={
+													text = "Command" .. tostring(cnt_cmd), --menuName}
+													type = "TEXT" }
+							SGP_helpPrompt[i + 1] ={
+														text = "300",
+														type = "SILENCE" }
+
+							cnt_cmd = cnt_cmd + 1
+						end
+						for i = 1, 5 do
+							SGP_vrHelp[i] = {	text = "Command" .. tostring(i), position = i }
+						end
 
 						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
 
@@ -1480,11 +1525,7 @@
 															{
 																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																-- Clarification is done in APPLINK-26638
-																vrHelp ={
-																					{
-																						text = config.application1.registerAppInterfaceParams.appName,
-																						position = 1
-																				}	},
+																vrHelp ={ SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 						:Do(function(_,data)
@@ -1496,10 +1537,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
-																helpPrompt = 
-																						{
-																							
-																						},
+																helpPrompt = {	SGP_helpPrompt },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 						:Do(function(_,data)
@@ -3018,12 +3056,12 @@
 --processing of request/response in different HMIlevels, SystemContext, AudioStreamingState---
   --Begin Test suit Different HMIStatus
   	--Begin Test case FULLHMIStatus.1
-			--Preconditions Test case FULLHMIStatus.1
-			Precondition_RegisterApp("TC"..TC_Number, self)
+		--Preconditions Test case FULLHMIStatus.1
+		Precondition_RegisterApp("TC"..TC_Number, self)
 
-			commonSteps:ActivationApp("TC"..TC_Number)
+		commonSteps:ActivationApp("TC"..TC_Number)
 			
-			Test["Precondition_FULL_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
+		Test["Precondition_FULL_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
 				
 					--mobile side: sending SetGlobalProperties request
 					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
@@ -3067,9 +3105,9 @@
 			
 					--mobile side: expect OnHashChange notification
 					EXPECT_NOTIFICATION("OnHashChange")
-			end
+		end
 
-			for cmdCount = 1, 10 do
+		for cmdCount = 1, 10 do
 				Test["Precondition_FULL_NoRequestToHMI_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
 				
 					AddCommand(self, cmdCount)
@@ -3165,7 +3203,7 @@
 
 					TC_Number = TC_Number + 1
 				end
-		--End Test case FULLHMIStatus.1
+	--End Test case FULLHMIStatus.1
 
 		--Begin Test case FULLHMIStatus.2
 			--Precondition
