@@ -265,6 +265,7 @@
 		--hmi side: expect UI.SetGlobalProperties request
 		EXPECT_HMICALL("UI.SetGlobalProperties",
 										{
+											vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 											vrHelp = { SGP_vrHelp },
 											appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 										})
@@ -910,12 +911,13 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 													  -- Clarification is done: APPLINK-26638
 														vrHelp = { 
-																				{
-																					text = config.application1.registerAppInterfaceParams.appName,
-																					position = 1
-																			}	},
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -969,13 +971,13 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  -- Clarification is done: APPLINK-26638
+													 	-- Clarification is done: APPLINK-26638
 														vrHelpTitle = "VR help title",
 														vrHelp ={ 
-																			{
-																				text = config.application1.registerAppInterfaceParams.appName,
-																				position = 1
-																		}	},
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -1052,6 +1054,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -1328,6 +1331,7 @@
 							--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 							EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																-- Clarification is done in APPLINK-26638
 																vrHelp ={
 																					{
@@ -1474,6 +1478,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																-- Clarification is done in APPLINK-26638
 																vrHelp ={
 																					{
@@ -1561,6 +1566,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -1633,6 +1639,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -1976,6 +1983,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -2236,6 +2244,7 @@
 						--hmi side: expect UI.SetGlobalProperties request
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -2319,6 +2328,7 @@
 						--hmi side: expect UI.SetGlobalProperties request
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -2523,6 +2533,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -2617,6 +2628,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -3006,7 +3018,7 @@
 --processing of request/response in different HMIlevels, SystemContext, AudioStreamingState---
   --Begin Test suit Different HMIStatus
   	--Begin Test case FULLHMIStatus.1
-			--Preconditions Test case EmulatingUserAction.1
+			--Preconditions Test case FULLHMIStatus.1
 			Precondition_RegisterApp("TC"..TC_Number, self)
 
 			commonSteps:ActivationApp("TC"..TC_Number)
@@ -3019,6 +3031,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -3113,6 +3126,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
