@@ -1492,10 +1492,13 @@ end
 			
 			end
 			commonSteps:RegisterAppInterface("RegisterAppInterface_MediaApp_for_AppChangesHMILevelFromNONE_TC6_time:"..tostring(i))
-			commonSteps:ActivationApp(_,"ActivationApp_for_TC_AppChangesHMILevelFromNONE_TC6_time:"..tostring(i))
 			Test["TC6:_"..APIName.."1App_OnDriverDistraction_NONE_FULL_(state:"..onDriverDistractionValue[i]..")"] = function(self)				
-				--mobile side: expect the response
-				EXPECT_NOTIFICATION("OnDriverDistraction", request)		
+				ActivationApp(self)
+				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "FULL"})
+				:Do(function(_,data)
+					--mobile side: expect the response
+					EXPECT_NOTIFICATION("OnDriverDistraction", request)		
+				end)	
 			end
 		end
 		--End Test case [App changes HMI level from NONE].6			
