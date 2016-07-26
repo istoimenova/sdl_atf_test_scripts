@@ -934,7 +934,7 @@ end
 -----------------------------------------------------------------------------------------------
 	
 	local Boundary = {1, 500}
-	
+	local Request = Test:createRequest()
 	stringParameter:verify_String_Parameter(Request, {"locationName"}, Boundary, false)	
 	stringParameter:verify_String_Parameter(Request, {"locationDescription"}, Boundary, false)	
 	stringParameter:verify_String_Parameter(Request, {"phoneNumber"}, Boundary, false)		
@@ -2550,7 +2550,8 @@ local function ResultCodeChecks()
 			end)
 										
 			--mobile side: expect response 
-			EXPECT_RESPONSE(cid, {  success = true, resultCode = "WARNINGS", info = "HMI doesn't support STATIC, DYNAMIC or any image types which exist in request data"})
+			--EXPECT_RESPONSE(cid, {  success = true, resultCode = "WARNINGS", info = "HMI doesn't support STATIC, DYNAMIC or any image types which exist in request data"})
+			EXPECT_RESPONSE(cid, {  success = true, resultCode = "UNSUPPORTED_RESOURCE" })
 		end								
 	--End Test case ResultCodeChecks.3
 end
