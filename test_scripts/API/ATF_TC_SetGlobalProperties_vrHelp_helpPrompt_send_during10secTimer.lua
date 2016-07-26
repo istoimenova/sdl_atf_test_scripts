@@ -152,13 +152,11 @@
 
 				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 			end)
-		end
-
-		commonSteps:ActivationApp("ActivationApp_" ..nameTC)
+		end		
 	end
 
 	local function AddCommand(self, icmdID)
-	
+		local TimeAddCmdSuccess = 0
 		--mobile side: sending AddCommand request
 		local cid = self.mobileSession:SendRPC("AddCommand",
 		{
@@ -206,10 +204,14 @@
 		EXPECT_RESPONSE(cid, {  success = true, resultCode = "SUCCESS"  })
 		:Do(function(_,data)
 			--mobile side: expect OnHashChange notification
-			
+			if( 
+				(TimeAddCmdSuccess - TimeRAISuccess) <= 10000 and
+				TimeAddCmdSuccess > 0) then
+				userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+			else
+				self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+			end
 
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
 			EXPECT_NOTIFICATION("OnHashChange")
 			:Do(function(_, data)
 				self.currentHashID = data.payload.hashID
@@ -219,6 +221,7 @@
 	end
 
 	local function DeleteCommand(self, icmdID)
+		local TimeDeleteCmdSuccess = 0
 		--mobile side: sending DeleteCommand request
 		local cid = self.mobileSession:SendRPC("DeleteCommand",
 		{
@@ -251,8 +254,14 @@
 		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
 		:Do(function(_,data)
 		
-			--Requirement id in JAMA/or Jira ID: APPLINK-15682
-			--[Data Resumption]: OnHashChange
+			if( 
+				(TimeDeleteCmdSuccess - TimeRAISuccess) <= 10000  and
+				(TimeDeleteCmdSuccess > 0) 	) then
+				userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+			else
+				self:FailTestCase("Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+			end
+
 			EXPECT_NOTIFICATION("OnHashChange")
 			:Do(function(_, data)
 				self.currentHashID = data.payload.hashID
@@ -262,11 +271,12 @@
 
 	local function CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 		--userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
-		local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+		local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
 
 		--hmi side: expect UI.SetGlobalProperties request
 		EXPECT_HMICALL("UI.SetGlobalProperties",
 										{
+											vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 											vrHelp = { SGP_vrHelp },
 											appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 										})
@@ -631,6 +641,7 @@
 																																	}
 
 																																},
+																										vrHelpTitle = "VR Help Title",
 																										vrHelp = 
 																																{
 																																	{
@@ -647,6 +658,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = "VR help title",
 														vrHelp = 
 																		{
 																			{
@@ -808,6 +820,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
+														vrHelpTitle = "VR help title",
 														vrHelp = 
 																		{
 																			{
@@ -904,13 +917,18 @@
 					xmlReporter.AddMessage("Test Case "..TC_Number)
 					userPrint(35,"======================================= Test Case "..TC_Number.." =============================================")
 					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
 					
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  --TODO: Check after clarification is done: APPLINK-26638
 														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  -- Clarification is done: APPLINK-26638
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -964,8 +982,13 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  --TODO: Check after clarification is done: APPLINK-26638
+													 	-- Clarification is done: APPLINK-26638
 														vrHelpTitle = "VR help title",
+														vrHelp ={ 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -1042,8 +1065,13 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  --TODO: Check after clarification is done: APPLINK-26638
 														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -1136,174 +1164,6 @@
 
 				--Preconditions Test case PositiveResponseCheck.1
 					Precondition_RegisterApp("TC" ..TC_Number, self)
-				
-					Test["Precondition_NoRespUpdateList_TC" ..TC_Number] = function(self)
-						--mobile side: sending SetGlobalProperties request
-						local cid = self.mobileSession:SendRPC("SetGlobalProperties",
-																											{
-																												helpPrompt = 
-																																		{
-																																			{
-																																				text = "Help prompt 1",
-																																				type = "TEXT"
-																																			},
-																																			{
-																																				text = "Help prompt 2",
-																																				type = "TEXT"
-																																			},
-																																			{
-																																				text = "Help prompt 3",
-																																				type = "TEXT"
-																																			},
-																																			{
-																																				text = "Help prompt 4",
-																																				type = "TEXT"
-																																			},
-																																			{
-																																				text = "Help prompt 5",
-																																				type = "TEXT"
-																																			}
-
-																																		},
-																												timeoutPrompt = 
-																																		{
-																																			{
-																																				text = "Timeout prompt",
-																																				type = "TEXT"
-																																			}
-																																		},
-																												vrHelpTitle = "VR help title",
-																												vrHelp = 
-																																		{
-																																			{
-																																				text = "VR help item",
-																																				image = {
-																																									value = "action.png",
-																																									imageType = "DYNAMIC"
-																																								},
-																																				position = 1
-																																			}
-																																		},
-																												menuTitle = "Menu Title",
-																												menuIcon = 
-																																		{
-																																			value = "action.png",
-																																			imageType = "DYNAMIC"
-																																		},
-																												keyboardProperties = 
-																																		{
-																																			keyboardLayout = "QWERTY",
-																																			keypressMode = "SINGLE_KEYPRESS",
-																																			limitedCharacterList = { "a" },
-																																			language = "EN-US",
-																																			autoCompleteText = "Daemon, Freedom"
-																																		}
-																											})
-							
-						--hmi side: expect UI.SetGlobalProperties request
-						EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = "VR help title",
-																vrHelp = 
-																				{
-																					{
-																						text = "VR help item",
-																						--[[ TODO: update after resolving APPLINK-16052]]
-																						image = 
-																										{
-																											imageType = "DYNAMIC",
-																											value = strAppFolder .. "action.png"
-																										},--]]
-																						position = 1
-																				}	},
-																menuTitle = "Menu Title",
-																--[[ TODO: update after resolving APPLINK-16052]]
-																menuIcon = 
-																					{
-																						imageType = "DYNAMIC",
-																						value = strAppFolder .. "action.png"
-																					},
-																keyboardProperties = 
-																					{
-																						keyboardLayout = "QWERTY",
-																						keypressMode = "SINGLE_KEYPRESS",
-																						--[=[ TODO: update after resolving APPLINK-16047
-																						limitedCharacterList = { "a" },]=]
-																						language = "EN-US",
-																						autoCompleteText = "Daemon, Freedom"
-																					},
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-						:Do(function(_,data)
-							--hmi side: sending UI.SetGlobalProperties response
-							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-						end)
-
-						--hmi side: expect TTS.SetGlobalProperties request
-						EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																						{
-																							{
-																								text = "Help prompt 1",
-																								type = "TEXT"
-																							},
-																							{
-																								text = "300",
-																								type = "SILENCE"
-																							},
-																							{
-																								text = "Help prompt 2",
-																								type = "TEXT"
-																							},
-																							{
-																								text = "300",
-																								type = "SILENCE"
-																							},
-																							{
-																								text = "Help prompt 3",
-																								type = "TEXT"
-																							},
-																							{
-																								text = "300",
-																								type = "SILENCE"
-																							},
-																							{
-																								text = "Help prompt 4",
-																								type = "TEXT"
-																							},
-																							{
-																								text = "300",
-																								type = "SILENCE"
-																							},
-																							{
-																								text = "Help prompt 5",
-																								type = "TEXT"
-																							},
-																							{
-																								text = "300",
-																								type = "SILENCE"
-																							}
-																						},
-																timeoutPrompt = 
-																						{
-																							{
-																								text = "Timeout prompt",
-																								type = "TEXT"
-																						}	},
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-						:Do(function(_,data)
-					 		--hmi side: sending UI.SetGlobalProperties response
-					 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-						end)		
-
-						--mobile side: expect SetGlobalProperties response
-						EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-					
-						--mobile side: expect OnHashChange notification
-						EXPECT_NOTIFICATION("OnHashChange")
-					end
 		
 				--Begin PositivaResponseCheck.1 and PositivaResponseCheck.2
 					for cmdCount = 1, 10 do
@@ -1335,7 +1195,10 @@
 																text = "300",
 																type = "SILENCE" }
 								
-							SGP_vrHelp[1] = { text = "Command" .. tostring(cmdCount) }
+							SGP_vrHelp[1] = { 
+																text = "Command" .. tostring(cmdCount), 
+																position = 1
+															}
 							
 							CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 						end
@@ -1362,9 +1225,15 @@
 							local SGP_vrHelp{}
 
 							--TODO: Shall be updated after APPLINK-26640 and APPLINK-26644 is answered.
-							SGP_helpPrompt[1] ={ }
+							SGP_helpPrompt[1] ={
+																 		text = default_HelpPromt,
+																		type = "TEXT"
+																	}
 							
-							SGP_vrHelp[1] = {  }
+							SGP_vrHelp[1] = {
+																text = config.application1.registerAppInterfaceParams.appName,
+																position = 1
+															}
 							
 							CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 						end
@@ -1450,6 +1319,9 @@
 		--Description: Positive case with request and update of internal list with helpPrompts, vrHelp
 			--Requirement id in JIRA: APPLINK-23727; APPLINK-19474
 			--Verification criteria:
+				-- In case mobile app successfully registers and gets any HMILevel other than NONE SDL must:
+					-- create internal list with "vrHelp" and "helpPrompt" based on successfully registered AddCommands and/or DeleteCommands requests
+					-- start 10 sec timer right after app`s registration for waiting SetGlobalProperties_request from mobile app
 				-- Precondition PositiveResponseCheck.4
 					Precondition_RegisterApp("TC"..TC_Number, self)
 					for cmdCount = 1, 5 do
@@ -1461,22 +1333,35 @@
 				--Begin Test case PositiveResponseCheck.4
 					Test["SetGlobalProperties_Without_vrHelp_helpPrompt_TC" ..TC_Number] = function(self)
 						local time = timestamp()
+						local cnt_cmd = 1;
 
 						if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+							for i = 1, 10, i = i+2 do
+								SGP_helpPrompt[i] ={
+																		text = "Command" .. tostring(cnt_cmd), --menuName}
+																		type = "TEXT" }
+								SGP_helpPrompt[i + 1] ={
+																		text = "300",
+																		type = "SILENCE" }
+
+								cnt_cmd = cnt_cmd + 1
+							end
+							for i = 1, 5 do
+								SGP_vrHelp[i] = {	text = "Command" .. tostring(i), position = i }
+							end
 							
 							xmlReporter.AddMessage("Test Case " ..TC_Number )
 							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
 
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+							local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
 
 							--hmi side: expect UI.SetGlobalProperties request
 							--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 							EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
-																vrHelp = 
-																				{
-																					
-																				},
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+																-- Clarification is done in APPLINK-26638
+																vrHelp ={ SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 							:Do(function(_,data)
@@ -1488,10 +1373,7 @@
 							--hmi side: expect TTS.SetGlobalProperties request
 							EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
-																helpPrompt = 
-																						{
-																							
-																						},
+																helpPrompt = { SGP_helpPrompt },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 							:Do(function(_,data)
@@ -1512,6 +1394,8 @@
 				--End Test case PositiveResponseCheck.4
 
 				--Precondition PositiveResponseCheck.5
+					commonSteps:ActivationApp("ActivationApp_TC"..TC_Number)
+					
 					Test["Suspend_TC"..TC_Number] = function(self)
 						self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",
 																									{ reason = "SUSPEND" })
@@ -1561,6 +1445,11 @@
 					end
 
 					Test["RegisterAppResumption_TC" .. TC_Number] = function (self)
+						local audiostreaming_full = "AUDIBLE"
+						if(config.application1.registerAppInterfaceParams.isMediaApplication == false) then
+							audiostreaming_full = "NOT_AUDIBLE"
+						end
+
 						self.mobileSession:StartService(7)
 						:Do(function()	
 							local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
@@ -1576,7 +1465,11 @@
 							self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
 							:Timeout(2000)
 
-							self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+							self.mobileSession:ExpectNotification("OnHMIStatus", 
+									{hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE",       systemContext = "MAIN"},
+									{hmiLevel = "FULL",       audioStreamingState = audiostreaming_full, systemContext = "MAIN"}
+							)
+							:Times(2)
 						end)
 
 						local UIAddCommandValues = {}
@@ -1605,22 +1498,34 @@
 						end)
 						:Times(5)
 					end
-		
 				--Begin Test case PositiveResponseCheck.5
 					Test["SetGlobalPropertiesAfterResumption_TC" .. TC_Number] = function(self)
 						xmlReporter.AddMessage("Test Case " ..TC_Number )
 						userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
 
-						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+						for i = 1, 10, i = i+2 do
+							SGP_helpPrompt[i] ={
+													text = "Command" .. tostring(cnt_cmd), --menuName}
+													type = "TEXT" }
+							SGP_helpPrompt[i + 1] ={
+														text = "300",
+														type = "SILENCE" }
+
+							cnt_cmd = cnt_cmd + 1
+						end
+						for i = 1, 5 do
+							SGP_vrHelp[i] = {	text = "Command" .. tostring(i), position = i }
+						end
+
+						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
 
 						--hmi side: expect UI.SetGlobalProperties request
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
-																vrHelp = 
-																				{
-																					
-																				},
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+																-- Clarification is done in APPLINK-26638
+																vrHelp ={ SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 						:Do(function(_,data)
@@ -1632,10 +1537,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
-																helpPrompt = 
-																						{
-																							
-																						},
+																helpPrompt = {	SGP_helpPrompt },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 						:Do(function(_,data)
@@ -1690,7 +1592,10 @@
 						end
 
 						for i = 1, cmdCount do
-							SGP_vrHelp[i] = {	text = "Command" .. tostring(i) }
+							SGP_vrHelp[i] = {	
+																text = "Command" .. tostring(i),
+																position = i
+															}
 						end
 
 						local cid = self.mobileSession:SendRPC("ResetGlobalProperties",{})
@@ -1699,6 +1604,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -1759,7 +1665,10 @@
 						end
 
 						for i = 1, cmdCount do
-							SGP_vrHelp[i] = {	text = "Command" .. tostring(i) }
+							SGP_vrHelp[i] = {	
+																text = "Command" .. tostring(i),
+																position = i
+															 }
 						end
 						
 						local cid = self.mobileSession:SendRPC("ResetGlobalProperties",{})
@@ -1768,6 +1677,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -1985,6 +1895,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = "VR help title",
 																vrHelp = 
 																			{
 																				{
@@ -2099,7 +2010,10 @@
 						end
 
 						for i = 1, cmdCount do
-							SGP_vrHelp[i] = {	text = "Command" .. tostring(i) }
+							SGP_vrHelp[i] = {	
+																text = "Command" .. tostring(i),
+																position = i
+															}
 						end
 						local cid = self.mobileSession:SendRPC("ResetGlobalProperties",{})
 			  			
@@ -2107,6 +2021,7 @@
 						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
+																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
 																vrHelp = { SGP_vrHelp },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
@@ -2362,13 +2277,18 @@
 					end
 
 					Test["NoUpdateFile_HMI_REJECTEDAddCommand_TC" .. TC_Number] = function(self)
-						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
 					
 						--hmi side: expect UI.SetGlobalProperties request
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  --TODO: Check after clarification is done: APPLINK-26638
 														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		} },	
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -2441,13 +2361,18 @@
 					end
 
 					Test["NoUpdateFile_HMI_UnsupportedAddCommand_TC" .. TC_Number] = function(self)
-						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{})
+						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
 					
 						--hmi side: expect UI.SetGlobalProperties request
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-													  --TODO: Check after clarification is done: APPLINK-26638
 														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},	
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -2633,9 +2558,495 @@
 ----------------------------------------VI TEST BLOCK-----------------------------------------
 --------------------------Sequence with emulating of user's action(s)-------------------------
 ----------------------------------------------------------------------------------------------
-  --These test shall be performed in tests for testing API SetGlobalProperties.
-  --See ATF_SetGlobalProperties.lua
   --Begin Test suit EmulatingUserAction
+  	--Begin Test case EmulatingUserAction.1
+			--Preconditions Test case EmulatingUserAction.1
+			Precondition_RegisterApp("TC"..TC_Number, self)
+
+			Test["Precondition_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
+				
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+			 			--hmi side: sending UI.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+			
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+			end
+
+			for cmdCount = 1, 10 do
+				Test["Precondition_NoRequestToHMI_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+				
+					AddCommand(self, cmdCount)
+
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end						
+						
+				Test["Precondition_CheckInternalList_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+						
+					--TODO: Shall be updated after APPLINK-26644 is answered.
+					SGP_helpPrompt[1] ={
+																text = "Command" .. tostring(cmdCount), --menuName}
+																type = "TEXT" }
+					SGP_helpPrompt[2] ={
+																text = "300",
+																type = "SILENCE" }
+								
+					SGP_vrHelp[1] = { text = "Command" .. tostring(cmdCount) }
+							
+					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
+				end
+
+						
+				Test["Precondition_NoRequestToHMI_DeleteCommand" .. cmdCount .."_TC" ..TC_Number] = function(self)
+					DeleteCommand(self, cmdCount)
+							
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end
+			end
+
+			--Description:Sequence that verifies that SGP starts with default values of vrHelp and helpPrompt;
+			--            Successfully updates internal list with AddCommand and DeleteCommand
+			--            And when nothing in internal list returns again default values
+			--Requirement id in JIRA: APPLINK-19475; APPLINK-23962; APPLINK-23728
+			--Verification criteria:
+				--In case mobile app has NO registered AddCommands and/or DeleteCommands requests (previously added or resumed within data resumption process)
+				-- SDL must use current appName as default value for "vrHelp" parameter
+				-- SDL must retrieve value of "helpPrompt" from .ini file ([GLOBAL PROPERTIES] section -> "HelpPrompt" param)					
+
+				Test["SetGlobalProperties_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
+					xmlReporter.AddMessage("Test Case "..TC_Number)
+					userPrint(35,"======================================= Test Case "..TC_Number.." =============================================")
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},	
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+			 			--hmi side: sending UI.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+			
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+
+					TC_Number = TC_Number + 1
+				end
+		--End Test case EmulatingUserAction.1
+
+		--Begin Test case EmulatingUserAction.2
+			--Precondition
+			Precondition_RegisterApp("TC"..TC_Number, self)
+
+			Test["Precondition_NoRespUpdateList_TC" ..TC_Number] = function(self)
+			
+				--mobile side: sending SetGlobalProperties request
+				local cid = self.mobileSession:SendRPC("SetGlobalProperties",
+																											{
+																												helpPrompt = 
+																																		{
+																																			{
+																																				text = "Help prompt 1",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 2",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 3",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 4",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 5",
+																																				type = "TEXT"
+																																			}
+
+																																		},
+																												timeoutPrompt = 
+																																		{
+																																			{
+																																				text = "Timeout prompt",
+																																				type = "TEXT"
+																																			}
+																																		},
+																												vrHelpTitle = "VR help title",
+																												vrHelp = 
+																																		{
+																																			{
+																																				text = "VR help item",
+																																				image = {
+																																									value = "action.png",
+																																									imageType = "DYNAMIC"
+																																								},
+																																				position = 1
+																																			}
+																																		},
+																												menuTitle = "Menu Title",
+																												menuIcon = 
+																																		{
+																																			value = "action.png",
+																																			imageType = "DYNAMIC"
+																																		},
+																												keyboardProperties = 
+																																		{
+																																			keyboardLayout = "QWERTY",
+																																			keypressMode = "SINGLE_KEYPRESS",
+																																			limitedCharacterList = { "a" },
+																																			language = "EN-US",
+																																			autoCompleteText = "Daemon, Freedom"
+																																		}
+																											})
+							
+				--hmi side: expect UI.SetGlobalProperties request
+				EXPECT_HMICALL("UI.SetGlobalProperties",
+															{
+																vrHelpTitle = "VR help title",
+																vrHelp = 
+																				{
+																					{
+																						text = "VR help item",
+																						--[[ TODO: update after resolving APPLINK-16052]]
+																						image = 
+																										{
+																											imageType = "DYNAMIC",
+																											value = strAppFolder .. "action.png"
+																										},--]]
+																						position = 1
+																				}	},
+																menuTitle = "Menu Title",
+																--[[ TODO: update after resolving APPLINK-16052]]
+																menuIcon = 
+																					{
+																						imageType = "DYNAMIC",
+																						value = strAppFolder .. "action.png"
+																					},
+																keyboardProperties = 
+																					{
+																						keyboardLayout = "QWERTY",
+																						keypressMode = "SINGLE_KEYPRESS",
+																						--[=[ TODO: update after resolving APPLINK-16047
+																						limitedCharacterList = { "a" },]=]
+																						language = "EN-US",
+																						autoCompleteText = "Daemon, Freedom"
+																					},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+				:Do(function(_,data)
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+				end)
+
+				--hmi side: expect TTS.SetGlobalProperties request
+				EXPECT_HMICALL("TTS.SetGlobalProperties",
+															{
+																helpPrompt = 
+																						{
+																							{
+																								text = "Help prompt 1",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 2",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 3",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 4",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 5",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							}
+																						},
+																timeoutPrompt = 
+																						{
+																							{
+																								text = "Timeout prompt",
+																								type = "TEXT"
+																						}	},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+				:Do(function(_,data)
+			 		--hmi side: sending UI.SetGlobalProperties response
+			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+				end)		
+
+				--mobile side: expect SetGlobalProperties response
+				EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+					
+				--mobile side: expect OnHashChange notification
+				EXPECT_NOTIFICATION("OnHashChange")
+			end
+			for cmdCount = 1, 10 do
+				Test["Precondition_NoRequestToHMI_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+				
+					AddCommand(self, cmdCount)
+
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end						
+						
+				Test["Precondition_CheckInternalList_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+					local i = 1
+					for helpPrompt_count = 1, 5
+						SGP_helpPrompt[i]={
+																text = "Help prompt " .. helpPrompt_count,
+																type = "TEXT"
+															}
+						SGP_helpPrompt[i+1]={
+															{
+																text = "300",
+																type = "SILENCE"
+															}
+						i = i + 2
+					end
+					
+					--TODO: Shall be updated after APPLINK-26644 is answered.
+					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
+																text = "Command" .. tostring(cmdCount), --menuName}
+																type = "TEXT" }
+					SGP_helpPrompt[helpPrompt_count*2 + 2] ={
+																text = "300",
+																type = "SILENCE" }
+					
+					SGP_vrHelp[1]={ text = "VR help item"}
+					SGP_vrHelp[2] = { text = "Command" .. tostring(cmdCount) }
+							
+					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
+				end
+
+						
+				Test["Precondition_NoRequestToHMI_DeleteCommand" .. cmdCount .."_TC" ..TC_Number] = function(self)
+					DeleteCommand(self, cmdCount)
+							
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end
+			end
+			--Description:Sequence that verifies that SGP starts with 5 helpPrompt params;
+			--            Successfully updates internal list with AddCommand and DeleteCommand
+			--            And when all commands are added / deleted only 5 helpPrompt params are left.
+				Test["SetGlobalProperties_5helpPrompt_vrHelpTitle_Assigned" ..TC_Number] = function(self)
+					
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties", { menuTitle = "Menu Title" })
+							
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+															{
+																vrHelpTitle = "VR help title",
+																vrHelp = 
+																				{
+																					{
+																						text = "VR help item",
+																						--[[ TODO: update after resolving APPLINK-16052]]
+																						image = 
+																										{
+																											imageType = "DYNAMIC",
+																											value = strAppFolder .. "action.png"
+																										},--]]
+																						position = 1
+																				}	},
+																menuTitle = "Menu Title",
+																--[[ TODO: update after resolving APPLINK-16052]]
+																menuIcon = 
+																					{
+																						imageType = "DYNAMIC",
+																						value = strAppFolder .. "action.png"
+																					},
+																keyboardProperties = 
+																					{
+																						keyboardLayout = "QWERTY",
+																						keypressMode = "SINGLE_KEYPRESS",
+																						--[=[ TODO: update after resolving APPLINK-16047
+																						limitedCharacterList = { "a" },]=]
+																						language = "EN-US",
+																						autoCompleteText = "Daemon, Freedom"
+																					},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+															{
+																helpPrompt = 
+																						{
+																							{
+																								text = "Help prompt 1",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 2",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 3",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 4",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 5",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							}
+																						},
+																timeoutPrompt = 
+																						{
+																							{
+																								text = "Timeout prompt",
+																								type = "TEXT"
+																						}	},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+					
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+					:Times(0)
+
+					TC_Number = TC_Number + 1
+				end
+		--End Test case EmulatingUserAction.2
   --End Test suit EmulatingUserAction
 ----------------------------------------------------------------------------------------------
 
@@ -2643,9 +3054,499 @@
 ----------------------------------------VII TEST BLOCK----------------------------------------
 -------------------------------------Different HMIStatus--------------------------------------
 --processing of request/response in different HMIlevels, SystemContext, AudioStreamingState---
-	--These test shall be performed in tests for testing API SetGlobalProperties.
-  --See ATF_SetGlobalProperties.lua
   --Begin Test suit Different HMIStatus
+  	--Begin Test case FULLHMIStatus.1
+		--Preconditions Test case FULLHMIStatus.1
+		Precondition_RegisterApp("TC"..TC_Number, self)
+
+		commonSteps:ActivationApp("TC"..TC_Number)
+			
+		Test["Precondition_FULL_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
+				
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},	
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+			 			--hmi side: sending UI.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+			
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+		end
+
+		for cmdCount = 1, 10 do
+				Test["Precondition_FULL_NoRequestToHMI_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+				
+					AddCommand(self, cmdCount)
+
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end						
+						
+				Test["Precondition_FULL_CheckInternalList_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+						
+					--TODO: Shall be updated after APPLINK-26644 is answered.
+					SGP_helpPrompt[1] ={
+																text = "Command" .. tostring(cmdCount), --menuName}
+																type = "TEXT" }
+					SGP_helpPrompt[2] ={
+																text = "300",
+																type = "SILENCE" }
+								
+					SGP_vrHelp[1] = { text = "Command" .. tostring(cmdCount) }
+							
+					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
+				end
+
+						
+				Test["Precondition_FULL_NoRequestToHMI_DeleteCommand" .. cmdCount .."_TC" ..TC_Number] = function(self)
+					DeleteCommand(self, cmdCount)
+							
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end
+			end
+
+			--Description:Sequence that verifies that SGP starts with default values of vrHelp and helpPrompt;
+			--            Successfully updates internal list with AddCommand and DeleteCommand
+			--            And when nothing in internal list returns again default values
+			--Requirement id in JIRA: APPLINK-19475; APPLINK-23962; APPLINK-23728
+			--Verification criteria:
+				--In case mobile app has NO registered AddCommands and/or DeleteCommands requests (previously added or resumed within data resumption process)
+				-- SDL must use current appName as default value for "vrHelp" parameter
+				-- SDL must retrieve value of "helpPrompt" from .ini file ([GLOBAL PROPERTIES] section -> "HelpPrompt" param)					
+
+				Test["SetGlobalProperties_FULL_DefaultParams_AddDeleteCmd_TC" ..TC_Number] = function (self)					
+					xmlReporter.AddMessage("Test Case "..TC_Number)
+					userPrint(35,"======================================= Test Case "..TC_Number.." =============================================")
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														-- Clarification is done in APPLINK-26638
+														vrHelp ={
+																			{
+																				text = config.application1.registerAppInterfaceParams.appName,
+																				position = 1
+																		}	},	
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+					:Do(function(_,data)
+			 			--hmi side: sending UI.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+			
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+
+					TC_Number = TC_Number + 1
+				end
+	--End Test case FULLHMIStatus.1
+
+		--Begin Test case FULLHMIStatus.2
+			--Precondition
+			Precondition_RegisterApp("TC"..TC_Number, self)
+			
+			commonSteps:ActivationApp("TC"..TC_Number)
+
+			Test["Precondition_FULL_NoRespUpdateList_TC" ..TC_Number] = function(self)
+			
+				--mobile side: sending SetGlobalProperties request
+				local cid = self.mobileSession:SendRPC("SetGlobalProperties",
+																											{
+																												helpPrompt = 
+																																		{
+																																			{
+																																				text = "Help prompt 1",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 2",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 3",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 4",
+																																				type = "TEXT"
+																																			},
+																																			{
+																																				text = "Help prompt 5",
+																																				type = "TEXT"
+																																			}
+
+																																		},
+																												timeoutPrompt = 
+																																		{
+																																			{
+																																				text = "Timeout prompt",
+																																				type = "TEXT"
+																																			}
+																																		},
+																												vrHelpTitle = "VR help title",
+																												vrHelp = 
+																																		{
+																																			{
+																																				text = "VR help item",
+																																				image = {
+																																									value = "action.png",
+																																									imageType = "DYNAMIC"
+																																								},
+																																				position = 1
+																																			}
+																																		},
+																												menuTitle = "Menu Title",
+																												menuIcon = 
+																																		{
+																																			value = "action.png",
+																																			imageType = "DYNAMIC"
+																																		},
+																												keyboardProperties = 
+																																		{
+																																			keyboardLayout = "QWERTY",
+																																			keypressMode = "SINGLE_KEYPRESS",
+																																			limitedCharacterList = { "a" },
+																																			language = "EN-US",
+																																			autoCompleteText = "Daemon, Freedom"
+																																		}
+																											})
+							
+				--hmi side: expect UI.SetGlobalProperties request
+				EXPECT_HMICALL("UI.SetGlobalProperties",
+															{
+																vrHelpTitle = "VR help title",
+																vrHelp = 
+																				{
+																					{
+																						text = "VR help item",
+																						--[[ TODO: update after resolving APPLINK-16052]]
+																						image = 
+																										{
+																											imageType = "DYNAMIC",
+																											value = strAppFolder .. "action.png"
+																										},--]]
+																						position = 1
+																				}	},
+																menuTitle = "Menu Title",
+																--[[ TODO: update after resolving APPLINK-16052]]
+																menuIcon = 
+																					{
+																						imageType = "DYNAMIC",
+																						value = strAppFolder .. "action.png"
+																					},
+																keyboardProperties = 
+																					{
+																						keyboardLayout = "QWERTY",
+																						keypressMode = "SINGLE_KEYPRESS",
+																						--[=[ TODO: update after resolving APPLINK-16047
+																						limitedCharacterList = { "a" },]=]
+																						language = "EN-US",
+																						autoCompleteText = "Daemon, Freedom"
+																					},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+				:Do(function(_,data)
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+				end)
+
+				--hmi side: expect TTS.SetGlobalProperties request
+				EXPECT_HMICALL("TTS.SetGlobalProperties",
+															{
+																helpPrompt = 
+																						{
+																							{
+																								text = "Help prompt 1",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 2",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 3",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 4",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 5",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							}
+																						},
+																timeoutPrompt = 
+																						{
+																							{
+																								text = "Timeout prompt",
+																								type = "TEXT"
+																						}	},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+				:Do(function(_,data)
+			 		--hmi side: sending UI.SetGlobalProperties response
+			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+				end)		
+
+				--mobile side: expect SetGlobalProperties response
+				EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+					
+				--mobile side: expect OnHashChange notification
+				EXPECT_NOTIFICATION("OnHashChange")
+			end
+			for cmdCount = 1, 10 do
+				Test["Precondition_FULL_NoRequestToHMI_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+				
+					AddCommand(self, cmdCount)
+
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end						
+						
+				Test["Precondition_FULL_CheckInternalList_AddCommand" .. cmdCount .. "_TC" ..TC_Number] = function(self)
+					local i = 1
+					for helpPrompt_count = 1, 5
+						SGP_helpPrompt[i]={
+																text = "Help prompt " .. helpPrompt_count,
+																type = "TEXT"
+															}
+						SGP_helpPrompt[i+1]={
+															{
+																text = "300",
+																type = "SILENCE"
+															}
+						i = i + 2
+					end
+					
+					--TODO: Shall be updated after APPLINK-26644 is answered.
+					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
+																text = "Command" .. tostring(cmdCount), --menuName}
+																type = "TEXT" }
+					SGP_helpPrompt[helpPrompt_count*2 + 2] ={
+																text = "300",
+																type = "SILENCE" }
+					
+					SGP_vrHelp[1]={ text = "VR help item"}
+					SGP_vrHelp[2] = { text = "Command" .. tostring(cmdCount) }
+							
+					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
+				end
+
+						
+				Test["Precondition_FULL_NoRequestToHMI_DeleteCommand" .. cmdCount .."_TC" ..TC_Number] = function(self)
+					DeleteCommand(self, cmdCount)
+							
+					EXPECT_HMICALL("UI.SetGlobalProperties",{})
+					:Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
+				end
+			end
+			--Description:Sequence that verifies that SGP starts with 5 helpPrompt params;
+			--            Successfully updates internal list with AddCommand and DeleteCommand
+			--            And when all commands are added / deleted only 5 helpPrompt params are left.
+				Test["SetGlobalProperties_FULL_5helpPrompt_vrHelpTitle_Assigned" ..TC_Number] = function(self)
+					
+					--mobile side: sending SetGlobalProperties request
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties", { menuTitle = "Menu Title" })
+							
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+															{
+																vrHelpTitle = "VR help title",
+																vrHelp = 
+																				{
+																					{
+																						text = "VR help item",
+																						--[[ TODO: update after resolving APPLINK-16052]]
+																						image = 
+																										{
+																											imageType = "DYNAMIC",
+																											value = strAppFolder .. "action.png"
+																										},--]]
+																						position = 1
+																				}	},
+																menuTitle = "Menu Title",
+																--[[ TODO: update after resolving APPLINK-16052]]
+																menuIcon = 
+																					{
+																						imageType = "DYNAMIC",
+																						value = strAppFolder .. "action.png"
+																					},
+																keyboardProperties = 
+																					{
+																						keyboardLayout = "QWERTY",
+																						keypressMode = "SINGLE_KEYPRESS",
+																						--[=[ TODO: update after resolving APPLINK-16047
+																						limitedCharacterList = { "a" },]=]
+																						language = "EN-US",
+																						autoCompleteText = "Daemon, Freedom"
+																					},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+															{
+																helpPrompt = 
+																						{
+																							{
+																								text = "Help prompt 1",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 2",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 3",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 4",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							},
+																							{
+																								text = "Help prompt 5",
+																								type = "TEXT"
+																							},
+																							{
+																								text = "300",
+																								type = "SILENCE"
+																							}
+																						},
+																timeoutPrompt = 
+																						{
+																							{
+																								text = "Timeout prompt",
+																								type = "TEXT"
+																						}	},
+																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+															})
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+					
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+					:Times(0)
+
+					TC_Number = TC_Number + 1
+				end
+		--End Test case FULLHMIStatus.2
   --End Test suit Different HMIStatus
 ----------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------
