@@ -1232,16 +1232,17 @@ end
 	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "month"}, ElementBoundary, true)
 
 	-- year parameter
+	--TODO: update when APPLINK-26717 is resolved
 	local ElementBoundary = {0, 4095}
 	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "year"}, ElementBoundary, true)
 
 	-- tz_hour parameter
 	local ElementBoundary = {-12, 14}
-	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "tz_hour"}, ElementBoundary, true)
+	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "tz_hour"}, ElementBoundary, true, 0)
 
 	-- tz_minute parameter
 	local ElementBoundary = {0, 59}
-	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "tz_minute"}, ElementBoundary, true)
+	integerParameter:verify_Integer_Parameter(Request, {"timeStamp", "tz_minute"}, ElementBoundary, true, 0)
 
 	----------------------------------------------------------------------------------------------
 	--List of test cases for parameters: deliveryMode, mandatory = false
