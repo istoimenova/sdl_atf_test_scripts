@@ -172,11 +172,12 @@ local function IGNITION_OFF(self, appNumber)
 		})
 
 	-- hmi side: expect OnSDLClose notification
+	--TODO: defect APPLINK-19717 [Service] SDL doesn't send onSDLClose to HMI upon ignition Off
 	EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLClose")
 
 	-- hmi side: expect OnAppUnregistered notification
-	--EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered")
-		-- :Times(appNumber)
+	EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered")
+	:Times(appNumber)
 end
 
 --This function is used in RestartSDL function
@@ -1325,7 +1326,20 @@ end
 	--Description: SDL must send OnDriverDistraction to app right after this app changes HMILevel from NONE to any other	
 	commonFunctions:newTestCasesGroup("Test case: SDL must sends OnDriverDistraction to app right after this app changes HMILevel from NONE to any other")	
 		--Precondition: Unregister the application on mobileSession of previous TestCase and Register a new application
-		commonSteps:UnregisterApplication("Unregister_Application_of_MobileSession_in_DifferentHMIlevelChecks")
+		--commonSteps:UnregisterApplication("Unregister_Application_of_MobileSession_in_DifferentHMIlevelChecks")
+		Test["Unregister_Application_of_MobileSession_in_DifferentHMIlevelChecks"] = function(self)		
+		
+				local cid = self.mobileSession:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response				
+				self.mobileSession:ExpectResponse(cid, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)
+
+				local cid2 = self.mobileSession2:SendRPC("UnregisterAppInterface",{})
+				--mobile side: expect the response
+				self.mobileSession2:ExpectResponse(cid2, { success = true, resultCode = "SUCCESS"})
+				:Timeout(2000)	
+		end
+		
 		function Test:AddNewSession()
 				-- Connected expectation
 				self.mobileSession = mobile_session.MobileSession(
@@ -1365,7 +1379,7 @@ end
 				end
 			end
 		--End Test case [App changes HMI level from NONE].2		
-		
+	
 			Test["Start TC3:"] = function(self)
 				print ("\27[33m TC3. 1 App - NONE - LIMITED - OnDriverDistraction -> OnDriverDistraction come (in case of Resumption) \27[0m")
 			end
@@ -1390,7 +1404,7 @@ end
 			end
 
 		--End Test case [App changes HMI level from NONE].3	
-
+	
 			Test["Start TC4:"] = function(self)
 				print ("\27[33m TC4. 1 App - NONE - OnDriverDistraction - LIMITED -> OnDriverDistraction come (in case of Resumption) \27[0m")
 			end		
@@ -1467,7 +1481,7 @@ end
 			end
 		end
 		--End Test case [App changes HMI level from NONE].5	
-		
+	
 			Test["Start TC6:"] = function(self)
 				print ("\27[33m TC6. 1 App - OnDriverDistraction - NONE - FULL -> OnDriverDistraction come \27[0m")
 			end	
