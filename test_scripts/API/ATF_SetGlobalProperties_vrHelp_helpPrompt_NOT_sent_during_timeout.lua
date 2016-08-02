@@ -1,18 +1,17 @@
--- Author: Anna Rotar
--- Creation date: 28.07.2016
--- ATF version: 2.2
-
 ---------------------------------------------------------------------------------------------
----------------------- Required system ATF files and Shared Libraries -----------------------
+------------------------------ Required system ATF files-------------------------------------
 ---------------------------------------------------------------------------------------------
 	Test = require('connecttest')
 	require('cardinalities')
-	local events = require('events')
+	local events 				   = require('events')
 	local mobile_session   = require('mobile_session')
-	local mobile = require('mobile_connection')
-	local tcp = require('tcp_connection')
+	local mobile  			   = require('mobile_connection')
+	local tcp 						 = require('tcp_connection')
 	local file_connection  = require('file_connection')
 
+---------------------------------------------------------------------------------------------
+----------------------------- Required Shared Libraries -------------------------------------
+---------------------------------------------------------------------------------------------
 	local commonSteps   = require('user_modules/shared_testcases/commonSteps')
 	local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 
@@ -22,15 +21,24 @@
 		print("policy.sqlite is found in bin folder")
   	os.remove(config.pathToSDL .. "policy.sqlite")
 	end
-
 	require('user_modules/AppTypes')
 	local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
+	local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
 ---------------------------------------------------------------------------------------------
 ------------------------------------ Common Variables ---------------------------------------
 ---------------------------------------------------------------------------------------------
-	local TC_Number = 1
 	config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+	local TimeRAISuccess = 0
+
+	-- Will be used for check is command is added within 10 sec after RAI; True - added
+	local AddCmdSuccess = {}
+
+	-- Will be used for check is command is deleted within 10 sec after RAI; True - added
+	local DeleteCmdSuccess = {}
+
+	local SGP_helpPrompt = {}
+	local SGP_vrHelp = {}
 
 	--ToDo: shall be removed when APPLINK-16610 is fixed
 	config.defaultProtocolVersion = 2
@@ -40,7 +48,8 @@
 
 	local default_HelpPromt = "Default Help Prompt"
 	
-	-- Requirement id in JIRA: APPLINK-19475: Read default value of HelpPromt in .ini file
+	-- Requirement id in JIRA: APPLINK-19475
+	-- Read default value of HelpPromt in .ini file
 	f = assert(io.open(config.pathToSDL.. "/smartDeviceLink.ini", "r"))
  
  	fileContent = f:read("*all")
@@ -55,7 +64,7 @@
 	f:close()
 
 ---------------------------------------------------------------------------------------------
------------------------------------Backup, updated preloaded file ---------------------------
+-----------------------------------Backup, update preloaded file ------------------------_---
 ---------------------------------------------------------------------------------------------
  	commonSteps:DeleteLogsFileAndPolicyTable()
 
@@ -63,6 +72,7 @@
 
  	f = assert(io.open(config.pathToSDL.. "/sdl_preloaded_pt.json", "r"))
 
+ 	-- SystemRequest
  	fileContent = f:read("*all")
  	DefaultContant = fileContent:match('"rpcs".?:.?.?%{')
 
@@ -82,44 +92,92 @@
 			fileContent = string.gsub(fileContent,'"OnEncodedSyncPData".?:.?.?%{.-%},',Content_OnEncodedSyncPData)
 		end
 	--]]
+
+	-- Policy SetGlobalProperties
+ 		Content_SetGlobalProperties = fileContent:match('"SetGlobalProperties".?:.?.?%{.-%}')
+ 		if not Content_SetGlobalProperties then
+ 			print ( " \27[31m  SetGlobalProperties is not found in sdl_preloaded_pt.json \27[0m " )
+ 		else
+ 			Content_SetGlobalProperties =  string.gsub(Content_SetGlobalProperties, '"SetGlobalProperties".?:.?.?%{.-%}', '"SetGlobalProperties":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
+ 			fileContent = string.gsub(fileContent,'"SetGlobalProperties".?:.?.?%{.-%}',Content_SetGlobalProperties)
+ 		end
+
+ 	-- Policy ResetGlobalProperties
+ 		Content_ResetGlobalProperties = fileContent:match('"ResetGlobalProperties".?:.?.?%{.-%}')
+ 		if not Content_ResetGlobalProperties then
+ 			print ( " \27[31m  ResetGlobalProperties is not found in sdl_preloaded_pt.json \27[0m " )
+ 		else
+ 			Content_ResetGlobalProperties =  string.gsub(Content_ResetGlobalProperties, '"ResetGlobalProperties".?:.?.?%{.-%}', '"ResetGlobalProperties":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
+ 			fileContent = string.gsub(fileContent,'"ResetGlobalProperties".?:.?.?%{.-%}',Content_ResetGlobalProperties)
+ 		end
+
+ 	-- Policy AddCommand
+ 		Content_AddCommand = fileContent:match('"AddCommand".?:.?.?%{.-%}')
+ 		if not Content_AddCommand then
+	 		print ( " \27[31m  AddCommand is not found in sdl_preloaded_pt.json \27[0m " )
+ 		else
+ 			Content_AddCommand =  string.gsub(Content_AddCommand, '"AddCommand".?:.?.?%{.-%}', '"AddCommand":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
+ 			fileContent = string.gsub(fileContent,'"AddCommand".?:.?.?%{.-%}',Content_AddCommand)
+ 		end
+
+ 	-- Policy DeleteCommand
+ 		Content_DeleteCommand = fileContent:match('"DeleteCommand".?:.?.?%{.-%}')
+ 		if not Content_DeleteCommand then
+ 			print ( " \27[31m  DeleteCommand is not found in sdl_preloaded_pt.json \27[0m " )
+ 		else
+ 			Content_DeleteCommand =  string.gsub(Content_DeleteCommand, '"DeleteCommand".?:.?.?%{.-%}', '"DeleteCommand":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
+ 			fileContent = string.gsub(fileContent,'"DeleteCommand".?:.?.?%{.-%}',Content_DeleteCommand)
+ 		end
+ 	
+
  	f = assert(io.open(config.pathToSDL.. "/sdl_preloaded_pt.json", "w+"))
  
  	f:write(fileContent)
  	f:close()
-  os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt.json " .. config.pathToSDL .. "sdl_preloaded_pt_corrected.json" )
+
+        os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt.json " .. config.pathToSDL .. "sdl_preloaded_pt_corrected.json" )
 
 ---------------------------------------------------------------------------------------------
 -----------------------------------Local functions ------------------------------------------
 ---------------------------------------------------------------------------------------------
-	local function userPrint( color, message)
 
+	--User prints
+	local function userPrint( color, message)
 		print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
 	end
 
+	
 	local function TextPrint(message)
 		if(message == "Precondition") then
 			function Test:PrintPrecondition()
-				userPrint(35,"======================================= Precondition =============================================")
+				userPrint(34,"======================================= Precondition =============================================")
 			end
 		elseif (message == "Test Case") then
 			function Test:PrintTestCase()
 				userPrint(35,"========================================= Test Case ==============================================")
 			end
 		else
-			function Test:PrintMessage()
-				userPrint(35,"==============================".. message .."==========================================")
+			function Test:PrintMes()
+				userPrint(33,"------------------------------------------- ".. message .." -------------------------------------------")
 			end
 		end
 	end
 
-	local function Precondition_RegisterApp(nameTC, self)
-		local TimeRAISuccess = 0
-		TextPrint("Precondition " ..nameTC)
-		commonSteps:UnregisterApplication("UnregisterApplication_" .. nameTC)	
+	function TCBody(self, numberOfTC)
+		TextPrint("Test Case"..numberOfTC)
+	end
 
-		commonSteps:StartSession("StartSession_" ..nameTC)
+	--Registering application
+	function Precondition_RegisterApp(self, nameTC)
 		
-		Test["RegisterApp" ..nameTC] = function(self)
+
+		TextPrint("Precondition")
+		commonSteps:UnregisterApplication(nameTC .."_UnregisterApplication")	
+
+		commonSteps:StartSession(nameTC .."_StartSession")
+
+		Test[nameTC .."_RegisterApp"] = function(self)
+
 			self.mobileSession:StartService(7)
 			:Do(function()	
 				local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
@@ -129,7 +187,8 @@
 																})
 				:Do(function(_,data)
 					TimeRAISuccess = timestamp()
-			  	self.applications[data.params.application.appName] = data.params.application.appID
+			  		self.applications[data.params.application.appName] = data.params.application.appID
+			  		return TimeRAISuccess
 				end)
 
 				self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
@@ -137,11 +196,18 @@
 
 				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 			end)
+
+			if(TimeRAISuccess == nil) then
+				TimeRAISuccess = 0
+				userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
+			end
 		end		
 	end
 
+  	--AddCommand
 	local function AddCommand(self, icmdID)
-	
+
+		local TimeAddCmdSuccess = 0
 		--mobile side: sending AddCommand request
 		local cid = self.mobileSession:SendRPC("AddCommand",
 		{
@@ -184,23 +250,49 @@
 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 		end)	
 	
-		
+		if(TimeRAISuccess == nil ) then
+			TimeRAISuccess = 0
+			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
+		end
 		--mobile side: expect AddCommand response 
 		EXPECT_RESPONSE(cid, {  success = true, resultCode = "SUCCESS"  })
-		:Do(function(_,data)
-			--mobile side: expect OnHashChange notification
+		:Do(function(_,data)			
+			
+			if(data.payload.resultCode ~= "SUCCESS") then
+				userPrint(33,"SUCCESS of AddCommand is not received!")
+				AddCmdSuccess[icmdID] = false
+			else
+				TimeAddCmdSuccess = timestamp()
+			
+				--mobile side: expect OnHashChange notification
+				if( 
+					 (TimeAddCmdSuccess - TimeRAISuccess) <= 10000 and
+				 	 (TimeAddCmdSuccess > 0) )then
+					userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+					AddCmdSuccess[icmdID] = true
+				else
+					userPrint(33,"Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess) )
+					--self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+					AddCmdSuccess[icmdID] = false
+				end
 			
 
-			--Requirement Jira ID: APPLINK-15682
-			EXPECT_NOTIFICATION("OnHashChange")
-			:Do(function(_, data)
-				self.currentHashID = data.payload.hashID
-			end)
-			
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Do(function(_, data)
+					self.currentHashID = data.payload.hashID
+				end)
+			end
 		end)
+
 	end
 
+	--DeleteCommand
 	local function DeleteCommand(self, icmdID)
+		local TimeDeleteCmdSuccess = 0
+		if(TimeRAISuccess == nil ) then
+			TimeRAISuccess = 0
+			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
+		end
 		--mobile side: sending DeleteCommand request
 		local cid = self.mobileSession:SendRPC("DeleteCommand",
 		{
@@ -232,15 +324,33 @@
 		--mobile side: expect DeleteCommand response 
 		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
 		:Do(function(_,data)
-		
-			--Requirement Jira ID: APPLINK-15682
-			EXPECT_NOTIFICATION("OnHashChange")
-			:Do(function(_, data)
-				self.currentHashID = data.payload.hashID
-			end)
+			if(data.payload.resultCode ~= "SUCCESS") then
+				userPrint(33,"SUCCESS of DeleteCommand is not received!")
+				DeleteCmdSuccess[icmdID] = false
+			else
+				TimeDeleteCmdSuccess  = timestamp()		
+				if( 
+					(TimeDeleteCmdSuccess - TimeRAISuccess) <= 10000  and
+					(TimeDeleteCmdSuccess > 0) 	) then
+					userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+					DeleteCmdSuccess[icmdID] = true
+				else
+					userPrint(33,"Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+					DeleteCmdSuccess[icmdID] = false
+				end
+
+				EXPECT_NOTIFICATION("OnHashChange")
+				:Do(function(_, data)
+					self.currentHashID = data.payload.hashID
+				end)
+			end
+
 		end)
+		
+
 	end
 
+	--Checks of updating/no update of internal list
 	local function CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 		--userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
 		local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
@@ -273,7 +383,7 @@
 			
 		--mobile side: expect OnHashChange notification
 		EXPECT_NOTIFICATION("OnHashChange")
-		:Times(0)
+		
 	end
 
 	local function CheckNOUpdateFile()
@@ -285,8 +395,8 @@
 ---------------------------------------------------------------------------------------------
 
 	--1. Precondition
-			TextPrint("General Precondition")
-			commonSteps:ActivationApp("ActivationApp_GeneralPrecondition")
+			TextPrint("Common Precondition")
+			commonSteps:ActivationApp(_, "ActivationApp_GeneralPrecondition")
 
 
 	--2. Precondition: update Policy with SetGlobalProperties API in FULL, LIMITED, BACKGROUND is allowed
@@ -401,17 +511,18 @@
 					-- SDL must retrieve value of "helpPrompt" from .ini file ([GLOBAL PROPERTIES] section -> "HelpPrompt" param)
 				-- SDL sends UI.SetGlobalProperties(<default_vrHelp>, params) and TTS.SetGlobalProperties(<default_helpPrompt>, params) to HMI 
 
-				Test["NO_SGP_from_App_during_Timer_TC" ..TC_Number] = function(self)
+				Precondition_RegisterApp(self, "TC1")
+
+                                TCBody(self, "1")
+
+				Test["TC1_NoSGP_from_App_during_10secTimer"] = function(self)
 
 	                        local time = timestamp()
 
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
+				if (time - TimeRAISuccess) > 10000 then
 
 					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
                                         :Times(0)
 					
 					--hmi side: expect UI.SetGlobalProperties request
@@ -424,8 +535,7 @@
 																		text = config.application1.registerAppInterfaceParams.appName,
 																		position = 1
 																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+                                                                                                                         }
 													})
 
 					:Do(function(_,data)
@@ -442,8 +552,7 @@
 																						text = default_HelpPromt,
 																						type = "TEXT"
 																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+																					}
 													})
 
 					:Do(function(_,data)
@@ -454,10 +563,11 @@
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
+
+					end
+							
 				end
+
 
 		--End Test case PositiveResponseCheck.1
 
@@ -466,28 +576,26 @@
 			--Description: Case when App does NOT send SetGlobalProperties request to SDL during 10 sec timer + values from internal list
 			--Requirement id in JIRA: APPLINK-19474, APPLINK-26644, APPLINK-23652->reg_1
 			--Verification criteria:
-				--In case mobile app has registered AddCommands and/or DeleteCommands requests (previously added)
+				--In case mobile app has registered AddCommands requests (previously added)
 				-- SDL must provide the value of "helpPrompt" and "vrHelp" based on registered AddCommands and DeleteCommands requests to HMI: 
 					-- SDL sends UI.SetGlobalProperties(<vrHelp_from_list>, params) and TTS.SetGlobalProperties(<helpPrompt_from_list>, params) to HMI 
 
 
 				-- Precondition to PositiveResponseCheck.2
-					Precondition_RegisterApp("TC"..TC_Number, self)
+					Precondition_RegisterApp(self, "TC2")
 					for cmdCount = 1, 2 do
-						Test["Precondition_AddCommandInitial_" .. cmdCount.."_TC"..TC_Number] = function(self)
+						Test["TC2_Precondition_AddCommandInitial_" .. cmdCount] = function(self)
 							AddCommand(self, cmdCount)
 						end
 					end 
 				--End Precondition to PositiveResponseCheck.2
+					TCBody(self, "2")
 
-					Test["No_SGP_and_VrHelp&HelpPrompt_from_List_TC" ..TC_Number] = function(self)
+					Test["TC2_NoSGP+vrHelp&helpPrompt_from_intList"] = function(self)
 
 						local time = timestamp()
 
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+						if (time - TimeRAISuccess) > 10000 then
 
 							--mobile side: sending SetGlobalProperties request
 							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
@@ -554,11 +662,12 @@
 							:Times(0)
 						end
 
-						TC_Number = TC_Number + 1
-					end	
+					end
 				--End Test case PositiveResponseCheck.2
 
-				----Begin Test case PositiveResponseCheck.3
+				--[TODO:uncomment after APPLINK-16610, APPLINK-16094, APPLINK-26394 are fixed]
+				--[[
+				--Begin Test case PositiveResponseCheck.3
 					--Description: Case when App does NOT send SetGlobalProperties request to SDL during 10 sec timer + values from internal list
 					--Requirement id in JIRA: APPLINK-19474, APPLINK-26644, APPLINK-23652->reg_1
 					--Verification criteria:
@@ -567,7 +676,8 @@
 							-- SDL sends UI.SetGlobalProperties(<vrHelp_from_list>, params) and TTS.SetGlobalProperties(<helpPrompt_from_list>, params) to HMI 
 
 				  	 --Precondition to PositiveResponseCheck.3
-						Test["Suspend_TC"..TC_Number] = function(self)
+						Precondition_RegisterApp(self, "TC2.1")
+						Test["TC2.1_Suspend"] = function(self)
 							self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications", { reason = "SUSPEND" })
 							--Requirement Jira ID: APPLINK-15702
 							--Send BC.OnPersistanceComplete to HMI on data persistance complete			
@@ -575,7 +685,7 @@
 							EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
 						end
 
-						Test["Ignion_OFF_TC" ..TC_Number] = function(self)
+						Test["TC2.1_Ignion_OFF"] = function(self)
 							-- hmi side: sends OnExitAllApplications (IGNITION_OFF)
 							self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications", { reason = "IGNITION_OFF"})
 
@@ -584,36 +694,36 @@
 
 							-- hmi side: expect OnAppUnregistered notification
 							EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered")
-							:Times(appNumber)
+							:Times(1)
 							StopSDL()
 						end
 					
-						Test["StartSDL_TC" ..TC_Number] = function(self)
+						Test["TC2.1_StartSDL"] = function(self)
 					
 							StartSDL(config.pathToSDL, config.ExitOnCrash)
 						end
 
-						Test["InitHMI_TC" ..TC_Number] = function(self)
+						Test["TC2.1_InitHMI"] = function(self)
 					
 							self:initHMI()
 						end
 
-						Test["InitHMIOnReady_TC" ..TC_Number] = function(self)
+						Test["TC2.1_InitHMIOnReady"] = function(self)
 
 							self:initHMI_onReady()
 						end
 
-						Test["ConnectMobile_TC" ..TC_Number] = function (self)
+						Test["TC2.1_ConnectMobile"] = function (self)
 
 							self:connectMobile()
 						end
 
-						Test["StartSession_TC" ..TC_Number] = function(self)
+						Test["TC2.1_StartSession"] = function(self)
 						
 							CreateSession(self)
 						end
 
-						Test["RegisterAppResumption_TC" .. TC_Number] = function (self)
+						Test["TC2.1_RegisterAppResumption"] = function (self)
 							self.mobileSession:StartService(7)
 							:Do(function()	
 								local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
@@ -659,23 +769,20 @@
 							:Times(2)
 						end
 
-				--End Precondition to PositiveResponseCheck.3
+		                        TCBody(self, "2.1")
 		
-					Test["No_SGP_After_Resumption_TC" .. TC_Number] = function(self)
+					Test["TC2.1_No_SGP_After_Resumption"] = function(self)
 
 					local time = timestamp()
 
-						if( (time - TimeRAISuccess) > 10000 then
-
-						xmlReporter.AddMessage("Test Case " ..TC_Number )
-						userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+						if (time - TimeRAISuccess) > 10000 then
 
 						--mobile side: sending SetGlobalProperties request
 						local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
 				                :Times(0)
 
 
-						--hmi side: expect UI.SetGlobalProperties request
+						       --hmi side: expect UI.SetGlobalProperties request
 							EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
 																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
@@ -693,10 +800,10 @@
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 
-						:Do(function(_,data)
-							--hmi side: sending UI.SetGlobalProperties response
-							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-						end)
+							:Do(function(_,data)
+								--hmi side: sending UI.SetGlobalProperties response
+								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+							end)
 
 
 							--hmi side: expect TTS.SetGlobalProperties request
@@ -736,11 +843,13 @@
 						--mobile side: expect OnHashChange notification
 						EXPECT_NOTIFICATION("OnHashChange")
 						:Times(0)
+						end
 
-						TC_Number = TC_Number + 1
 					end
+
 			--End Test case PositiveResponseCheck.3
-		
+			--]]
+				
 	--End Test suit PositiveResponseCheck
 
 ----------------------------------------------------------------------------------------------
@@ -758,80 +867,72 @@
 				--SDL receives GENERIC_ERROR <errorCode> on UI.SetGlobalProperties from HMI
 				--SDL should log corresponding error internally
 
-                                --Precondition for NegativeResponse.1
-				 Precondition_RegisterApp("TC"..TC_Number, self)
+				 --Precondition for NegativeResponse.1
 
-						Test["Precondition_AddCommand_" .. cmdCount.."_TC"..TC_Number] = function(self)
-							AddCommand(self, cmdCount)
-						end	
-				
-				--End precondition for NegativeResponse.1	
+			                Precondition_RegisterApp(self, "TC3")
 
-					Test["No_SGP_GENERIC_ERROR_on_UISGP_from_HMI_TC" ..TC_Number] = function(self)
+				--End precondition for NegativeResponse.1
+					TCBody(self, "3")
 
-						local time = timestamp()
+					Test["TC3_NoSGP_from_App_during_10secTimer"] = function(self)
 
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+			                local time = timestamp()
 
-							--mobile side: sending SetGlobalProperties request
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-				                        :Times(0)
+					if (time - TimeRAISuccess) > 10000 then
 
-							--hmi side: expect UI.SetGlobalProperties request
-							EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-														
-																vrHelp ={
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						position = 1
-																				        }
-	                                                                                                                                },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-								--hmi side: sending UI.SetGlobalProperties response
-								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)
-
-							
-							--hmi side: expect TTS.SetGlobalProperties request
-							EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																	     {
-																				        {
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-					 			--hmi side: sending TTS.SetGlobalProperties response
-					 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)		
-
-							--mobile side: expect SetGlobalProperties response
-							EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-							:Times(0)
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
 					
-							--mobile side: expect OnHashChange notification
-							EXPECT_NOTIFICATION("OnHashChange")
-							:Times(0)
-						end
-						
-						AddCommand(self, cmdCount)
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+													})
 
- 				         local time = timestamp()
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                       end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+GENERIC_ERROR_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
 
                                          if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
 					
@@ -881,12 +982,8 @@
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "GENERIC_ERROR"})
                                         :Times(0)
 
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-
-						TC_Number = TC_Number + 1
-					end				
+					end
+							
 		
 		--End Test case NegativeResponse.1
                 
@@ -898,80 +995,73 @@
 				--SDL receives GENERIC_ERROR <errorCode> on TTS.SetGlobalProperties from HMI
 				--SDL should log corresponding error internally
 
-                                --Precondition for NegativeResponse.2
-				 Precondition_RegisterApp("TC"..TC_Number, self)
+				 --Precondition for NegativeResponse.2
 
-						Test["Precondition_AddCommand_" .. cmdCount.."_TC"..TC_Number] = function(self)
-							AddCommand(self, cmdCount)
-						end	
-				
-				--End precondition for NegativeResponse.2	
+			                Precondition_RegisterApp(self, "TC4")
 
-					Test["No_SGP_GENERIC_ERROR_on_TTSSGP_from_HMI_TC" ..TC_Number] = function(self)
+				--End precondition for NegativeResponse.2
+					TCBody(self, "4")
 
-						local time = timestamp()
+					Test["TC4_NoSGP_from_App_during_10secTimer"] = function(self)
 
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+			                local time = timestamp()
 
-							--mobile side: sending SetGlobalProperties request
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-				                        :Times(0)
+					if (time - TimeRAISuccess) > 10000 then
 
-							--hmi side: expect UI.SetGlobalProperties request
-							EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-														
-																vrHelp ={
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						position = 1
-																				        }
-	                                                                                                                                },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-								--hmi side: sending UI.SetGlobalProperties response
-								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)
-
-							
-							--hmi side: expect TTS.SetGlobalProperties request
-							EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																	     {
-																				        {
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-					 			--hmi side: sending TTS.SetGlobalProperties response
-					 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)		
-
-							--mobile side: expect SetGlobalProperties response
-							EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-							:Times(0)
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
 					
-							--mobile side: expect OnHashChange notification
-							EXPECT_NOTIFICATION("OnHashChange")
-							:Times(0)
-						end
-						
-						AddCommand(self, cmdCount)
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+														
+													})
 
- 				         local time = timestamp()
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+GENERIC_ERROR_on_TTS.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
 
                                          if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
 					
@@ -1016,16 +1106,13 @@
 			 			self.hmiConnection:SendResponse(data.id, data.method, "GENERIC_ERROR", {})
 					end)		
 
+
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "GENERIC_ERROR"})
                                         :Times(0)
 
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-					:Times(0)
+					end
 
-						TC_Number = TC_Number + 1
-					end				
 		
 		--End Test case NegativeResponse.2
 		
@@ -1039,81 +1126,21 @@
 				--SDL should log corresponding error internally
 
                                 --Precondition for NegativeResponse.3
-				 Precondition_RegisterApp("TC"..TC_Number, self)
 
-						Test["Precondition_AddCommand_" .. cmdCount.."_TC"..TC_Number] = function(self)
-							AddCommand(self, cmdCount)
-						end	
-				
-				--End precondition for NegativeResponse.3	
+			                Precondition_RegisterApp(self, "TC5")
 
-					Test["No_SGP_UNSUP_RES_on_TTSSGP_from_HMI_TC" ..TC_Number] = function(self)
+				--End precondition for NegativeResponse.3
+					TCBody(self, "5")
 
-						local time = timestamp()
+					Test["TC5_NoSGP_from_App_during_10secTimer"] = function(self)
 
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+			                local time = timestamp()
 
-							--mobile side: sending SetGlobalProperties request
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-				                        :Times(0)
+					if (time - TimeRAISuccess) > 10000 then
 
-							--hmi side: expect UI.SetGlobalProperties request
-							EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-														
-																vrHelp ={
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						position = 1
-																				        }
-	                                                                                                                                },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-								--hmi side: sending UI.SetGlobalProperties response
-								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)
-
-							
-							--hmi side: expect TTS.SetGlobalProperties request
-							EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																	     {
-																				        {
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-					 			--hmi side: sending TTS.SetGlobalProperties response
-					 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)		
-
-							--mobile side: expect SetGlobalProperties response
-							EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-							:Times(0)
-					
-							--mobile side: expect OnHashChange notification
-							EXPECT_NOTIFICATION("OnHashChange")
-							:Times(0)
-						end
-						
-						AddCommand(self, cmdCount)
-
- 				         local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
 					
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
@@ -1122,11 +1149,11 @@
 													  
 														vrHelp = { 
 																	{
-																		text = "Command" .. tostring(cmdCount),
+																		text = config.application1.registerAppInterfaceParams.appName,
 																		position = 1
 																        }	
                                                                                                                          },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+														--appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
 					:Do(function(_,data)
@@ -1140,117 +1167,32 @@
 														helpPrompt = 
 																				{
 																					{
-																						text = "Command" .. tostring(cmdCount),
+																						text = default_HelpPromt,
 																						type = "TEXT"
-																				        },
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																				},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+																				}			
+																					},																		
+														--appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
 					:Do(function(_,data)
 			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "UNSUPPORTED_RESOURCE", {})
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 					end)		
 
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "UNSUPPORTED_RESOURCE"})
-                                        :Times(0)
-		
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
 
-						TC_Number = TC_Number + 1
-					end				
-		
-		--End Test case NegativeResponse.3
+                                       end
+                                      end
 
-		--Begin Test case NegativeResponse.4
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
-			--Requirement id in JIRA: APPLINK 23652->reg_4
-			--Verification criteria:
-				--In case mobile app has registered AddCommand requests (previously added)
-				--SDL receives UNSUPPORTED_RESOURCE <errorCode> on UI.SetGlobalProperties from HMI
-				--SDL should log corresponding error internally
-
-                                --Precondition for NegativeResponse.4
-				 Precondition_RegisterApp("TC"..TC_Number, self)
-
-						Test["Precondition_AddCommand_" .. cmdCount.."_TC"..TC_Number] = function(self)
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+UNSUP_RES_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
 							AddCommand(self, cmdCount)
-						end	
-				
-				--End precondition for NegativeResponse.4	
-
-					Test["No_SGP_UNSUP_RES_on_UISGP_from_HMI_TC" ..TC_Number] = function(self)
-
-						local time = timestamp()
-
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
-
-							--mobile side: sending SetGlobalProperties request
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-				                        :Times(0)
-
-							--hmi side: expect UI.SetGlobalProperties request
-							EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-														
-																vrHelp ={
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						position = 1
-																				        }
-	                                                                                                                                },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-								--hmi side: sending UI.SetGlobalProperties response
-								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)
-
-							
-							--hmi side: expect TTS.SetGlobalProperties request
-							EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																	     {
-																				        {
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-					 			--hmi side: sending TTS.SetGlobalProperties response
-					 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)		
-
-							--mobile side: expect SetGlobalProperties response
-							EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-							:Times(0)
-					
-							--mobile side: expect OnHashChange notification
-							EXPECT_NOTIFICATION("OnHashChange")
-							:Times(0)
 						end
-						
-						AddCommand(self, cmdCount)
-
- 				         local time = timestamp()
+					end 
+					
+					    local time = timestamp()
 
                                          if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
 					
@@ -1295,624 +1237,91 @@
 			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 					end)		
 
+
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "UNSUPPORTED_RESOURCE"})
                                         :Times(0)
-		
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
 
-						TC_Number = TC_Number + 1
-					end				
-		
-		--End Test case NegativeResponse.4
-
-		--Begin Test case NegativeResponse.5
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
-			--Requirement id in JIRA: APPLINK 23652->reg_4
-			--Verification criteria:
-				--In case mobile app has registered AddCommand requests
-				--SDL receives REJECTED <errorCode> on UI.SetGlobalProperties from HMI
-				--SDL should log corresponding error internally
-
-                                --Precondition for Test case NegativeResponse.5
-				 
-				Precondition_RegisterApp("TC"..TC_Number, self)
-
-				--End precondition for Test case NegativeResponse.5
-
-
-				Test["No_SGP_REJECTED_on_UISGP_from_HMI_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
-
-					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-                                        :Times(0)
-					
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					AddCommand(self, cmdCount)
-
-					 local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = "Command" .. tostring(cmdCount),
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "REJECTED", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)	
-					
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "REJECTED"})
-                                        :Times(0)	
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
-				end
-		--End Test case NegativeResponse.5
-
-		--Begin Test case NegativeResponse.6
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
-			--Requirement id in JIRA: APPLINK 23652->reg_4
-			--Verification criteria:
-				--In case mobile app has registered AddCommand requests
-				--SDL receives REJECTED <errorCode> on TTS.SetGlobalProperties from HMI
-				--SDL should log corresponding error internally
-
-                                --Precondition for Test case NegativeResponse.6
-				 
-				Precondition_RegisterApp("TC"..TC_Number, self)
-
-				--End precondition for Test case NegativeResponse.6
-
-
-				Test["No_SGP_REJECTED_on_TTSSGP_from_HMI_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
-
-					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-                                        :Times(0)
-					
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					AddCommand(self, cmdCount)
-
-					 local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = "Command" .. tostring(cmdCount),
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "REJECTED", {})
-					end)	
-					
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "REJECTED"})
-                                        :Times(0)	
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
-				end
-		--End Test case NegativeResponse.6
-
-
-	        --Begin Test case NegativeResponse.7
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL doesn't receive response from HMI at least to one TTS/UI.SetGlobalProperties 
-			--Requirement id in JIRA: APPLINK 23652->reg_5
-			--Verification criteria:
-				--In case mobile app has registered AddCommand requests
-				--SDL doesn't receive response on UI.SetGlobalProperties from HMI
-				--SDL should log corresponding error internally
-
-				--Precondition for NegativeResponse.7
-				 
-				Precondition_RegisterApp("TC"..TC_Number, self)
-
-				--End precondition for NegativeResponse.7
-
-
-				Test["NO_SGP_and_NO_UISGPResponse_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
-
-					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-                                        :Times(0)
-					
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					AddCommand(self, cmdCount)
-
-					 local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = "Command" .. tostring(cmdCount),
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					
-					--hmi side: sending UI.SetGlobalProperties response
-					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-                                        :Times(0)
-					
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
-				end
-
-			--End Test case NegativeResponse.7
-
-			--Begin Test case NegativeResponse.8
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL doesn't receive response from HMI at least to one TTS/UI.SetGlobalProperties 
-			--Requirement id in JIRA: APPLINK 23652->reg_5
-			--Verification criteria:
-				--In case mobile app has registered AddCommand requests
-				--SDL doesn't receive response on TTS.SetGlobalProperties from HMI
-				--SDL should log corresponding error internally
-
-				--Precondition for NegativeResponse.8
-				 
-				Precondition_RegisterApp("TC"..TC_Number, self)
-
-				--End precondition for NegativeResponse.8
-
-
-				Test["NO_SGP_and_NO_TTSSGPResponse_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
-
-					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-                                        :Times(0)
-					
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					AddCommand(self, cmdCount)
-
-					 local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = "Command" .. tostring(cmdCount),
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					
-					:Do(function(_,data)					
-					--hmi side: sending UI.SetGlobalProperties response
-					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-                                        end)	
-					
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					
-			 		--hmi side: sending TTS.SetGlobalProperties response
-			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					:Times(0)
+					end
 							
+		
+		--End Test case NegativeResponse.3
 
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
-				end
-
-			--End Test case NegativeResponse.8
-
-
- --End Test suit NegativeResponse
-  	
-----------------------------------------------------------------------------------------------
-----------------------------------------IV TEST BLOCK-----------------------------------------
----------------------------------------Result codes check-------------------------------------
-------------------Check of each resultCode + success (true, false)----------------------------
-
-   --These test shall be performed in tests for testing API SetGlobalProperties. 
-   --See ATF_SetGlobalProperties.lua
-
-----------------------------------------------------------------------------------------------
-----------------------------------------V TEST BLOCK------------------------------------------
------------------------------------- HMI negative cases---------------------------------------
-----------------------------------incorrect data from HMI-------------------------------------
-
-  --These test shall be performed in tests for testing API SetGlobalProperties.
-  --See ATF_SetGlobalProperties.lua
-
-----------------------------------------------------------------------------------------------
-----------------------------------------VI TEST BLOCK-----------------------------------------
---------------------------Sequence with emulating of user's action(s)-------------------------
-----------------------------------------------------------------------------------------------
-  --Begin Test suit EmulatingUserAction
-  	--Begin Test case EmulatingUserAction.1
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer + values from internal list + AddCommand request
-			--Requirement id in JIRA: APPLINK 23652->reg_3
+		--Begin Test case NegativeResponse.4
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
+			--Requirement id in JIRA: APPLINK 23652->reg_4
 			--Verification criteria:
 				--In case mobile app has registered AddCommand requests (previously added)
-				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull AddCommand response from HMI
-				--SDL should send updated "vrHelp" and "helpPrompt" via TTS/UI.SetGlobalProperties to HMI till App sends SetGlobalProperties request with valid <vrHelp> and <helpPrompt> params to SDL
+				--SDL receives UNSUPPORTED_RESOURCE <errorCode> on UI.SetGlobalProperties from HMI
+				--SDL should log corresponding error internally
 
-				--Precondition for Test case EmulatingUserAction.1
-				 Precondition_RegisterApp("TC"..TC_Number, self)
+                                 --Precondition for NegativeResponse.4
 
-						Test["Precondition_AddCommand_" .. cmdCount.."_TC"..TC_Number] = function(self)
-							AddCommand(self, cmdCount)
-						end	
-				
-				--End precondition for Test case EmulatingUserAction.1	
+			                Precondition_RegisterApp(self, "TC6")
 
-					Test["No_SGP_ListValues_AddCommand_from_App_TC" ..TC_Number] = function(self)
+				--End precondition for NegativeResponse.4
+					TCBody(self, "6")
 
-						local time = timestamp()
+					Test["TC6_NoSGP_from_App_during_10secTimer"] = function(self)
 
-						if( (time - TimeRAISuccess) > 10000 then
-							
-							xmlReporter.AddMessage("Test Case " ..TC_Number )
-							userPrint(35,"======================================= Test Case ".. TC_Number .." =============================================")
+			                local time = timestamp()
 
-							--mobile side: sending SetGlobalProperties request
-							local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
-				                        :Times(0)
+					if (time - TimeRAISuccess) > 10000 then
 
-							--hmi side: expect UI.SetGlobalProperties request
-							EXPECT_HMICALL("UI.SetGlobalProperties",
-															{
-																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-														
-																vrHelp ={
-																					{
-																						text = "Command" .. tostring(cmdCount),
-																						position = 1
-																				        }
-	                                                                                                                                },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-								--hmi side: sending UI.SetGlobalProperties response
-								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)
-
-							
-							--hmi side: expect TTS.SetGlobalProperties request
-							EXPECT_HMICALL("TTS.SetGlobalProperties",
-															{
-																helpPrompt = 
-																	     {
-																				        {
-																						text = "Command" .. tostring(cmdCount),
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
-																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-															})
-							:Do(function(_,data)
-					 			--hmi side: sending TTS.SetGlobalProperties response
-					 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-							end)		
-
-							--mobile side: expect SetGlobalProperties response
-							EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-							:Times(0)
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
 					
-							--mobile side: expect OnHashChange notification
-							EXPECT_NOTIFICATION("OnHashChange")
-							:Times(0)
-						end
-						
-						AddCommand(self, cmdCount)
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+														
+													})
 
- 				         local time = timestamp()
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+UNSUP_RES_on_TTS.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
 
                                          if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
 					
@@ -1954,6 +1363,77 @@
 
 					:Do(function(_,data)
 			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "UNSUPPORTED_RESOURCE", {})
+					end)		
+
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "UNSUPPORTED_RESOURCE"})
+                                        :Times(0)
+
+					end
+
+		--End Test case NegativeResponse.4
+
+		--Begin Test case NegativeResponse.5
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
+			--Requirement id in JIRA: APPLINK 23652->reg_4
+			--Verification criteria:
+				--In case mobile app has registered AddCommand requests
+				--SDL receives REJECTED <errorCode> on UI.SetGlobalProperties from HMI
+				--SDL should log corresponding error internally
+
+                                --Precondition for Test case NegativeResponse.5
+
+			                Precondition_RegisterApp(self, "TC7")
+
+				--End precondition for NegativeResponse.5
+					TCBody(self, "7")
+
+					Test["TC7_NoSGP_from_App_during_10secTimer"] = function(self)
+
+			                local time = timestamp()
+
+					if (time - TimeRAISuccess) > 10000 then
+
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         },
+														--appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					},																		
+														--appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
 			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 					end)		
 
@@ -1961,37 +1441,503 @@
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
 
-						TC_Number = TC_Number + 1
-					end				
-		
-		--End Test case EmulatingUserAction.1
+                                       end
+                                      end
 
-		--Begin Test case EmulatingUserAction.2
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer + default values + AddCommand request
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+REJECTED_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
+
+                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = "Command" .. tostring(cmdCount),
+																		position = 1
+																        }	
+                                                                                                                         },
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "REJECTED", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = "Command" .. tostring(cmdCount),
+																						type = "TEXT"
+																				        },
+																					{
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "REJECTED"})
+                                        :Times(0)
+
+					end
+							
+
+		--End Test case NegativeResponse.5
+
+		--Begin Test case NegativeResponse.6
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL receives at least to one TTS/UI.SetGlobalProperties <errorCode> from HMI
+			--Requirement id in JIRA: APPLINK 23652->reg_4
+			--Verification criteria:
+				--In case mobile app has registered AddCommand requests
+				--SDL receives REJECTED <errorCode> on TTS.SetGlobalProperties from HMI
+				--SDL should log corresponding error internally
+
+                                --Precondition for Test case NegativeResponse.6
+				 
+			                Precondition_RegisterApp(self, "TC8")
+
+				--End precondition for NegativeResponse.6
+					TCBody(self, "8")
+
+					Test["TC8_NoSGP_from_App_during_10secTimer"] = function(self)
+
+			                local time = timestamp()
+
+					if (time - TimeRAISuccess) > 10000 then
+
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+														
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+REJECTED_on_TTS.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
+
+                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = "Command" .. tostring(cmdCount),
+																		position = 1
+																        }	
+                                                                                                                         },
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = "Command" .. tostring(cmdCount),
+																						type = "TEXT"
+																				        },
+																					{
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "REJECTED", {})
+					end)		
+
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "REJECTED"})
+                                        :Times(0)
+
+					end
+
+
+		--End Test case NegativeResponse.6
+
+
+	        --Begin Test case NegativeResponse.7
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL doesn't receive response from HMI at least to one TTS/UI.SetGlobalProperties 
+			--Requirement id in JIRA: APPLINK 23652->reg_5
+			--Verification criteria:
+				--In case mobile app has registered AddCommand requests
+				--SDL doesn't receive response on UI.SetGlobalProperties from HMI
+				--SDL should log corresponding error internally
+
+				--Precondition for NegativeResponse.7
+				 
+				Precondition_RegisterApp(self, "TC9")
+
+				--End precondition for NegativeResponse.7
+					TCBody(self, "9")
+
+					Test["TC9_NoSGP_from_App_during_10secTimer"] = function(self)
+	
+			                local time = timestamp()
+
+					if (time - TimeRAISuccess) > 10000 then
+
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+														
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+NoResponse_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
+
+                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = "Command" .. tostring(cmdCount),
+																		position = 1
+																        }	
+                                                                                                                         },
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					:Times(0)
+					
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = "Command" .. tostring(cmdCount),
+																						type = "TEXT"
+																				        },
+																					{
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+					end
+
+			--End Test case NegativeResponse.7
+
+			--Begin Test case NegativeResponse.8
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer and SDL doesn't receive response from HMI at least to one TTS/UI.SetGlobalProperties 
+			--Requirement id in JIRA: APPLINK 23652->reg_5
+			--Verification criteria:
+				--In case mobile app has registered AddCommand requests
+				--SDL doesn't receive response on TTS.SetGlobalProperties from HMI
+				--SDL should log corresponding error internally
+
+				--Precondition for NegativeResponse.8
+				 
+				Precondition_RegisterApp(self, "TC10")
+
+				--End precondition for NegativeResponse.7
+					TCBody(self, "10")
+
+					Test["TC10_NoSGP_from_App_during_10secTimer"] = function(self)
+	
+			                local time = timestamp()
+
+					if (time - TimeRAISuccess) > 10000 then
+
+					--mobile side: sending SetGlobalProperties request
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+                                        :Times(0)
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = config.application1.registerAppInterfaceParams.appName,
+																		position = 1
+																        }	
+                                                                                                                         }
+														
+													})
+
+					:Do(function(_,data)
+						--hmi side: sending UI.SetGlobalProperties response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)
+
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = default_HelpPromt,
+																						type = "TEXT"
+																				}			
+																					}
+													})
+
+					:Do(function(_,data)
+			 			--hmi side: sending TTS.SetGlobalProperties response
+			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+NoResponse_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
+
+                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
+					
+					--hmi side: expect UI.SetGlobalProperties request
+					EXPECT_HMICALL("UI.SetGlobalProperties",
+													{
+														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+													  
+														vrHelp = { 
+																	{
+																		text = "Command" .. tostring(cmdCount),
+																		position = 1
+																        }	
+                                                                                                                         },
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					
+					:Do(function(_,data)					
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
+
+					
+					--hmi side: expect TTS.SetGlobalProperties request
+					EXPECT_HMICALL("TTS.SetGlobalProperties",
+													{
+														helpPrompt = 
+																				{
+																					{
+																						text = "Command" .. tostring(cmdCount),
+																						type = "TEXT"
+																				        },
+																					{
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
+														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+													})
+
+					
+			 		--hmi side: sending TTS.SetGlobalProperties response
+			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+                                        :Times(0)	
+
+					--mobile side: expect SetGlobalProperties response
+					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+                                        :Times(0)
+
+					end
+
+		--End Test case NegativeResponse.8
+
+ --End Test suit NegativeResponse
+  	
+----------------------------------------------------------------------------------------------
+----------------------------------------IV TEST BLOCK-----------------------------------------
+---------------------------------------Result codes check-------------------------------------
+------------------Check of each resultCode + success (true, false)----------------------------
+
+   --These test shall be performed in tests for testing API SetGlobalProperties. 
+   --See ATF_SetGlobalProperties.lua
+
+----------------------------------------------------------------------------------------------
+----------------------------------------V TEST BLOCK------------------------------------------
+------------------------------------ HMI negative cases---------------------------------------
+----------------------------------incorrect data from HMI-------------------------------------
+
+  --These test shall be performed in tests for testing API SetGlobalProperties.
+  --See ATF_SetGlobalProperties.lua
+
+----------------------------------------------------------------------------------------------
+----------------------------------------VI TEST BLOCK-----------------------------------------
+--------------------------Sequence with emulating of user's action(s)-------------------------
+----------------------------------------------------------------------------------------------
+  --Begin Test suit EmulatingUserAction
+		--Begin Test case EmulatingUserAction.1
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer + AddCommand request
 			--Requirement id in JIRA: APPLINK 23652->reg_3
                         --Verification criteria:
 				--In case mobile app has no registered AddCommand requests
 				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull AddCommand response from HMI
 				--SDL should send updated "vrHelp" and "helpPrompt" via TTS/UI.SetGlobalProperties to HMI till App sends SetGlobalProperties request with valid <vrHelp> and <helpPrompt> params to SDL
 
-	                	--Precondition for Test case EmulatingUserAction.2
-				 
-					Precondition_RegisterApp("TC"..TC_Number, self)
+			        	--Precondition for Test case EmulatingUserAction.1
+					Precondition_RegisterApp(self, "TC12")
 
-				--End precondition for Test case EmulatingUserAction.2
+					--End precondition for EmulatingUserAction.1
+					TCBody(self, "12")
 
+					Test["TC12_NoSGP_from_App_during_10secTimer"] = function(self)
+	
+			                local time = timestamp()
 
-				Test["NO_SGP_DefValues_AddCommand_from_App_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
+					if (time - TimeRAISuccess) > 10000 then
 
 					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
                                         :Times(0)
 					
 					--hmi side: expect UI.SetGlobalProperties request
@@ -2004,8 +1950,8 @@
 																		text = config.application1.registerAppInterfaceParams.appName,
 																		position = 1
 																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+                                                                                                                         }
+														
 													})
 
 					:Do(function(_,data)
@@ -2022,8 +1968,7 @@
 																						text = default_HelpPromt,
 																						type = "TEXT"
 																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+																					}
 													})
 
 					:Do(function(_,data)
@@ -2034,13 +1979,20 @@
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
-					
-					AddCommand(self, cmdCount)
 
-					 local time = timestamp()
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP+SUCCESS_on_UI.SGP_from_HMI" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
 
                                          if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
+					
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
@@ -2055,11 +2007,13 @@
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
+					
+					:Do(function(_,data)					
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
 
+					
 					--hmi side: expect TTS.SetGlobalProperties request
 					EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
@@ -2068,53 +2022,52 @@
 																					{
 																						text = "Command" .. tostring(cmdCount),
 																						type = "TEXT"
-																				}			
-																					},																		
+																				        },
+																					{
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
 					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
+			 		--hmi side: sending TTS.SetGlobalProperties response
+			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+                                   	end)
 
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
-					
-					TC_Number = TC_Number + 1
-			
-				end
 
-		--End Test case EmulatingUserAction.2
+					end
+
+
+		--End Test case EmulatingUserAction.1
 			
 
-                --Begin Test case EmulatingUserAction.3
-			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer + values from internal list + DeleteCommand request
+                --Begin Test case EmulatingUserAction.2
+			--Description: Case when App does NOT send SetGlobalProperties to SDL during 10 sec timer + default values + DeleteCommand request
 			--Requirement id in JIRA: APPLINK 23652->reg_3
 			--Verification criteria:
-				--In case mobile app has registered DeleteCommand requests (previously added)
-				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull DeleteCommand response from HMI
+				--In case mobile app has registered AddCommand/DeleteCommand requests
+				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull AddCommand response from HMI
 				--SDL should send updated "vrHelp" and "helpPrompt" via TTS/UI.SetGlobalProperties to HMI till App sends SetGlobalProperties request with valid <vrHelp> and <helpPrompt> params to SDL
 
-				--Precondition for Test case EmulatingUserAction.3
-		
-				Precondition_RegisterApp("TC"..TC_Number, self)
+                                        --Precondition for Test case EmulatingUserAction.2
+					Precondition_RegisterApp(self, "TC13")
+					--End precondition for EmulatingUserAction.2
 
-				--End precondition for Test case EmulatingUserAction.3
+					TCBody(self, "13")
 
+					Test["TC13_NoSGP_from_App_during_10secTimer"] = function(self)
+	
+			                local time = timestamp()
 
-				Test["NO_SGP_ListValues_DeleteCommand_from_App_TC" ..TC_Number] = function(self)
-
-	                        local time = timestamp()
-
-				if( (time - TimeRAISuccess) > 10000 then
-
-					xmlReporter.AddMessage("Test Case "..TC_Number)
-					userPrint(35,"======================================= Test Case " .. TC_Number .." =============================================")
+					if (time - TimeRAISuccess) > 10000 then
 
 					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
+				        local cid = self.mobileSession:SendRPC("SetGlobalProperties", {})
                                         :Times(0)
 					
 					--hmi side: expect UI.SetGlobalProperties request
@@ -2127,8 +2080,8 @@
 																		text = config.application1.registerAppInterfaceParams.appName,
 																		position = 1
 																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+                                                                                                                         }
+														
 													})
 
 					:Do(function(_,data)
@@ -2145,8 +2098,7 @@
 																						text = default_HelpPromt,
 																						type = "TEXT"
 																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+																					}
 													})
 
 					:Do(function(_,data)
@@ -2157,9 +2109,19 @@
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
-					
-					AddCommand(self, cmdCount)
 
+                                            end
+                                      end
+
+                                       for cmdCount = 1, 1 do
+						Test["NoSGP_but_DeleteCommand_from_App" .. cmdCount] = function(self)
+							AddCommand(self, cmdCount)
+						end
+					end 
+					
+					    local time = timestamp()
+
+                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
 					
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
@@ -2175,11 +2137,13 @@
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
+					
+					:Do(function(_,data)					
+					--hmi side: sending UI.SetGlobalProperties response
+					self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+					end)		
 
+					
 					--hmi side: expect TTS.SetGlobalProperties request
 					EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
@@ -2188,76 +2152,38 @@
 																					{
 																						text = "Command" .. tostring(cmdCount),
 																						type = "TEXT"
-																				}			
-																					},																		
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
-
-					--mobile side: expect SetGlobalProperties response
-					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-                                        :Times(0)
-
-					DeleteCommand(self, cmdCount)
-
-                                            local time = timestamp()
-
-                                         if( (time - TimeRAISuccess) < 10000 and (time - TimeRAISuccess) > 0 ) then
-
-					--hmi side: expect UI.SetGlobalProperties request
-					EXPECT_HMICALL("UI.SetGlobalProperties",
-													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-													  
-														vrHelp = { 
-																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
-																		position = 1
-																        }	
-                                                                                                                         },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-
-					:Do(function(_,data)
-						--hmi side: sending UI.SetGlobalProperties response
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)
-
-					--hmi side: expect TTS.SetGlobalProperties request
-					EXPECT_HMICALL("TTS.SetGlobalProperties",
-													{
-														helpPrompt = 
-																				{
+																				        },
 																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+																						text = "300",
+																						type = "SILENCE"
+																					}			
+																				},																		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 
 					:Do(function(_,data)
-			 			--hmi side: sending TTS.SetGlobalProperties response
-			 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-					end)		
+			 		--hmi side: sending TTS.SetGlobalProperties response
+			 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+                                   	end)
 
 					--mobile side: expect SetGlobalProperties response
 					EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
                                         :Times(0)
+
+                                        DeleteCommand(self, cmdCount)
+
+                                        EXPECT_HMICALL("UI.SetGlobalProperties",{})
+				        :Times(0)
+
+					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
+					:Times(0)
 					
-					TC_Number = TC_Number + 1
 			
-				end
-			
-		--End Test case EmulatingUserAction.3
+			  end 
+		--End Test case EmulatingUserAction.2
 
   --End Test suit EmulatingUserAction
-
-----------------------------------------------------------------------------------------------
+-------------------=--------------------------------------------------------------------------
 ----------------------------------------VII TEST BLOCK----------------------------------------
 -------------------------------------Different HMIStatus--------------------------------------
 
@@ -2267,7 +2193,6 @@
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Postconditions------------------------------------
 ---------------------------------------------------------------------------------------------
-
 	function Test:Postcondition_remove_user_connecttest_restore_preloaded_file()
 	  	os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt_origin.json " .. config.pathToSDL .. "sdl_preloaded_pt.json" )
 	  	os.execute(" rm -f " .. config.pathToSDL .. "/sdl_preloaded_pt_origin.json" ) 
