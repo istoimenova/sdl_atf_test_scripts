@@ -1,490 +1,275 @@
----------------------------------------------------------------------------------------------
------------------------------- Required system ATF files-------------------------------------
----------------------------------------------------------------------------------------------
-	Test = require('connecttest')
-	require('cardinalities')
-	local events 				   = require('events')
-	local mobile_session   = require('mobile_session')
-	local mobile  			   = require('mobile_connection')
-	local tcp 						 = require('tcp_connection')
-	local file_connection  = require('file_connection')
+-- ATF verstion: 2.2
+---------------------------------------------------
+Test = require('connecttest')
+require('cardinalities')
+local events = require('events')
+local mobile_session = require('mobile_session')
+local mobile  = require('mobile_connection')
+local tcp = require('tcp_connection')
+local file_connection  = require('file_connection')
 
 ---------------------------------------------------------------------------------------------
------------------------------ Required Shared Libraries -------------------------------------
+-----------------------------Required Shared Libraries---------------------------------------
 ---------------------------------------------------------------------------------------------
-	local commonSteps   = require('user_modules/shared_testcases/commonSteps')
-	local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+require('user_modules/AppTypes')
+local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
+local commonSteps = require('user_modules/shared_testcases/commonSteps')
+local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 
-	commonSteps:DeleteLogsFileAndPolicyTable()
+APIName = "SetGlobalProperties" -- set for required scripts
+strMaxLengthFileName255 = string.rep("a", 251)  .. ".png" -- set max length file name
 
-	if ( commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") == true ) then
-		print("policy.sqlite is found in bin folder")
-  	os.remove(config.pathToSDL .. "policy.sqlite")
-	end
-	require('user_modules/AppTypes')
-	local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
-	local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
-
----------------------------------------------------------------------------------------------
------------------------------------- Common Variables ---------------------------------------
----------------------------------------------------------------------------------------------
-	config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
-	local TimeRAISuccess = 0
-
-	-- Will be used for check is command is added within 10 sec after RAI; True - added
-	local AddCmdSuccess = {}
-
-	-- Will be used for check is command is deleted within 10 sec after RAI; True - added
-	local DeleteCmdSuccess = {}
-
-	local SGP_helpPrompt = {}
-	local SGP_vrHelp = {}
-
-	--ToDo: shall be removed when APPLINK-16610 is fixed
-	config.defaultProtocolVersion = 2
-
-	local strAppFolder = config.pathToSDL .. "storage/" ..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
-	strMaxLengthFileName255 = string.rep("a", 251)  .. ".png" -- set max length file name
-
-	local default_HelpPromt = "Default Help Prompt"
-	
-	-- Requirement id in JIRA: APPLINK-19475
-	-- Read default value of HelpPromt in .ini file
-	f = assert(io.open(config.pathToSDL.. "/smartDeviceLink.ini", "r"))
- 
- 	fileContent = f:read("*all")
- 	DefaultContant = fileContent:match('HelpPromt.?=.?([^\n]*)')
- 	
-	if not DefaultContant then
-		print ( " \27[31m HelpPromt is not found in smartDeviceLink.ini \27[0m " )
-	else
-		default_HelpPromt = DefaultContant
-		print(default_HelpPromt)
-	end
-	f:close()
+local iTimeout = 5000
+local TimeRAISuccess = 0
+config.defaultProtocolVersion = 2
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+local strAppFolder = config.pathToSDL .. "storage/" ..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 
 ---------------------------------------------------------------------------------------------
------------------------------------Backup, update preloaded file ------------------------_---
+--------------------------------------Delete/update files------------------------------------
 ---------------------------------------------------------------------------------------------
- 	commonSteps:DeleteLogsFileAndPolicyTable()
+function DeleteLog_app_info_dat_policy()
+    commonSteps:CheckSDLPath()
+    local SDLStoragePath = config.pathToSDL .. "storage/"
 
- 	os.execute(" cp " .. config.pathToSDL .. "/sdl_preloaded_pt.json " .. config.pathToSDL .. "/sdl_preloaded_pt_origin.json" )
+    --Delete app_info.dat and log files and storage
+    if commonSteps:file_exists(config.pathToSDL .. "app_info.dat") == true then
+      os.remove(config.pathToSDL .. "app_info.dat")
+    end
 
- 	f = assert(io.open(config.pathToSDL.. "/sdl_preloaded_pt.json", "r"))
+    if commonSteps:file_exists(config.pathToSDL .. "SmartDeviceLinkCore.log") == true then
+      os.remove(config.pathToSDL .. "SmartDeviceLinkCore.log")
+    end
 
- 	-- SystemRequest
- 	fileContent = f:read("*all")
- 	DefaultContant = fileContent:match('"rpcs".?:.?.?%{')
+    if commonSteps:file_exists(SDLStoragePath .. "policy.sqlite") == true then
+      os.remove(SDLStoragePath .. "policy.sqlite")
+    end
 
- 	if not DefaultContant then
-  	print ( " \27[31m  rpcs is not found in sdl_preloaded_pt.json \27[0m " )
- 	else
-   	DefaultContant =  string.gsub(DefaultContant, '"rpcs".?:.?.?%{', '"rpcs": { \n"SystemRequest": {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n},')
-   	fileContent  =  string.gsub(fileContent, '"rpcs".?:.?.?%{', DefaultContant)
- 	end
-	
-	--[--[TODO: Shall be removed when APPLINK-26629: PASA_Ubuntu: Policy table can't be loaded when RPCs added in functional_group is greater than 50. is fixed
-		Content_OnEncodedSyncPData = fileContent:match('"OnEncodedSyncPData".?:.?.?%{.-%},')
-		if not Content_OnEncodedSyncPData then
-			print ( " \27[31m  rpc OnEncodedSyncPData is not found in sdl_preloaded_pt.json \27[0m " )
-		else
-			Content_OnEncodedSyncPData = string.gsub(Content_OnEncodedSyncPData,'"OnEncodedSyncPData".?:.?.?%{.-%},','')
-			fileContent = string.gsub(fileContent,'"OnEncodedSyncPData".?:.?.?%{.-%},',Content_OnEncodedSyncPData)
-		end
-	--]]
+    if commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") == true then
+      os.remove(config.pathToSDL .. "policy.sqlite")
+    end
+print("path = " .."rm -r " ..config.pathToSDL .. "storage")
+    os.execute("rm -r " ..config.pathToSDL .. "storage")
+end
 
-	-- Policy SetGlobalProperties
- 		Content_SetGlobalProperties = fileContent:match('"SetGlobalProperties".?:.?.?%{.-%}')
- 		if not Content_SetGlobalProperties then
- 			print ( " \27[31m  SetGlobalProperties is not found in sdl_preloaded_pt.json \27[0m " )
- 		else
- 			Content_SetGlobalProperties =  string.gsub(Content_SetGlobalProperties, '"SetGlobalProperties".?:.?.?%{.-%}', '"SetGlobalProperties":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
- 			fileContent = string.gsub(fileContent,'"SetGlobalProperties".?:.?.?%{.-%}',Content_SetGlobalProperties)
- 		end
+DeleteLog_app_info_dat_policy()
 
- 	-- Policy ResetGlobalProperties
- 		Content_ResetGlobalProperties = fileContent:match('"ResetGlobalProperties".?:.?.?%{.-%}')
- 		if not Content_ResetGlobalProperties then
- 			print ( " \27[31m  ResetGlobalProperties is not found in sdl_preloaded_pt.json \27[0m " )
- 		else
- 			Content_ResetGlobalProperties =  string.gsub(Content_ResetGlobalProperties, '"ResetGlobalProperties".?:.?.?%{.-%}', '"ResetGlobalProperties":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
- 			fileContent = string.gsub(fileContent,'"ResetGlobalProperties".?:.?.?%{.-%}',Content_ResetGlobalProperties)
- 		end
+function UpdatePolicy()
+    commonPreconditions:BackupFile("sdl_preloaded_pt.json")
+    local src_preloaded_json = config.pathToSDL .."sdl_preloaded_pt.json"
+    local dest               = "files/SetGlobalProperties_DISALLOWED.json"
+    
+    local filecopy = "cp " .. dest .."  " .. src_preloaded_json
 
- 	-- Policy AddCommand
- 		Content_AddCommand = fileContent:match('"AddCommand".?:.?.?%{.-%}')
- 		if not Content_AddCommand then
-	 		print ( " \27[31m  AddCommand is not found in sdl_preloaded_pt.json \27[0m " )
- 		else
- 			Content_AddCommand =  string.gsub(Content_AddCommand, '"AddCommand".?:.?.?%{.-%}', '"AddCommand":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
- 			fileContent = string.gsub(fileContent,'"AddCommand".?:.?.?%{.-%}',Content_AddCommand)
- 		end
+    os.execute(filecopy)
+end
 
- 	-- Policy DeleteCommand
- 		Content_DeleteCommand = fileContent:match('"DeleteCommand".?:.?.?%{.-%}')
- 		if not Content_DeleteCommand then
- 			print ( " \27[31m  DeleteCommand is not found in sdl_preloaded_pt.json \27[0m " )
- 		else
- 			Content_DeleteCommand =  string.gsub(Content_DeleteCommand, '"DeleteCommand".?:.?.?%{.-%}', '"DeleteCommand":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
- 			fileContent = string.gsub(fileContent,'"DeleteCommand".?:.?.?%{.-%}',Content_DeleteCommand)
- 		end
- 	
-
- 	f = assert(io.open(config.pathToSDL.. "/sdl_preloaded_pt.json", "w+"))
- 
- 	f:write(fileContent)
- 	f:close()
-
-        os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt.json " .. config.pathToSDL .. "sdl_preloaded_pt_corrected.json" )
+UpdatePolicy()
 
 ---------------------------------------------------------------------------------------------
------------------------------------Local functions ------------------------------------------
----------------------------------------------------------------------------------------------
-
-	--User prints
-	local function userPrint( color, message)
-		print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
-	end
+---------------------------------------Common functions--------------------------------------
+---------------------------------------------------------------------------------------------	
+--User prints
+function userPrint( color, message)
+	print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
+end
 
 	
-	local function TextPrint(message)
-		if(message == "Precondition") then
-			function Test:PrintPrecondition()
-				userPrint(34,"======================================= Precondition =============================================")
-			end
-		elseif (message == "Test Case") then
-			function Test:PrintTestCase()
-				userPrint(35,"========================================= Test Case ==============================================")
-			end
-		else
-			function Test:PrintMes()
-				userPrint(33,"------------------------------------------- ".. message .." -------------------------------------------")
-			end
-		end
+function TextPrint(message)
+    if(message == "Postconditions") then
+	function Test:PrintPostcond()
+		userPrint(34,"========================================= Postconditions ==========================================")
 	end
-
-	function TCBody(self, numberOfTC)
-		TextPrint("Test Case"..numberOfTC)
+    else
+	function Test:PrintMes()
+		userPrint(33,"------------------------------------------- ".. message .." -------------------------------------------")
 	end
+    end
+end
 
-	--Registering application
-	function Precondition_RegisterApp(self, nameTC)
-		
+function TCBody(self, numberOfTC)
+	TextPrint("TC"..numberOfTC)
+end
 
-		TextPrint("Precondition")
-		commonSteps:UnregisterApplication(nameTC .."_UnregisterApplication")	
 
-		commonSteps:StartSession(nameTC .."_StartSession")
+function Check_menuIconParams(data, type_icon, value)
 
-		Test[nameTC .."_RegisterApp"] = function(self)
+    if( (value == nil) or (#value == 0) ) then value = "action.png" end
+    if(type_icon == nil) then type_icon = "DYNAMIC" end
 
-			self.mobileSession:StartService(7)
-			:Do(function()	
-				local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
-				EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", 
-																{
-				  												application = {	appName = config.application1.registerAppInterfaceParams.appName }
-																})
-				:Do(function(_,data)
-					TimeRAISuccess = timestamp()
-			  		self.applications[data.params.application.appName] = data.params.application.appID
-			  		return TimeRAISuccess
-				end)
-
-				self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
-				:Timeout(2000)
-
-				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-			end)
-
-			if(TimeRAISuccess == nil) then
-				TimeRAISuccess = 0
-				userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
-			end
-		end		
-	end
-
-  	--AddCommand
-	local function AddCommand(self, icmdID)
-
-		local TimeAddCmdSuccess = 0
-		--mobile side: sending AddCommand request
-		local cid = self.mobileSession:SendRPC("AddCommand",
-		{
-			cmdID = icmdID,
-			menuParams = 	
-			{
-				position = 0,
-				menuName ="Command" .. tostring(icmdID)
-			}, 
-			vrCommands = {"VRCommand" .. tostring(icmdID)}
-		})
+     local result = true
+     local path  = "bin/storage/"..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
+     local value_Icon = value--"action.png"
 	
-		--hmi side: expect UI.AddCommand request 
-		EXPECT_HMICALL("UI.AddCommand", 
-		{ 
-			cmdID = icmdID,		
-			menuParams = 
-			{
-				position = 0,
-				menuName ="Command" .. tostring(icmdID)
-			}
-		})
-		:Do(function(_,data)
-			--hmi side: sending UI.AddCommand response 
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)
-
-		--hmi side: expect VR.AddCommand request 
-		EXPECT_HMICALL("VR.AddCommand", 
-		{ 
-			cmdID = icmdID,							
-			type = "Command",
-			vrCommands = 
-			{
-				"VRCommand" .. tostring(icmdID)
-			}
-		})
-		:Do(function(_,data)
-			--hmi side: sending VR.AddCommand response 
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)	
+     if (type_icon == "DYNAMIC") then
+	value_Icon = path .. value--"action.png"
+end
 	
-		if(TimeRAISuccess == nil ) then
-			TimeRAISuccess = 0
-			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
-		end
-		--mobile side: expect AddCommand response 
-		EXPECT_RESPONSE(cid, {  success = true, resultCode = "SUCCESS"  })
-		:Do(function(_,data)			
-			
-			if(data.payload.resultCode ~= "SUCCESS") then
-				userPrint(33,"SUCCESS of AddCommand is not received!")
-				AddCmdSuccess[icmdID] = false
-			else
-				TimeAddCmdSuccess = timestamp()
-			
-				--mobile side: expect OnHashChange notification
-				if( 
-					 (TimeAddCmdSuccess - TimeRAISuccess) <= 10000 and
-				 	 (TimeAddCmdSuccess > 0) )then
-					userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
-					AddCmdSuccess[icmdID] = true
-				else
-					userPrint(33,"Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess) )
-					--self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
-					AddCmdSuccess[icmdID] = false
-				end
-			
+        
+    --if (data.params.menuIcon.imageType ~= "DYNAMIC") then
+    if (data.params.menuIcon.imageType ~= type_icon) then
+    	print("\27[31m imageType of menuIcon is WRONG. Expected: ".. type_icon.."; Real: " .. data.params.menuIcon.imageType .. "\27[0m")
+    	result = false
+    end
 
-				EXPECT_NOTIFICATION("OnHashChange")
-				:Do(function(_, data)
-					self.currentHashID = data.payload.hashID
-				end)
-			end
-		end)
+    if(string.find(data.params.menuIcon.value, value_Icon) ) then
 
-	end
+    else
+    	print("\27[31m value of menuIcon is WRONG. Expected: ~/".. value_Icon .. "; Real: " .. data.params.menuIcon.value .. "\27[0m")
+    	result = false
+    end
 
-	--DeleteCommand
-	local function DeleteCommand(self, icmdID)
-		local TimeDeleteCmdSuccess = 0
-		if(TimeRAISuccess == nil ) then
-			TimeRAISuccess = 0
-			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
-		end
-		--mobile side: sending DeleteCommand request
-		local cid = self.mobileSession:SendRPC("DeleteCommand",
-		{
-			cmdID = icmdID
-		})
-	
-		--hmi side: expect UI.DeleteCommand request
-		EXPECT_HMICALL("UI.DeleteCommand", 
-		{ 
-			cmdID = icmdID,
-			appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-		})
-		:Do(function(_,data)
-			--hmi side: sending UI.DeleteCommand response
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)
-	
-		--hmi side: expect VR.DeleteCommand request
-		EXPECT_HMICALL("VR.DeleteCommand", 
-		{ 
-			cmdID = icmdID,
-			type = "Command"
-		})
-		:Do(function(_,data)
-			--hmi side: sending VR.DeleteCommand response
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)
-				
-		--mobile side: expect DeleteCommand response 
-		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
-		:Do(function(_,data)
-			if(data.payload.resultCode ~= "SUCCESS") then
-				userPrint(33,"SUCCESS of DeleteCommand is not received!")
-				DeleteCmdSuccess[icmdID] = false
-			else
-				TimeDeleteCmdSuccess  = timestamp()		
-				if( 
-					(TimeDeleteCmdSuccess - TimeRAISuccess) <= 10000  and
-					(TimeDeleteCmdSuccess > 0) 	) then
-					userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
-					DeleteCmdSuccess[icmdID] = true
-				else
-					userPrint(33,"Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
-					DeleteCmdSuccess[icmdID] = false
-				end
+    return result
+end
 
-				EXPECT_NOTIFICATION("OnHashChange")
-				:Do(function(_, data)
-					self.currentHashID = data.payload.hashID
-				end)
-			end
-
-		end)
-		
-
-	end
-
-	--Checks of updating/no update of internal list
-	local function CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
-		--userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
-		local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
-
-		--hmi side: expect UI.SetGlobalProperties request
-		EXPECT_HMICALL("UI.SetGlobalProperties",
-										{
-											vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
-											vrHelp = { SGP_vrHelp },
-											appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-										})
-		:Do(function(_,data)
-			--hmi side: sending UI.SetGlobalProperties response
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)
-
-		--hmi side: expect TTS.SetGlobalProperties request
-		EXPECT_HMICALL("TTS.SetGlobalProperties",
-												{
-														helpPrompt = { SGP_helpPrompt },
-														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-													})
-		:Do(function(_,data)
-			--hmi side: sending UI.SetGlobalProperties response
-			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-		end)		
-
-		--mobile side: expect SetGlobalProperties response
-		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-			
-		--mobile side: expect OnHashChange notification
-		EXPECT_NOTIFICATION("OnHashChange")
-		
-	end
-
-	local function CheckNOUpdateFile()
-		userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
-	end
-
----------------------------------------------------------------------------------------------
--------------------------------------------Preconditions-------------------------------------
----------------------------------------------------------------------------------------------
-
-	--1. Precondition
-			TextPrint("Common Precondition")
-			commonSteps:ActivationApp(_, "ActivationApp_GeneralPrecondition")
+function DelayedExp(time)
+  local event = events.Event()
+  event.matches = function(self, e) return self == e end
+  EXPECT_EVENT(event, "Delayed event")
+  	:Timeout(time+1000)
+  RUN_AFTER(function()
+              RAISE_EVENT(event, event)
+            end, time)
+end
 
 
-	--2. Precondition: update Policy with SetGlobalProperties API in FULL, LIMITED, BACKGROUND is allowed
-		function Test:Precondition_PolicyUpdate_GeneralPrecondition()
-			--hmi side: sending SDL.GetURLS request
-			local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-		
-			--hmi side: expect SDL.GetURLS response from HMI
-			EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
+function copy_table(t)
+  local t2 = {}
+  for k,v in pairs(t) do
+    t2[k] = v
+  end
+  return t2
+end
+
+
+--Registering application
+
+function Precondition_RegisterApp(self, nameTC)
+
+	TextPrint("Precondition_"..nameTC)
+
+	commonSteps:UnregisterApplication(nameTC .."_UnregisterApplication")	
+
+	commonSteps:StartSession(nameTC .."_StartSession")
+
+	Test[nameTC .."_RegisterApp"] = function(self)
+
+		self.mobileSession:StartService(7)
+		:Do(function()	
+			local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
+			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", 
+														{ application = {	appName = config.application1.registerAppInterfaceParams.appName }})
 			:Do(function(_,data)
-				--print("SDL.GetURLS response is received")
-				--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-				self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-																				{
-																					requestType = "PROPRIETARY",
-																					fileName = "filename"
-																				} )
-			
-				--mobile side: expect OnSystemRequest notification 
-				EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-				:Do(function(_,data)
-					--print("OnSystemRequest notification is received")
-					--mobile side: sending SystemRequest request 
-					local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-																																{
-																																	fileName = "PolicyTableUpdate",
-																																	requestType = "PROPRIETARY"
-																																},
-																																"files/ptu_general.json")
-
-				
-					local systemRequestId
-					--hmi side: expect SystemRequest request
-					EXPECT_HMICALL("BasicCommunication.SystemRequest")
-					:Do(function(_,data)
-						systemRequestId = data.id
-						--print("BasicCommunication.SystemRequest is received")
-						
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-																								{
-																									policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-																								}	)
-						function to_run()
-							--hmi side: sending SystemRequest response
-							self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-						end
-					
-						RUN_AFTER(to_run, 500)
-					end)
-				
-					--hmi side: expect SDL.OnStatusUpdate
-					EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-					:ValidIf(function(exp,data)
-						if ( exp.occurences == 1 and data.params.status == "UP_TO_DATE" ) then
-							return true
-						elseif ( exp.occurences == 1 and data.params.status == "UPDATING" ) then
-							return true
-						elseif ( exp.occurences == 2 and data.params.status == "UP_TO_DATE" ) then
-							return true
-						else 
-							if (exp.occurences == 1) then
-								print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-							elseif (exp.occurences == 2) then
-								print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-							end
-							return false
-						end
-					end)
-					:Times(Between(1,2))
-				
-					--mobile side: expect SystemRequest response
-					EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-					:Do(function(_,data)
-						--print("SystemRequest is received")
-						--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-						local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-				
-						--hmi side: expect SDL.GetUserFriendlyMessage response
-						-- TODO: update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-						EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage)
-						:Do(function(_,data)
-							--print("SDL.GetUserFriendlyMessage is received")			
-						end)
-					end)
-				end)
+				TimeRAISuccess = timestamp()
+			  	self.applications[data.params.application.appName] = data.params.application.appID
+			  	return TimeRAISuccess
 			end)
+
+			self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
+			:Timeout(2000)
+
+			self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "NONE", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+		end)
+
+		if(TimeRAISuccess == nil) then
+			TimeRAISuccess = 0
+			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
 		end
+	end		
+end
+
+
+--Activation application
+
+local TimeOfActivation
+function ActivationApp(self, nameTC)
+                                 
+   Test[nameTC .."_ActivationApp"] = function(self)
+
+	--hmi side: sending SDL.ActivateApp request
+	local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
+
+		EXPECT_HMIRESPONSE(RequestId)
+		:Do(function(_,data)
+				if data.result.isSDLAllowed ~= true then
+					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+					--hmi side: expect SDL.GetUserFriendlyMessage message response
+					--TODO: update after resolving APPLINK-16094.
+					--EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+					EXPECT_HMIRESPONSE(RequestId)
+					:Do(function(_,data)						
+						--hmi side: send request SDL.OnAllowSDLFunctionality
+						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+						--hmi side: expect BasicCommunication.ActivateApp request
+						EXPECT_HMICALL("BasicCommunication.ActivateApp")
+						:Do(function(_,data)
+							--hmi side: sending BasicCommunication.ActivateApp response
+							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+						end)
+							:Times(AnyNumber())
+					end)
+
+				end
+			end)
+		
+			--mobile side: expect notification
+			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"})
+				:Do(function(_,data)
+					TimeOfActivation = timestamp()
+				end)
+		end
+end
+
+
+local function AddCommand(self, icmdID)
+local TimeAddCmdSuccess = 0
+	local cid = self.mobileSession:SendRPC("AddCommand",
+	{
+		cmdID = 11,
+		menuParams = 	
+		{ 
+					
+			menuName ="SGP test"
+		}, 
+		vrCommands = 
+		{ 
+			"SGP test",
+			"SGP"
+		}
+	})
+			
+	--UI
+	EXPECT_HMICALL("UI.AddCommand", 
+	{ 
+		cmdID = 11,
+		menuParams = 
+		{ 
+			menuName ="SGP test"
+		}
+	})
+	:Do(function(_,data)
+	self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+	end)
+			
+	--VR
+	EXPECT_HMICALL("VR.AddCommand", 
+	{ 
+		cmdID = 11,
+		vrCommands = 
+		{
+			"SGP test",
+			"SGP"
+		}
+	})
+	:Do(function(_,data)
+	self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+	end)		
+			
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS" })
+	EXPECT_NOTIFICATION("OnHashChange")
+end 
 
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
@@ -511,7 +296,10 @@
 					-- SDL must retrieve value of "helpPrompt" from .ini file ([GLOBAL PROPERTIES] section -> "HelpPrompt" param)
 				-- SDL sends UI.SetGlobalProperties(<default_vrHelp>, params) and TTS.SetGlobalProperties(<default_helpPrompt>, params) to HMI 
 
-				Precondition_RegisterApp(self, "TC1")
+			--Precondition to PositiveResponseCheck.2
+
+			  Precondition_RegisterApp(self, "TC1")
+			--End Precondition to PositiveResponseCheck.2
 
                                 TCBody(self, "1")
 
@@ -580,15 +368,20 @@
 				-- SDL must provide the value of "helpPrompt" and "vrHelp" based on registered AddCommands and DeleteCommands requests to HMI: 
 					-- SDL sends UI.SetGlobalProperties(<vrHelp_from_list>, params) and TTS.SetGlobalProperties(<helpPrompt_from_list>, params) to HMI 
 
-
 				-- Precondition to PositiveResponseCheck.2
-					Precondition_RegisterApp(self, "TC2")
-					for cmdCount = 1, 2 do
+
+				  Precondition_RegisterApp(self, "TC2")
+
+				  ActivationApp(self, "TC2")
+
+					for cmdCount = 1, 1 do
 						Test["TC2_Precondition_AddCommandInitial_" .. cmdCount] = function(self)
 							AddCommand(self, cmdCount)
 						end
 					end 
+
 				--End Precondition to PositiveResponseCheck.2
+
 					TCBody(self, "2")
 
 					Test["TC2_NoSGP+vrHelp&helpPrompt_from_intList"] = function(self)
@@ -610,10 +403,6 @@
 																					{
 																						text = "VRCommand1",
 																						position = 1
-																				        },
-	                                                                                                                                                                {
-																						text = "VRCommand2",
-																						position = 2
 																				        }
 	                                                                                                                                },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
@@ -631,14 +420,6 @@
 																	     {
 																				        {
 																						text = "VRCommand1",
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					},
-																					{
-																						text = "VRCommand2",
 																						type = "TEXT"
 																					},
 																					{
@@ -665,8 +446,8 @@
 					end
 				--End Test case PositiveResponseCheck.2
 
-				--[TODO:uncomment after APPLINK-16610, APPLINK-16094, APPLINK-26394 are fixed]
-				--[[
+			   --[[	--[TODO:uncomment after APPLINK-16610, APPLINK-16094, APPLINK-26394 are fixed]
+			
 				--Begin Test case PositiveResponseCheck.3
 					--Description: Case when App does NOT send SetGlobalProperties request to SDL during 10 sec timer + values from internal list
 					--Requirement id in JIRA: APPLINK-19474, APPLINK-26644, APPLINK-23652->reg_1
@@ -743,7 +524,7 @@
 							end)
 
 							local UIAddCommandValues = {}
-							for m=1,2 do
+							for m=1,1 do
 								UIAddCommandValues[m] = {cmdID = m, menuParams = { menuName ="Command" .. tostring(m)}}
 							end
 
@@ -766,7 +547,7 @@
 								--hmi side: sending UI.AddCommand response 
 								self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 							end)
-							:Times(2)
+							:Times(1)
 						end
 
 		                        TCBody(self, "2.1")
@@ -791,12 +572,7 @@
 																					{
 																						text = "VRCommand1",
 																						position = 1
-																				        },
-	                                                                                                                                                                {
-																						text = "VRCommand2",
-																						position = 2
 																				        }
-	                                                                                                                                },
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 
@@ -818,16 +594,7 @@
 																					{
 																						text = "300",
 																						type = "SILENCE"
-																					},
-																					{
-																						text = "VRCommand2",
-																						type = "TEXT"
-																					},
-																					{
-																						text = "300",
-																						type = "SILENCE"
-																					}			
-																	     },
+																					}
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 
@@ -871,7 +638,10 @@
 
 			                Precondition_RegisterApp(self, "TC3")
 
-				--End precondition for NegativeResponse.1
+					ActivationApp(self, "TC3")
+
+			         --End precondition for NegativeResponse.1
+
 					TCBody(self, "3")
 
 					Test["TC3_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -995,11 +765,14 @@
 				--SDL receives GENERIC_ERROR <errorCode> on TTS.SetGlobalProperties from HMI
 				--SDL should log corresponding error internally
 
-				 --Precondition for NegativeResponse.2
+				--Precondition for NegativeResponse.2
 
-			                Precondition_RegisterApp(self, "TC4")
+			          Precondition_RegisterApp(self, "TC4")
+
+				  ActivationApp(self, "TC4")
 
 				--End precondition for NegativeResponse.2
+
 					TCBody(self, "4")
 
 					Test["TC4_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1127,9 +900,12 @@
 
                                 --Precondition for NegativeResponse.3
 
-			                Precondition_RegisterApp(self, "TC5")
+			          Precondition_RegisterApp(self, "TC5")
+
+				  ActivationApp(self, "TC5")
 
 				--End precondition for NegativeResponse.3
+
 					TCBody(self, "5")
 
 					Test["TC5_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1255,11 +1031,14 @@
 				--SDL receives UNSUPPORTED_RESOURCE <errorCode> on UI.SetGlobalProperties from HMI
 				--SDL should log corresponding error internally
 
-                                 --Precondition for NegativeResponse.4
+                                --Precondition for NegativeResponse.4
 
-			                Precondition_RegisterApp(self, "TC6")
+			          Precondition_RegisterApp(self, "TC6")
 
-				--End precondition for NegativeResponse.4
+			          ActivationApp(self, "TC6")
+
+			        --End precondition for NegativeResponse.4
+
 					TCBody(self, "6")
 
 					Test["TC6_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1385,9 +1164,12 @@
 
                                 --Precondition for Test case NegativeResponse.5
 
-			                Precondition_RegisterApp(self, "TC7")
+			          Precondition_RegisterApp(self, "TC7")
+
+			          ActivationApp(self, "TC7")
 
 				--End precondition for NegativeResponse.5
+
 					TCBody(self, "7")
 
 					Test["TC7_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1515,9 +1297,12 @@
 
                                 --Precondition for Test case NegativeResponse.6
 				 
-			                Precondition_RegisterApp(self, "TC8")
+			          Precondition_RegisterApp(self, "TC8")
+
+				  ActivationApp(self, "TC8")
 
 				--End precondition for NegativeResponse.6
+
 					TCBody(self, "8")
 
 					Test["TC8_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1645,9 +1430,12 @@
 
 				--Precondition for NegativeResponse.7
 				 
-				Precondition_RegisterApp(self, "TC9")
+				  Precondition_RegisterApp(self, "TC9")
+
+				  ActivationApp(self, "TC9")
 
 				--End precondition for NegativeResponse.7
+
 					TCBody(self, "9")
 
 					Test["TC9_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1774,9 +1562,12 @@
 
 				--Precondition for NegativeResponse.8
 				 
-				Precondition_RegisterApp(self, "TC10")
+				  Precondition_RegisterApp(self, "TC10")
+
+				  ActivationApp(self, "TC10")
 
 				--End precondition for NegativeResponse.7
+
 					TCBody(self, "10")
 
 					Test["TC10_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -1924,10 +1715,14 @@
 				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull AddCommand response from HMI
 				--SDL should send updated "vrHelp" and "helpPrompt" via TTS/UI.SetGlobalProperties to HMI till App sends SetGlobalProperties request with valid <vrHelp> and <helpPrompt> params to SDL
 
-			        	--Precondition for Test case EmulatingUserAction.1
-					Precondition_RegisterApp(self, "TC12")
+			        --Precondition for Test case EmulatingUserAction.1
 
-					--End precondition for EmulatingUserAction.1
+				  Precondition_RegisterApp(self, "TC12")
+
+			          ActivationApp(self, "TC12")
+
+				--End precondition for EmulatingUserAction.1
+
 					TCBody(self, "12")
 
 					Test["TC12_NoSGP_from_App_during_10secTimer"] = function(self)
@@ -2054,9 +1849,13 @@
 				--SDL should update internal list with new values of "vrHelp" and "helpPrompt" params ONLY after successfull AddCommand response from HMI
 				--SDL should send updated "vrHelp" and "helpPrompt" via TTS/UI.SetGlobalProperties to HMI till App sends SetGlobalProperties request with valid <vrHelp> and <helpPrompt> params to SDL
 
-                                        --Precondition for Test case EmulatingUserAction.2
-					Precondition_RegisterApp(self, "TC13")
-					--End precondition for EmulatingUserAction.2
+                                --Precondition for Test case EmulatingUserAction.2
+
+				  Precondition_RegisterApp(self, "TC13")
+
+			          ActivationApp(self, "TC13")
+
+				--End precondition for EmulatingUserAction.2
 
 					TCBody(self, "13")
 
@@ -2178,12 +1977,11 @@
 					EXPECT_HMICALL("TTS.SetGlobalProperties",{})
 					:Times(0)
 					
-			
 			  end 
 		--End Test case EmulatingUserAction.2
 
   --End Test suit EmulatingUserAction
--------------------=--------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------
 ----------------------------------------VII TEST BLOCK----------------------------------------
 -------------------------------------Different HMIStatus--------------------------------------
 
@@ -2193,9 +1991,14 @@
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Postconditions------------------------------------
 ---------------------------------------------------------------------------------------------
+ 	TextPrint("Postconditions")
+
 	function Test:Postcondition_remove_user_connecttest_restore_preloaded_file()
-	  	os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt_origin.json " .. config.pathToSDL .. "sdl_preloaded_pt.json" )
-	  	os.execute(" rm -f " .. config.pathToSDL .. "/sdl_preloaded_pt_origin.json" ) 
+        os.execute(" cp " .. config.pathToSDL .. "sdl_preloaded_pt_origin.json " .. config.pathToSDL .. "sdl_preloaded_pt.json" )
+	os.execute(" rm -f " .. config.pathToSDL .. "/sdl_preloaded_pt_origin.json" ) 
 	end
 
 return Test
+
+
+
