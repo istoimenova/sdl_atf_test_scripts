@@ -19,49 +19,31 @@ local floatParameterInNotification = require('user_modules/shared_testcases/test
 local stringParameterInNotification = require('user_modules/shared_testcases/testCasesForStringParameterInNotification')
 local enumParameterInNotification = require('user_modules/shared_testcases/testCasesForEnumerationParameterInNotification')
 local booleanParameterInNotification = require('user_modules/shared_testcases/testCasesForBooleanParameterInNotification')
+local doubleParameterInNotification = require('user_modules/shared_testcases/testCasesForDoubleParameterInNotification')
 local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 local SDLConfig = require('user_modules/shared_testcases/SmartDeviceLinkConfigurations')
 local functionId = require('function_id')
 require('user_modules/AppTypes')
 
 APIName = "OnVehicleData" -- set API name
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
 Apps = {}
 Apps[1] = {}
 Apps[1].storagePath = config.pathToSDL .. SDLConfig:GetValue("AppStorageFolder") .. "/"..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 Apps[1].appName = config.application1.registerAppInterfaceParams.appName 
-
-
----------------------------------------------------------------------------------------------
-------------------------------------------Common functions-----------------------------------
----------------------------------------------------------------------------------------------
-
-local SVDValues = {		                gps						= "VEHICLEDATA_GPS", 
-						speed					= "VEHICLEDATA_SPEED", 
-						rpm						= "VEHICLEDATA_RPM", 
-						fuelLevel				= "VEHICLEDATA_FUELLEVEL", 
-						fuelLevel_State			= "VEHICLEDATA_FUELLEVEL_STATE", 
-						instantFuelConsumption	= "VEHICLEDATA_FUELCONSUMPTION", 
-						externalTemperature		= "VEHICLEDATA_EXTERNTEMP", 
-						prndl					= "VEHICLEDATA_PRNDL", 
-						tirePressure			= "VEHICLEDATA_TIREPRESSURE", 
-						odometer				= "VEHICLEDATA_ODOMETER", 
-						beltStatus				= "VEHICLEDATA_BELTSTATUS", 
-						bodyInformation			= "VEHICLEDATA_BODYINFO", 
-						deviceStatus			= "VEHICLEDATA_DEVICESTATUS", 
-						driverBraking			= "VEHICLEDATA_BRAKING", 
-						wiperStatus				= "VEHICLEDATA_WIPERSTATUS", 
-						headLampStatus			= "VEHICLEDATA_HEADLAMPSTATUS", 
-						engineTorque			= "VEHICLEDATA_ENGINETORQUE", 
-						accPedalPosition		= "VEHICLEDATA_ACCPEDAL", 
-						steeringWheelAngle		= "VEHICLEDATA_STEERINGWHEEL", 
-						eCallInfo				= "VEHICLEDATA_ECALLINFO", 
-						airbagStatus			= "VEHICLEDATA_AIRBAGSTATUS", 
-						emergencyEvent			= "VEHICLEDATA_EMERGENCYEVENT", 
-						clusterModeStatus		= "VEHICLEDATA_CLUSTERMODESTATUS", 
-						myKey					= "VEHICLEDATA_MYKEY"}
-						
-
-local allVehicleData = {	                        "gps", 
+local absStateValues = {"INACTIVE", "ACTIVE"}
+local tpmsValues = {"UNKNOWN", "SYSTEM_FAULT", "SENSOR_FAULT", "LOW", "SYSTEM_ACTIVE", "TRAIN_LF_TIRE", "TRAIN_RF_TIRE", "TRAIN_RR_TIRE", "TRAIN_ORR_TIRE", "TRAIN_IRR_TIRE", "TRAIN_LR_TIRE", "TRAIN_OLR_TIRE", "TRAIN_ILR_TIRE", "TRAINING_COMPLETE", "TIRES_NOT_TRAINED"}
+local turnSignalValues = {"OFF", "LEFT", "RIGHT", "UNUSED"}
+local tirePressureValueParams = {"leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear", "frontRecommended", "rearRecommended"}
+	local PermissionLines_SubscribeVehicleData = 
+[[					"SubscribeVehicleData": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [
+							"gps", 
 							"speed", 
 							"rpm", 
 							"fuelLevel", 
@@ -84,7 +66,119 @@ local allVehicleData = {	                        "gps",
 							"airbagStatus", 
 							"emergencyEvent", 
 							"clusterModeStatus", 
-							"myKey"}
+							"myKey",
+							"fuelRange",
+							"abs_State",
+							"tirePressureValue",
+							"tpms",
+							"turnSignal"							
+					   ]
+					  }]]
+
+
+	local PermissionLines_OnVehicleData = 
+[[					"OnVehicleData": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [
+							"gps", 
+							"speed",  
+							"rpm", 
+							"fuelLevel", 
+							"fuelLevel_State", 
+							"instantFuelConsumption", 
+							"externalTemperature", 
+							"prndl", 
+							"tirePressure", 
+							"odometer", 
+							"beltStatus", 
+							"bodyInformation", 
+							"deviceStatus", 
+							"driverBraking", 
+							"wiperStatus", 
+							"headLampStatus", 
+							"engineTorque", 
+							"accPedalPosition", 
+							"steeringWheelAngle", 
+							"eCallInfo", 
+							"airbagStatus", 
+							"emergencyEvent", 
+							"clusterModeStatus", 
+							"myKey",
+							"fuelRange",
+							"abs_State",
+							"tirePressureValue",
+							"tpms",
+							"turnSignal"
+					   ]
+					  }]]
+---------------------------------------------------------------------------------------------
+------------------------------------------Common functions-----------------------------------
+---------------------------------------------------------------------------------------------
+
+local SVDValues = {		gps						= "VEHICLEDATA_GPS", 
+						speed					= "VEHICLEDATA_SPEED", 
+						rpm						= "VEHICLEDATA_RPM", 
+						fuelLevel				= "VEHICLEDATA_FUELLEVEL", 
+						fuelLevel_State			= "VEHICLEDATA_FUELLEVEL_STATE", 
+						instantFuelConsumption	= "VEHICLEDATA_FUELCONSUMPTION", 
+						externalTemperature		= "VEHICLEDATA_EXTERNTEMP", 
+						prndl					= "VEHICLEDATA_PRNDL", 
+						tirePressure			= "VEHICLEDATA_TIREPRESSURE", 
+						odometer				= "VEHICLEDATA_ODOMETER", 
+						beltStatus				= "VEHICLEDATA_BELTSTATUS", 
+						bodyInformation			= "VEHICLEDATA_BODYINFO", 
+						deviceStatus			= "VEHICLEDATA_DEVICESTATUS", 
+						driverBraking			= "VEHICLEDATA_BRAKING", 
+						wiperStatus				= "VEHICLEDATA_WIPERSTATUS", 
+						headLampStatus			= "VEHICLEDATA_HEADLAMPSTATUS", 
+						engineTorque			= "VEHICLEDATA_ENGINETORQUE", 
+						accPedalPosition		= "VEHICLEDATA_ACCPEDAL", 
+						steeringWheelAngle		= "VEHICLEDATA_STEERINGWHEEL", 
+						eCallInfo				= "VEHICLEDATA_ECALLINFO", 
+						airbagStatus			= "VEHICLEDATA_AIRBAGSTATUS", 
+						emergencyEvent			= "VEHICLEDATA_EMERGENCYEVENT", 
+						clusterModeStatus		= "VEHICLEDATA_CLUSTERMODESTATUS", 
+						myKey					= "VEHICLEDATA_MYKEY",
+						fuelRange 				= "VEHICLEDATA_FUELRANGE",
+						abs_State				= "VEHICLEDATA_ABS_STATE",
+						tirePressureValue		= "VEHICLEDATA_TIREPRESSURE_VALUE",
+						tpms					= "VEHICLEDATA_TPMS",
+						turnSignal				= "VEHICLEDATA_TURNSIGNAL"}
+						
+
+local allVehicleData = {	"gps", 
+							"speed", 
+							"rpm", 
+							"fuelLevel", 
+							"fuelLevel_State", 
+							"instantFuelConsumption", 
+							"externalTemperature", 
+							"prndl", 
+							"tirePressure", 
+							"odometer", 
+							"beltStatus", 
+							"bodyInformation", 
+							"deviceStatus", 
+							"driverBraking", 
+							"wiperStatus", 
+							"headLampStatus", 
+							"engineTorque", 
+							"accPedalPosition", 
+							"steeringWheelAngle", 
+							"eCallInfo", 
+							"airbagStatus", 
+							"emergencyEvent", 
+							"clusterModeStatus", 
+							"myKey",
+							"fuelRange",
+							"abs_State",
+							"tirePressureValue",
+							"tpms",
+							"turnSignal"}
 							
 
 function Test:subscribeVehicleDataSuccess(paramsSend)
@@ -165,12 +259,20 @@ end
 
 
 --This function is used to send default request and response with specific valid data and verify SUCCESS resultCode
-function Test:verify_SUCCESS_Notification_Case(Notification)
-	
+-- Note: vin in Notification from HMI will be ignored  by SDL according to APPLINK-26880
+function Test:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
+
+	local expNotification	
+	if ExpectNotification == nil then
+		expNotification = Notification
+	else 
+		expNotification = ExpectNotification
+	end
+		
 	self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", Notification)	  		
 	
 	--mobile side: expected SubscribeVehicleData response
-	EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+	EXPECT_NOTIFICATION("OnVehicleData", expNotification)	
 		
 end
 
@@ -191,93 +293,19 @@ end
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
-
-
-
-	--Print new line to separate new test cases group
+		
+	--Print new line to separate Preconditions
 	commonFunctions:newTestCasesGroup("Preconditions")
-	
+
+	--Delete app_info.dat, logs and policy table
+	commonSteps:DeleteLogsFileAndPolicyTable()
+
+
 	--1. Activate application
 	commonSteps:ActivationApp()
 
-	local PermissionLines_SubscribeVehicleData = 
-[[					"SubscribeVehicleData": {
-						"hmi_levels": [
-						  "BACKGROUND",
-						  "FULL",
-						  "LIMITED"
-						],
-						"parameters": [
-							"gps", 
-							"speed", 
-							"rpm", 
-							"fuelLevel", 
-							"fuelLevel_State", 
-							"instantFuelConsumption", 
-							"externalTemperature", 
-							"prndl", 
-							"tirePressure", 
-							"odometer", 
-							"beltStatus", 
-							"bodyInformation", 
-							"deviceStatus", 
-							"driverBraking", 
-							"wiperStatus", 
-							"headLampStatus", 
-							"engineTorque", 
-							"accPedalPosition", 
-							"steeringWheelAngle", 
-							"eCallInfo", 
-							"airbagStatus", 
-							"emergencyEvent", 
-							"clusterModeStatus", 
-							"myKey"
-					   ]
-					  }]]
-
-
-	local PermissionLines_OnVehicleData = 
-[[					"OnVehicleData": {
-						"hmi_levels": [
-						  "BACKGROUND",
-						  "FULL",
-						  "LIMITED"
-						],
-						"parameters": [
-							"gps", 
-							"speed",  
-							"rpm", 
-							"fuelLevel", 
-							"fuelLevel_State", 
-							"instantFuelConsumption", 
-							"externalTemperature", 
-							"prndl", 
-							"tirePressure", 
-							"odometer", 
-							"beltStatus", 
-							"bodyInformation", 
-							"deviceStatus", 
-							"driverBraking", 
-							"wiperStatus", 
-							"headLampStatus", 
-							"engineTorque", 
-							"accPedalPosition", 
-							"steeringWheelAngle", 
-							"eCallInfo", 
-							"airbagStatus", 
-							"emergencyEvent", 
-							"clusterModeStatus", 
-							"myKey"
-					   ]
-					  }]]
-		
-
-	local PermissionLinesForBase4 = PermissionLines_SubscribeVehicleData .. ", \n" .. PermissionLines_OnVehicleData ..", \n"
-	local PermissionLinesForGroup1 = nil
-	local PermissionLinesForApplication = nil
-	--TODO: PT is blocked by ATF defect APPLINK-19188
-	--local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
-	--testCasesForPolicyTable:updatePolicy(PTName)		
+	--2. Update policy to allow request
+	testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForOnVehicleData.json")	
 		
 			
 	----Get appID Value on HMI side
@@ -342,14 +370,19 @@ end
 		--23.airbagStatus: type=Common.AirbagStatus mandatory=false
 		--24.gps: type=Common.GPSData mandatory=false
 		--25.tirePressure: type=Common.TireStatus mandatory=false
+		--26. fuelRange: type="Double" mandatory="false"
+		--27. abs_State: type="ABS_STATE" mandatory="false"
+		--28. tirePressureValue: type="TirePressureValue" mandatory="false"
+		--29. tpms: type="TPMS" mandatory="false"
+		--30. turnSignal: type="TurnSignal" mandatory="false"
 ---------------------------------------------------------------------------------------------------------------------------------
 	
 	--This test case is used in some places such as verify all parameters are low bound, notification in different HMI levels
+	--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668
 	local function OnVehicleData_AllParametersLowerBound_SUCCESS(TestCaseName)
 
 		Test[TestCaseName] = function(self)
-		
-			
+				
 			local Notification = 
 			{
 				speed = 0.0,
@@ -463,12 +496,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 0.0,
+				fuelLevel = -6.000000,
+				instantFuelConsumption = 0.000000,
+				externalTemperature = -40.000000,
+				engineTorque = -1000.000000,
+				accPedalPosition = 0.000000,
+				steeringWheelAngle = -2000.000000,
+				
+				rpm = 0,
+				odometer = 0,
+				
+				--vin = "a",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+							 	},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 0,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{	        longitudeDegrees = -180.0,
+									latitudeDegrees = -90.0,
+									pdop = 0.0,
+									hdop = 0.0,
+									vdop = 0.0,
+									altitude = -10000.0,
+									heading = 0.0,
+									speed = 0.0,
+									
+									utcYear = 2010,
+									utcMonth = 1,
+									utcDay = 1,
+									utcHours = 0,
+									utcMinutes = 0,
+									utcSeconds = 0,
+									satellites = 0,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"
+			}
 			
-			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 	end
@@ -484,13 +659,12 @@ end
 	 -- accPedalPosition
 	 -- steeringWheelAngle
          -- gps params
-
+	--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668
        
 	local function OnVehicleData_AllParametersLowerBoundand_IntForFloat_SUCCESS(TestCaseName2)
 
 		Test[TestCaseName2] = function(self)
-		
-			
+					
 			local Notification = 
 			{
 				speed = 0,
@@ -604,12 +778,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 0,
+						rightFront = 0,
+						leftRear = 0,
+						rightRear = 0,
+						innerLeftRear = 0,
+						innerRightRear = 0,
+						frontRecommended = 0,
+						rearRecommended = 0
+						},
+				tpms = "TIRES_NOT_TRAINED",
+				turnSignal = "UNUSED"				
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 0,
+				fuelLevel = -6,
+				instantFuelConsumption = 0,
+				externalTemperature = -40,
+				engineTorque = -1000,
+				accPedalPosition = 0,
+				steeringWheelAngle = -2000,
+				
+				rpm = 0,
+				odometer = 0,
+				
+				--vin = "a",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 0,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{	        longitudeDegrees = -180,
+									latitudeDegrees = -90,
+									pdop = 0,
+									hdop = 0,
+									vdop = 0,
+									altitude = -10000.0,
+									heading = 0,
+									speed = 0,
+									
+									utcYear = 2010,
+									utcMonth = 1,
+									utcDay = 1,
+									utcHours = 0,
+									utcMinutes = 0,
+									utcSeconds = 0,
+									satellites = 0,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 0,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 0,
+						rightFront = 0,
+						leftRear = 0,
+						rightRear = 0,
+						innerLeftRear = 0,
+						innerRightRear = 0,
+						frontRecommended = 0,
+						rearRecommended = 0
+						},
+				tpms = "TIRES_NOT_TRAINED",
+				turnSignal = "UNUSED"				
+			}
 			
-			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 	end
@@ -628,8 +944,7 @@ end
 -----------------------------------------------------------------------------------------------------------------------------
 
 		Test["OnVehicleData_PositiveNotification_SUCCESS"] = function(self)
-		
-			
+				
 			local Notification = 
 			{
 				speed = 1.1,
@@ -743,11 +1058,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 1.1,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 1.1,
+						rightFront = 1.1,
+						leftRear = 1.1,
+						rightRear = 1.1,
+						innerLeftRear = 1.1,
+						innerRightRear = 1.1,
+						frontRecommended = 1.1,
+						rearRecommended = 1.1
+						},
+				tpms = "LOW",
+				turnSignal = "LEFT"
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 1.1,
+				fuelLevel = 1.1,
+				instantFuelConsumption = 1.1,
+				externalTemperature = 1.1,
+				engineTorque = 1.1,
+				accPedalPosition = 1.1,
+				steeringWheelAngle = 1.1,
+				
+				rpm = 1,
+				odometer = 1,
+				
+				--vin = "a",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 0,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{        	longitudeDegrees = 1.1,
+									latitudeDegrees = 1.1,
+									pdop = 1.1,
+									hdop = 1.1,
+									vdop = 1.1,
+									altitude = 1.1,
+									heading = 1.1,
+									speed = 1.1,
+									
+									utcYear = 2011,
+									utcMonth = 1,
+									utcDay = 1,
+									utcHours = 1,
+									utcMinutes = 1,
+									utcSeconds = 1,
+									satellites = 1,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 1.1,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 1.1,
+						rightFront = 1.1,
+						leftRear = 1.1,
+						rightRear = 1.1,
+						innerLeftRear = 1.1,
+						innerRightRear = 1.1,
+						frontRecommended = 1.1,
+						rearRecommended = 1.1
+						},
+				tpms = "LOW",
+				turnSignal = "LEFT"
+			}
 			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 		
@@ -761,12 +1219,11 @@ end
 	 -- engineTorque
 	 -- accPedalPosition
 	 -- steeringWheelAngle
-         -- gps params
+     -- gps params
 
 
 		Test["OnVehicleData_PositiveNotification_IntForFloat_SUCCESS"] = function(self)
 		
-			
 			local Notification = 
 			{
 				speed = 1,
@@ -857,7 +1314,7 @@ end
 									pdop = 1,
 									hdop = 1,
 									vdop = 1,
-									altitude = 1.1,
+									altitude = 1,
 									heading = 1,
 									speed = 1,
 									
@@ -880,11 +1337,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 1,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 1,
+						rightFront = 1,
+						leftRear = 1,
+						rightRear = 1,
+						innerLeftRear = 1,
+						innerRightRear = 1,
+						frontRecommended = 1,
+						rearRecommended = 1
+						},
+				tpms = "SYSTEM_ACTIVE",
+				turnSignal = "RIGHT"
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 1,
+				fuelLevel = 1,
+				instantFuelConsumption = 1,
+				externalTemperature = 1,
+				engineTorque = 1,
+				accPedalPosition = 1,
+				steeringWheelAngle = 1,
+				
+				rpm = 1,
+				odometer = 1,
+				
+				--vin = "a",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 0,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{        	longitudeDegrees = 1,
+									latitudeDegrees = 1,
+									pdop = 1,
+									hdop = 1,
+									vdop = 1,
+									altitude = 1,
+									heading = 1,
+									speed = 1,
+									
+									utcYear = 2011,
+									utcMonth = 1,
+									utcDay = 1,
+									utcHours = 1,
+									utcMinutes = 1,
+									utcSeconds = 1,
+									satellites = 1,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 1,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 1,
+						rightFront = 1,
+						leftRear = 1,
+						rightRear = 1,
+						innerLeftRear = 1,
+						innerRightRear = 1,
+						frontRecommended = 1,
+						rearRecommended = 1
+						},
+				tpms = "SYSTEM_ACTIVE",
+				turnSignal = "RIGHT"
+			}
 			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 
@@ -897,7 +1497,7 @@ end
   ----------------------------------------------------------------------------------------------------------------
 		
 		Test["OnVehicleData_AllParametersUpperBound_SUCCESS"] = function(self)
-		
+		--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668
 			local Notification = 
 			{
 				speed = 700.0,
@@ -1011,12 +1611,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 100.00,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 100.00,
+						rightFront = 100.00,
+						leftRear = 100.00,
+						rightRear = 100.00,
+						innerLeftRear = 100.00,
+						innerRightRear = 100.00,
+						frontRecommended = 100.00,
+						rearRecommended = 100.00
+						},
+				tpms = "SENSOR_FAULT",
+				turnSignal = "OFF"
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 700.0,
+				fuelLevel = 106.000000,
+				instantFuelConsumption = 25575.000000,
+				externalTemperature = 100.000000,
+				engineTorque = 2000.000000,
+				accPedalPosition = 100.000000,
+				steeringWheelAngle = 2000.000000,
+				
+				rpm = 20000,
+				odometer = 17000000,
+				
+				--vin = "aaaaaaaaaaaaaaaaa",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 255,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{	        longitudeDegrees = 180.0,
+									latitudeDegrees = 90.0,
+									pdop = 10.0,
+									hdop = 10.0,
+									vdop = 10.0,
+									altitude = 10000.0,
+									heading = 359.99,
+									speed = 500.0,
+									
+									utcYear = 2100,
+									utcMonth = 12,
+									utcDay = 31,
+									utcHours = 23,
+									utcMinutes = 59,
+									utcSeconds = 59,
+									satellites = 31,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 100.00,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 100.00,
+						rightFront = 100.00,
+						leftRear = 100.00,
+						rightRear = 100.00,
+						innerLeftRear = 100.00,
+						innerRightRear = 100.00,
+						frontRecommended = 100.00,
+						rearRecommended = 100.00
+						},
+				tpms = "SENSOR_FAULT",
+				turnSignal = "OFF"
+			}
 			
-			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 
@@ -1033,7 +1775,7 @@ end
          -- gps params
 
 		Test["OnVehicleData_AllParametersUpperBound_IntForFloat_SUCCESS"] = function(self)
-		
+		--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668		
 			local Notification = 
 			{
 				speed = 700,
@@ -1147,12 +1889,154 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 100,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 100,
+						rightFront = 100,
+						leftRear = 100,
+						rightRear = 100,
+						innerLeftRear = 100,
+						innerRightRear = 100,
+						frontRecommended = 100,
+						rearRecommended = 100
+						},
+				tpms = "SENSOR_FAULT",
+				turnSignal = "OFF"
 			}
 			
+			local ExpectNotification = 
+			{
+				speed = 700,
+				fuelLevel = 106,
+				instantFuelConsumption = 25575,
+				externalTemperature = 100,
+				engineTorque = 2000,
+				accPedalPosition = 100,
+				steeringWheelAngle = 2000,
+				
+				rpm = 20000,
+				odometer = 17000000,
+				
+				--vin = "aaaaaaaaaaaaaaaaa",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 255,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{	        longitudeDegrees = 180,
+									latitudeDegrees = 90,
+									pdop = 10,
+									hdop = 10,
+									vdop = 10,
+									altitude = 10000.0,
+									heading = 400,
+									speed = 500,
+									
+									utcYear = 2100,
+									utcMonth = 12,
+									utcDay = 31,
+									utcHours = 23,
+									utcMinutes = 59,
+									utcSeconds = 59,
+									satellites = 31,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 100,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 100,
+						rightFront = 100,
+						leftRear = 100,
+						rightRear = 100,
+						innerLeftRear = 100,
+						innerRightRear = 100,
+						frontRecommended = 100,
+						rearRecommended = 100
+						},
+				tpms = "SENSOR_FAULT",
+				turnSignal = "OFF"
+			}
 			
-			
-			self:verify_SUCCESS_Notification_Case(Notification)
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
 			
 		end
 	
@@ -1197,7 +2081,7 @@ end
 									innerRightRear = {status = "UNKNOWN"}
 								}
 			}
-			
+					
 			self:verify_SUCCESS_Notification_Case(Notification)
 			
 			
@@ -1359,8 +2243,9 @@ end
 ----------------------------------------------------------------------------------------------
 
 	--10.vin: type=String maxlength=17 mandatory=false
-	local Notification = {rpm = 1}		
-	stringParameterInNotification:verify_String_Parameter(Notification, {"vin"}, {1, 17}, false, true)
+	-- vin in Notification from HMI will be ignored  by SDL according to APPLINK-26880
+	--local Notification = {rpm = 1}		
+	--stringParameterInNotification:verify_String_Parameter(Notification, {"vin"}, {1, 17}, false, true)
 ----------------------------------------------------------------------------------------------
 	
 	--11.prndl: type=Common.PRNDL mandatory=false
@@ -1368,7 +2253,7 @@ end
 	--13.driverBraking: type=Common.VehicleDataEventStatus mandatory=false
 	--14.wiperStatus: type=Common.WiperStatus mandatory=false
 	--Enumerations:
-	local PRNDL = {"PARK", "REVERSE", "NEUTRAL", "DRIVE", "SPORT", "LOWGEAR", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "FAULT"}
+	local PRNDL = {"PARK", "REVERSE", "NEUTRAL", "DRIVE", "SPORT", "LOWGEAR", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "UNKNOWN", "FAULT"}
 	local ComponentVolumeStatus = {"UNKNOWN", "NORMAL", "LOW", "FAULT", "ALERT", "NOT_SUPPORTED"}
 	local VehicleDataEventStatus = {"NO_EVENT", "NO", "YES", "NOT_SUPPORTED", "FAULT"}	
 	local WiperStatus = {"OFF","AUTO_OFF","OFF_MOVING","MAN_INT_OFF","MAN_INT_ON","MAN_LOW","MAN_HIGH", "MAN_FLICK","WASH","AUTO_LOW","AUTO_HIGH","COURTESYWIPE","AUTO_ADJUST","STALLED","NO_DATA_EXISTS"}
@@ -1888,7 +2773,47 @@ end
 	verify_tirePressure_parameter()
 	----------------------------------------------------------------------------------------------
 
-
+	--26. fuelRange: type="Double" mandatory="false"
+	--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668
+	local Notification = {rpm = 1, fuelRange = 1}
+	doubleParameterInNotification:verify_Double_Parameter(Notification,{"fuelRange"},{0,100},false)		
+	--27. abs_State: type="ABS_STATE" mandatory="false"
+	local Notification = {rpm =1, abs_State = {}}	
+	enumParameterInNotification:verify_Enumeration_Parameter(Notification,{"abs_State"},absStateValues,false)
+	--28. tirePressureValue: type="TirePressureValue" mandatory="false"
+	--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668		
+	local Notification = {rpm =1, tirePressureValue = 
+								{
+									leftFront = 1.0,
+									rightFront = 1.0,
+									leftRear = 1.0,
+									rightRear = 1.0,
+									innerLeftRear = 1.0,
+									innerRightRear = 1.0,
+									frontRecommended = 1.0,
+									rearRecommended = 1.0
+								}
+						}
+	commonFunctions:newTestCasesGroup("Tets Suite For Parameter: tirePressureValue")
+			
+	-- tirePressureValue IsEmpty
+	commonFunctions:TestCaseForNotification(self, Notification, {"tirePressureValue"}, "IsEmpty", {}, true)
+				
+	-- tirePressureValue IsWrongType: 
+	commonFunctions:TestCaseForNotification(self, Notification, {"tirePressureValue"}, "IsWrongDataType", 123, false)
+					
+	-- Check for all sub-params
+	local paramBoundary = {{0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}}
+			
+	for i = 1, #tirePressureValueParams do
+		doubleParameterInNotification:verify_Double_Parameter(Notification,{"tirePressureValue", tirePressureValueParams[i]},paramBoundary[i],false)
+	end		
+	--29. tpms: type="TPMS" mandatory="false"
+	local Notification = {rpm =1, tpms = {}}
+	enumParameterInNotification:verify_Enumeration_Parameter(Notification,{"tpms"},tpmsValues,false)
+	--30. turnSignal: type="TurnSignal" mandatory="false"
+	local Notification = {rpm =1, turnSignal ={}}
+	enumParameterInNotification:verify_Enumeration_Parameter(Notification,{"turnSignal"},turnSignalValues,false)
 ----------------------------------------------------------------------------------------------
 -----------------------------------------TEST BLOCK IV----------------------------------------
 ----------------------------Check special cases of HMI notification---------------------------
@@ -2076,7 +3001,21 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"				
 			}
 			
 			local Notification_ExpectedResultOnMobileWithoutFakeParameters = 
@@ -2092,7 +3031,7 @@ end
 				rpm = 0,
 				odometer = 0,
 				
-				vin = "a",
+				--vin = "a",
 				
 				prndl = "PARK",
 				fuelLevel_State = "UNKNOWN",
@@ -2192,7 +3131,21 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"
 			}
 			
 			
@@ -2353,7 +3306,21 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"	
 			}
 			
 			local Notification_ExpectedResultOnMobileWithoutFakeParameters = 
@@ -2369,7 +3336,7 @@ end
 				rpm = 0,
 				odometer = 0,
 				
-				vin = "a",
+				--vin = "a",
 				
 				prndl = "PARK",
 				fuelLevel_State = "UNKNOWN",
@@ -2469,7 +3436,21 @@ end
 									rightRear = {status = "UNKNOWN"},
 									innerLeftRear = {status = "UNKNOWN"},
 									innerRightRear = {status = "UNKNOWN"}
-								}
+								},
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"	
 			}
 			
 			
@@ -2613,7 +3594,7 @@ end
 			self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", {speed = 1})	  		
 			
 			--mobile side: expected Notification
-			EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+			EXPECT_NOTIFICATION("OnVehicleData", {speed = 1})	
 			:Times(0)				
 		end
 	----------------------------------------------------------------------------------------------
@@ -2658,7 +3639,7 @@ end
 			self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", {speed = 1})	  		
 			
 			--mobile side: expected Notification
-			EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+			EXPECT_NOTIFICATION("OnVehicleData", {speed = 1})	
 			:Times(0)				
 		end
 	----------------------------------------------------------------------------------------------
@@ -2695,7 +3676,7 @@ end
 			self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", {speed = 1})	  		
 			
 			--mobile side: expected Notification
-			EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+			EXPECT_NOTIFICATION("OnVehicleData", {speed = 1})	
 			:Times(0)				
 		end
 	----------------------------------------------------------------------------------------------
@@ -2714,7 +3695,7 @@ end
 			self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", {speed = 1})	  		
 			
 			--mobile side: expected Notification
-			EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+			EXPECT_NOTIFICATION("OnVehicleData", {speed = 1})	
 			:Times(0)	
 		end
 	----------------------------------------------------------------------------------------------
@@ -2730,13 +3711,12 @@ end
 			self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", {speed = 1})	  		
 			
 			--mobile side: expected Notification
-			EXPECT_NOTIFICATION("OnVehicleData", Notification)	
+			EXPECT_NOTIFICATION("OnVehicleData", {speed = 1})	
 		end
 	----------------------------------------------------------------------------------------------	
 	end
 	
-	--TODO: PT is blocked by ATF defect APPLINK-19188
-	--SequenceChecks()
+	SequenceChecks()
 
 	
 ----------------------------------------------------------------------------------------------
@@ -2884,7 +3864,22 @@ end
 										rightRear = {status = "UNKNOWN"},
 										innerLeftRear = {status = "UNKNOWN"},
 										innerRightRear = {status = "UNKNOWN"}
-									}
+									},
+				--TODO: boundary values of fuelRange and TirePressureValue are under clarification APPLINK-26668
+				fuelRange = 0.0,
+				abs_State = "INACTIVE",
+				tirePressureValue = {
+						leftFront = 0.0,
+						rightFront = 0.0,
+						leftRear = 0.0,
+						rightRear = 0.0,
+						innerLeftRear = 0.0,
+						innerRightRear = 0.0,
+						frontRecommended = 0.0,
+						rearRecommended = 0.0
+						},
+				tpms = "UNKNOWN",
+				turnSignal = "OFF"										
 				}
 				
 				
@@ -2925,4 +3920,13 @@ end
 	end
 	DifferentHMIlevelChecks()
 
-return Test	
+---------------------------------------------------------------------------------------------
+-------------------------------------------Postcondition-------------------------------------
+---------------------------------------------------------------------------------------------
+
+	--Print new line to separate Postconditions
+	commonFunctions:newTestCasesGroup("Postconditions")
+	testCasesForPolicyTable:Restore_preloaded_pt()
+	Test["Stop_SDL"] = function(self)
+		StopSDL()
+	end 
