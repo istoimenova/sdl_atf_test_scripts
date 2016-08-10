@@ -298,9 +298,12 @@ function testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, 
 end
 
 --Precondition: update policy with specified policy file, policy group name and return groupID of consent group.
-function testCasesForPolicyTable:updatePolicy(PTName, iappID)
-	
-	Test["UpdatePolicy"] = function(self)
+function testCasesForPolicyTable:updatePolicy(PTName, iappID, TestName)
+
+	if (TestName == nil) then
+		TestName = "UpdatePolicy"
+	end
+	Test[TestName] = function(self)
 
 		if not iappID then
 			iappID = self.applications[config.application1.registerAppInterfaceParams.appName]
@@ -492,10 +495,16 @@ function testCasesForPolicyTable:updatePolicyGenivi(self, PTName, iappID)
 end
 
 --User allowed or disallowed group policy
-function testCasesForPolicyTable:userConsent(IsConsent, functionGroupName)
+function testCasesForPolicyTable:userConsent(IsConsent, functionGroupName, TestName)
+	
+	if (TestName == nil) then
+		TestName = "UserConsent_".. tostring(IsConsent)
+	end
 	
 	
-	Test["UserConsent_".. tostring(IsConsent)] = function(self)
+	--Test["UserConsent_".. tostring(IsConsent)] = function(self)
+	Test[TestName] = function(self)
+	
 	
 		if functionGroupName == nil then
 			functionGroupName = defaultFunctionGroupName
@@ -529,7 +538,7 @@ function testCasesForPolicyTable:userConsent(IsConsent, functionGroupName)
 					--hmi side: sending SDL.OnAppPermissionConsent
 					self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = IsConsent, id = groupID, name = functionGroupName}}, source = "GUI"})
 					
-					EXPECT_NOTIFICATION("OnPermissionsChange", {})                   
+					--EXPECT_NOTIFICATION("OnPermissionsChange", {})                   
 			end)
 			
 			
