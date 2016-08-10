@@ -26,6 +26,7 @@ local module = require('testbase')
 ---------------------------------------------------------------------------------------------
 -----------------------------Required Shared Libraries---------------------------------------
 ---------------------------------------------------------------------------------------------
+local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local stringParameter = require('user_modules/shared_testcases/testCasesForStringParameter')
@@ -270,7 +271,10 @@ end
 	--------------------------------------------------------------------------------------------------------
 	-- Precondition function is added needed fields.
 	-- TODO: need to be removed after resolving APPLINK-17511
-
+	
+	-- Precondition: deleting logs, policy table
+	commonSteps:DeleteLogsFileAndPolicyTable()
+	
 	-- Verify config.pathToSDL
 	commonSteps:CheckSDLPath()
 
@@ -347,10 +351,8 @@ end
 	commonSteps:PutFile( "PutFile_icon.png", "icon.png")
 	commonSteps:PutFile( "PutFile_action.png", "action.png")
 	commonSteps:PutFile( "PutFile_MaxLength_255Characters", strMaxLengthFileName255)
-
-	--2. policy update
-	policyTable:updatePolicy("files/ptu_general.json")
-
+	--3. UpdatePolicy
+	-- policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FULL", "LIMITED"})
 -----------------------------------------------------------------------------------------
 	
 
@@ -374,6 +376,14 @@ end
 	-- APPLINK-21910
 	-- APPLINK-24180
 	-- APPLINK-24215
+	-- APPLINK-24201
+	-- APPLINK-21166
+	-- APPLINK-24180
+	-- APPLINK-24125
+	-- APPLINK-24224
+	-- APPLINK-24229
+	-- APPLINK-25890
+	-- APPLINK-25891
 	
 --Verification criteria: 
 	-- Verify request with valid and invalid values of parameters; 
@@ -401,17 +411,33 @@ end
 	
 -----------------------------------------------------------------------------------------------
 --Common Test cases:
---1. Positive cases
+--1. Check allowance of parameters for SendLocation and positive cases
 --2. All parameters are lower bound
 --3. All parameters are upper bound
 --4. Mandatory only
 --5. Check allowance of deliveryMode
 
---1.2, 2.2, 3.2, 4.2 longitudeDegrees and latitudeDegrees are integer values
+--1. Check allowance of parameters for SendLocation and positive cases
 -----------------------------------------------------------------------------------------------
+	--RequirementID: APPLINK-21166
+	--Description: SendLocation is present in Base4 with empty parameters in Policy.
+	local PermissionLines_ParametersIsEmpty = 
+[[					"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [
 
-    --Check 1.1
-     local Request = {
+					   ]
+					  }]]
+	local PermissionLinesForBase4 = PermissionLines_ParametersIsEmpty .. ", \n" 
+	local PermissionLinesForGroup1 = nil
+	local PermissionLinesForApplication = nil
+	local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_SendLocation_InBase4_WithEmptyParameters")
+	local Request = {
         longitudeDegrees = 1.1,
 		latitudeDegrees = 1.1,
 		address = {
@@ -450,12 +476,1021 @@ end
 			imageType = "DYNAMIC",
 		}
     }
-	function Test:SendLocation_PositiveAllParams()
+	function Test:SendLocation_InBase4_WithEmptyParamters()
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)									
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})				
+		:Times(0)																
+		--mobile side: expect response 
+		EXPECT_RESPONSE(cid, {  success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies"})
+		commonTestCases:DelayedExp(1000)
+	end	
+	
+	--RequirementID: APPLINK-24180, APPLINK-24215, APPLINK-24229
+	--Description: SendLocation is present in Base4 with 9 allowed params and disallowed locationName by policies.
+	local PermissionLines_DisallowedLocationName = 
+[[					"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [
+							"longitudeDegrees",
+							"latitudeDegrees", 
+							"locationDescription", 
+							"addressLines", 
+							"phoneNumber", 
+							"locationImage", 
+							"deliveryMode", 
+							"timeStamp", 
+							"address"
+					   ]
+					  }]]
+	local PermissionLinesForBase4 = PermissionLines_DisallowedLocationName .. ", \n" 
+	local PermissionLinesForGroup1 = nil
+	local PermissionLinesForApplication = nil
+	local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_SendLocation4_InBase4_WithDisallowedLocationName")
+	
+	--Description: SDL must respond DISALLOWED for SendLocation request with only one disallowed param in Base4 by Policies.
+	local Request = {
+		locationName = "location Name"
+    }
+	
+	function Test:SendLocation_InBase4_WithOnlyOneDisallowedParam()
+		--mobile side: sending the request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)									
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})				
+		:Times(0)																
+		--mobile side: expect response 
+		EXPECT_RESPONSE(cid, {resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies",  success = false})
+		commonTestCases:DelayedExp(1000)
+	end	
+
+	--Description: SDL must respond SUCCESS for SendLocation request with 9 allowed params in Base4 by Policies.
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	function Test:SendLocation_WithOnlyAllowedParams()
 		self:verify_SUCCESS_Case(Request)
 	end
+	
+	-- SDL should respond SUCCESS with info of disallowed param for SendLocation request with 9 allowed params and 1 disallowed param.
+	local RequestParams = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	
+	function Test:SendLocation_InBase4_WithAllowedParams_DisallowedLocationNameParam()
 
-   --- End check 1.1
--------------------------------------------------------------------------------------------------
+		--mobile side: sending SendLocation request
+		cid = self.mobileSession:SendRPC("SendLocation", RequestParams)
+
+		--hmi side: expect Navigation.SendLocation request
+		EXPECT_HMICALL("Navigation.SendLocation", {longitudeDegrees = 1.1,
+													latitudeDegrees = 1.1,
+													address = {
+														countryName = "countryName",
+														countryCode = "countryName",
+														postalCode = "postalCode",
+														administrativeArea = "administrativeArea",
+														subAdministrativeArea = "subAdministrativeArea",
+														locality = "locality",
+														subLocality = "subLocality",
+														thoroughfare = "thoroughfare",
+														subThoroughfare = "subThoroughfare"
+													},
+													locationDescription = "location Description",
+													addressLines = 
+													{ 
+														"line1",
+														"line2",
+													}, 
+													phoneNumber = "phone Number",
+													deliveryMode = "PROMPT",
+													locationImage =	
+													{ 
+														imageType="DYNAMIC",value= storagePath .. "icon.png"
+													}})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.locationName then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain locationName parameter in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, {success = true, info = "'locationName' disallowed by policies.", resultCode = "SUCCESS"})			
+
+	end
+	
+	--RequirementID: APPLINK-24180, APPLINK-24215, APPLINK-24229
+	--Description: SendLocation is present in Base4 with 4 allowed params and 6 disallowed params by policies.
+	local PermissionLines_AllowedForBase4 = 
+	[[				"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [	
+							"longitudeDegrees", 
+							"latitudeDegrees", 
+							"locationName", 
+							"locationDescription"							
+					   ]
+					  },]]
+					  
+	local PermissionLinesForBase4 = PermissionLines_AllowedForBase4 .. ", \n" .. ", \n"
+	local PermissionLinesForSendLocation = nil 
+	local PermissionLinesForApplication = nil 
+	local PTName = policyTable:createPolicyTableFile(PermissionLines_AllowedForBase4, PermissionLinesForSendLocation, PermissionLines_App)
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_DisallowedSomeParams_AllowBase4")
+	
+	--Description: SDL should respond "DISALLOWED" for SendLocation request with some disallowed parameters.
+	local Request = {
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	function Test:SendLocation_Base4_With_SomeDisallowedParams_ByPolicies()
+
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)
+	
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})
+		:Times(0)
+		
+		--mobile side: expect response 
+		EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies"})
+		commonTestCases:DelayedExp(1000)
+	end	
+	
+	--Verification criteria: SDL should respond "SUCCESS" with info of some disallowed params for SendLocation request with some allowed parameters and some disallowed parameters by policies.
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	
+	function Test:SendLocation_InBase4_With_SomeAllowedParams_And_SomeDisallowedParams()
+
+		--mobile side: sending SendLocation request
+		cid = self.mobileSession:SendRPC("SendLocation", Request)
+	
+		-- hmi side: expect Navigation.SendLocation request
+		EXPECT_HMICALL("Navigation.SendLocation", {longitudeDegrees = 1.1,
+													latitudeDegrees = 1.1,
+													locationName = "location Name",
+													locationDescription = "location Description"})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.address or data.params.addressLines or data.params.deliveryMode or data.params.locationImage or data.params.phoneNumber then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		-- mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationImage', 'phoneNumber' disallowed by policies."})			
+	end
+
+	
+	--RequirementID: APPLINK-25890, APPLINK-25891
+	--Description: SendLocation(longitudeDegrees, latitudeDegrees) exists at Base4, SendLocation(addressLines, phoneNumber, deliveryMode, address) exists at group1 in Policies but Base4 and group1 was assigned to User.Group1 need to consent.
+		local PermissionLines_AllowedForBase4 = 
+	[[				"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [	
+							"longitudeDegrees", 
+							"latitudeDegrees" 			
+					   ]
+					}
+					]]
+	local PermissionLines_AllowedForSendLocation = 
+	[[				"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [		
+							"addressLines", 
+							"phoneNumber", 
+							"deliveryMode", 
+							"timeStamp", 
+							"address"						
+					   ]
+					  }]]
+
+	
+	local PermissionLinesForApp1=[[			"]].."0000001" ..[[":{
+							"keep_context": true,
+							"steal_focus": true,
+							"priority": "NONE",
+							"default_hmi": "BACKGROUND",
+							"groups": ["group1","Base-4"]
+						}
+						]]	
+			
+	local PermissionLinesForBase4 = PermissionLines_AllowedForBase4 .. ", \n" 
+	local PermissionLinesForSendLocation = PermissionLines_AllowedForSendLocation .. ", \n" 
+	local PermissionLinesForApplication = PermissionLinesForApp1 ..", \n"
+	local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLines_AllowedForSendLocation, PermissionLinesForApplication)	
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_SendLocation_PresentGroup1AndBase4_AssignedToApp")
+	
+	--Question: APPLINK-26856
+	--Description: SDL respond DISALLOWED for SendLocation request when user does not answer for consent.
+	local Request = {
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		}
+    }
+	function Test:SendLocation_ParamsInGroup1_User_Not_Answer_Consent()
+		--mobile side: sending SendLocation request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)
+							
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})				
+		:Times(0)
+		
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by policies."})
+		commonTestCases:DelayedExp(1000)	
+	end
+	
+	-- Description: SendLocation with allowed params in Base4 and params in group1 when user does not answer consent for group1.
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT"
+    }	
+	
+	function Test:SendLocation_AllowedParamsInBase4_NotAnswerForUserConsentForGroup1()
+
+		--mobile side: sending SendLocation request
+		cid = self.mobileSession:SendRPC("SendLocation", Request)
+
+		--hmi side: expect Navigation.SendLocation request
+		EXPECT_HMICALL("Navigation.SendLocation", {    longitudeDegrees = 1.1,
+														latitudeDegrees = 1.1})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.address or data.params.timestamp or  data.params.addressLines or data.params.phoneNumber or data.params.deliveryMode then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'timestamp', 'addressLines', 'phoneNumber' disallowed by policies."})			
+	end
+	
+	-- Description: SendLocation with allowed params in Base4, disallowed params by policies and params in group1 when user does not answer consent for group1.
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	
+	function Test:SendLocation_AllowedParamsBase4_ParamsNotPresentedInPolicies_NotAnswerForConsentGroup1()
+
+		--mobile side: sending SendLocation request
+		cid = self.mobileSession:SendRPC("SendLocation", Request)
+	
+		-- hmi side: expect Navigation.SendLocation request
+		EXPECT_HMICALL("Navigation.SendLocation", {longitudeDegrees = 1.1,
+														latitudeDegrees = 1.1})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.address or data.params.addressLines or data.params.deliveryMode or data.params.locationImage or data.params.phoneNumber or data.params.locationName or data.params.locationDescription or data.params.locationImage or data.params.timeStamp  then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		-- mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationName', 'locationDescription', 'locationImage', 'phoneNumber', 'timestamp' disallowed by policies."})			
+	end
+	
+	policyTable:userConsent(false, "group1", "UserConsent_Answer_No")
+	
+	-- RequirementID: APPLINK-25890
+	-- Description: SendLocation with some params are disallowed by Policies and some params are disallowed by User. Question: APPLINK-26856 and APPLINK-26869	
+	local Request = {
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT"
+    }
+	
+	function Test:SendLocation_ParamsInGroup1_User_Answer_NO()
+		--mobile side: sending SendLocation request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)
+							
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})				
+		:Times(0)
+		
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "RPC is disallowed by the user"})
+		commonTestCases:DelayedExp(1000)	
+	end
+	
+	-- Description: SendLocation with some params are allowed by Policies and some params are disallowed by User.
+	local Request = {
+		longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		deliveryMode = "PROMPT"
+    }
+	
+	function Test:SendLocation_ParamsInBase4_ParamInGroup1_User_Answer_NO()
+		--mobile side: sending SendLocation request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)
+		
+		--hmi side: not expect Navigation.SendLocation
+		 EXPECT_HMICALL("Navigation.SendLocation",{longitudeDegrees = 1.1,
+														latitudeDegrees = 1.1})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.address or  data.params.deliveryMode then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain parameters in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		-- mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address' is disallowed by user."})			
+	end
+	
+	
+	-- RequirementID: APPLINK-25891
+	-- Description: SendLocation with some params are disallowed by Policies and some params are disallowed by User. Question: APPLINK-26856 and APPLINK-26869
+	local Request = {
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	function Test:SendLocation_With_DisallowedParamsByPolicies_ParamInGroup1_UserAnswerNO()
+		--mobile side: sending SendLocationRequest request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)		
+							
+		--hmi side: not expect Navigation.SendLocation
+		EXPECT_HMICALL("Navigation.SendLocation", {})				
+		:Times(0)
+		
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info="Several of requested parameters are disallowed by user, 'address': USER_DISALLOWED, 'timestamp': USER_DISALLOWED, 'addressLines': USER_DISALLOWED, 'phoneNumber': USER_DISALLOWED, 'locationName': DISALLOWED, 'locationDescription': DISALLOWED, 'locationImage': DISALLOWED"})
+		commonTestCases:DelayedExp(1000)	
+	end
+	
+	-- RequirementID: APPLINK-25891.
+	-- Question: APPLINK-26904 
+	-- Description: SendLocation with some params are allowed, disallowed by Policies and some params are disallowed by User. 
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	
+	function Test:SendLocation_AlowedParamsInBase4_ParamsNotPresentedInPolicies_DisallowedParamsByUser()
+		--mobile side: sending SendLocationRequest request
+		local cid = self.mobileSession:SendRPC("SendLocation", Request)		
+		EXPECT_HMICALL("Navigation.SendLocation", {    longitudeDegrees = 1.1,
+														latitudeDegrees = 1.1})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.locationName or data.params.locationDescription or  data.params.locationImage or data.params.address or data.params.timestamp or data.params.phoneNumber or data.params.deliveryMode or data.params.addressLines then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'locationName', 'locationDescription', 'locationImage' disallowed by policies and 'address', 'timestamp', 'phoneNumber', 'addressLines' disallowed by users."})	
+	end
+	
+	-- RequirementID: APPLINK-24215
+	--Description: SDL should respond SUCCESS for allowed params by policies and user with info of disallowed param
+	policyTable:userConsent(true, "group1", "UserConsent_true")
+	local RequestParams = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }	
+	function Test:SendLocation_AllowedParamsInBase4_ParamsNotPresentedInPolicies_AllowedParamsInGroup1()
+
+		--mobile side: sending SendLocation request
+		cid = self.mobileSession:SendRPC("SendLocation", RequestParams)
+
+		--hmi side: expect Navigation.SendLocation request
+		EXPECT_HMICALL("Navigation.SendLocation", {longitudeDegrees = 1.1,
+													latitudeDegrees = 1.1,
+													address = {
+														countryName = "countryName",
+														countryCode = "countryName",
+														postalCode = "postalCode",
+														administrativeArea = "administrativeArea",
+														subAdministrativeArea = "subAdministrativeArea",
+														locality = "locality",
+														subLocality = "subLocality",
+														thoroughfare = "thoroughfare",
+														subThoroughfare = "subThoroughfare"
+													},
+													
+													addressLines = 
+													{ 
+														"line1",
+														"line2",
+													}, 
+													phoneNumber = "phone Number",
+													deliveryMode = "PROMPT"
+		})
+		:Do(function(_,data)
+			--hmi side: sending Navigation.SendLocation response
+			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+		end)
+		:ValidIf(function(_,data)
+				if data.params.locationName or  data.params.locationDescription or data.params.locationImage then
+					commonFunctions:userPrint(31,"Navigation.SendLocation contain location info in request when should be omitted")
+					return false
+				else
+					return true
+				end
+			end)
+		--mobile side: expect SendLocation response
+		EXPECT_RESPONSE(cid, {success = true, info = "'locationDescription', 'locationImage', 'locationName' disallowed by policies.", resultCode = "SUCCESS"})			
+
+	end
+	
+	--Description: SDL respond SUCCESS for SendLocation request with allowed params by user.
+	local Request = {
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT"
+    }
+	
+	function Test:SendLocation_AllParamsInGroup1_UserAnswerYES()
+		self:verify_SUCCESS_Case(Request)
+	end
+	
+	--Description: SDL respond SUCCESS for SendLocation request with allowed params by user and allowed params by policies
+	local Request = {
+		longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT"
+		
+    }
+	
+	function Test:SendLocation_AllowedParamsBase4_ParamsInGroup1_UserAnswerYES()
+		self:verify_SUCCESS_Case(Request)
+	end
+	
+	--RequirementID: APPLINK-24180, APPLINK-23497
+	--Description: All parameters are presented at Base4 in Policy. SDL respond SUCCESS for SendLocation request with allowed params by Policy.
+	local PermissionLines_AllParameters = 
+[[					"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						],
+						"parameters": [
+						"longitudeDegrees", 
+							"latitudeDegrees", 
+							"locationName", 
+							"locationDescription", 
+							"addressLines", 
+							"phoneNumber", 
+							"locationImage", 
+							"deliveryMode", 
+							"timeStamp", 
+							"address"
+					   ]
+					  }]]
+	local PermissionLinesForBase4 = PermissionLines_AllParameters .. ", \n" 
+	local PermissionLinesForGroup1 = nil
+	local PermissionLinesForApplication = nil
+	local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+	
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_SendLocation_Base4_WithAllParams")
+	
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	function Test:SendLocation_AllowedAllParams_InBase4()
+		self:verify_SUCCESS_Case(Request)
+	end
+	
+	--RequirementID: APPLINK-24224
+	--Description: All parameters are omitted on Policy. SDL must allow all parameter.
+	local PermissionLines_EmptyParameters = 
+[[					"SendLocation": {
+						"hmi_levels": [
+						  "BACKGROUND",
+						  "FULL",
+						  "LIMITED"
+						]
+					  }]]
+	local PermissionLinesForBase4 = PermissionLines_EmptyParameters .. ", \n" 
+	local PermissionLinesForGroup1 = nil
+	local PermissionLinesForApplication = nil
+	local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+	policyTable:updatePolicy(PTName, nil, "UpdatePolicy_OmittedAllParam")
+	local Request = {
+        longitudeDegrees = 1.1,
+		latitudeDegrees = 1.1,
+		address = {
+			countryName = "countryName",
+			countryCode = "countryName",
+			postalCode = "postalCode",
+			administrativeArea = "administrativeArea",
+			subAdministrativeArea = "subAdministrativeArea",
+			locality = "locality",
+			subLocality = "subLocality",
+			thoroughfare = "thoroughfare",
+			subThoroughfare = "subThoroughfare"
+		},
+		timestamp = {
+			second = 40,
+			minute = 30,
+			hour = 14,
+			day = 25,
+			month = 5,
+			year = 2017,
+			tz_hour = 5,
+			tz_minute = 30
+		},
+		locationName = "location Name",
+		locationDescription = "location Description",
+		addressLines = 
+		{ 
+			"line1",
+			"line2",
+		}, 
+		phoneNumber = "phone Number",
+		deliveryMode = "PROMPT",
+		locationImage =	
+		{ 
+			value = "icon.png",
+			imageType = "DYNAMIC",
+		}
+    }
+	
+	function Test:SendLocation_OmitedAllParams_InBase4()
+		self:verify_SUCCESS_Case(Request)
+	end
+	
+	
+--1.2, 2.2, 3.2, 4.2 longitudeDegrees and latitudeDegrees are integer values
+-----------------------------------------------------------------------------------------------
    --Check 1.2
 
 	local Request = {
@@ -877,42 +1912,7 @@ end
 	--NOTE: Bellow line should be uncomment when APPLINK-24202 is DONE
 	--SendLocation_DeliverModeIsAllowed_OthersAreNotAllowed()
 	--------------------------------------------------------------------------------------------------------------------------------
-	--5.3: This TC is created following APPLINK-24180: SDL should respond DISALLOWED to app when all params are disallowed by Policy
 
-	local function SendLocation_AllParamsAreNotAllowed()
-
-		--Update Policy > SendLocation doesn't allow all params when "parameters" field is empty
-		policyTable:updatePolicy("files/PTU_ForSendLocation3.json")
-
-		function Test:SendLocation_AllParamsAreNotAllowed_Disallowed()
-			local Request = {
-				longitudeDegrees = 1,
-				latitudeDegrees = 1,
-				locationName = "location Name",
-				locationDescription = "location Description",
-				addressLines =
-				{
-					"line1",
-					"line2",
-				},
-				phoneNumber = "phone Number",
-				deliveryMode = "PROMPT",
-				locationImage =
-				{
-					value = "icon.png",
-					imageType = "DYNAMIC",
-				}
-			}
-			cid = self.mobileSession:SendRPC("SendLocation", Request)
-
-			--mobile side: expect response
-			EXPECT_RESPONSE(cid, {  success = false, resultCode = "DISALLOWED", info={}})
-
-		end
-	end
-
-	--NOTE: Bellow line should be uncomment when APPLINK-24202 is DONE
-	--SendLocation_AllParamsAreNotAllowed()
 	----------------------------------------------------------------------
 	
 	--NOTE: Bellow line should be uncomment when defect APPLINK-25834 is fixed 

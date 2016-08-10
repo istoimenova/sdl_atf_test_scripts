@@ -305,7 +305,7 @@ end
 	commonSteps:ActivationApp()
 
 	--2. Update policy to allow request
-	testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForOnVehicleData.json")	
+	testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")	
 		
 			
 	----Get appID Value on HMI side
