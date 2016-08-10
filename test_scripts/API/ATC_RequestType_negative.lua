@@ -623,6 +623,7 @@ function Test:checkOnAppRegistered(params)
 
   -- EXPECT_NOTIFICATION("OnAppInterfaceUnregistered", {reason = "LANGUAGE_CHANGE"})
   EXPECT_NOTIFICATION("OnAppInterfaceUnregistered")
+  :Times(0)
   :ValidIf(function(exp, data)
     if 
       exp.occurences == 1 then
@@ -636,20 +637,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestType( ... )
   self:checkOnAppRegistered({})
 end
 
-function Test:WAregisterAppAgain1( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-  if language_change == true then
-    os.execute( "sleep 3" )
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain2()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-  language_change = false
-end
+
+
 
 local requestTypeEnum = {"HTTP", "FILE_RESUME", "AUTH_REQUEST", "AUTH_CHALLENGE", 
   "AUTH_ACK", "PROPRIETARY", "QUERY_APPS", "LAUNCH_APP", "LOCK_SCREEN_ICON_URL", 
@@ -671,7 +661,7 @@ for k, v in pairs( requestTypeEnum ) do
     EXPECT_HMICALL("BasicCommunication.SystemRequest")
     :ValidIf(function (self, data)
           -- body
-          if #data.params.application.requestType == v then
+          if data.params.requestType == v then
             return true
           else
             return false
@@ -754,19 +744,6 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({})
 end
 
-function Test:WAregisterAppAgain3( ... )
-  -- body
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
-
-function Test:WAregisterAppAgain4()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-
-  language_change = false
-end
 
 for k, v in pairs( requestTypeEnum ) do
   Test["CheckPreDataRequestType" .. v] = function(self)
@@ -930,20 +907,9 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain5( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain6()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-  language_change = false
-end
+
 
 local temp = {}
 
@@ -1173,21 +1139,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain7( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain8()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  language_change = false
-end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
@@ -1400,21 +1354,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain9( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain10()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  language_change = false
-end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
@@ -1637,20 +1579,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain11( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain12()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-  language_change = false
-end
+
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
@@ -1868,21 +1799,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain13( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain14()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  language_change = false
-end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
@@ -2107,20 +2026,9 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-function Test:WAregisterAppAgain13( ... )
-  -- body
-  userPrint(35, "================= WorkAround ==================")
 
-  if language_change == true then
-    self:checkOnAppRegistered({})
-  end
-end
 
-function Test:WAregisterAppAgain14()
-  -- body
-  userPrint(35, "================= WorkAround ==================")
-  language_change = false
-end
+
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
