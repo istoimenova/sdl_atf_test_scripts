@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------------------
 -- Author: I.Stoimenova
 -- Creation date: 19.07.2016
--- Last update date: 22.07.2016
+-- Last update date: 10.08.2016
 -- ATF version: 2.2
 
 ---------------------------------------------------------------------------------------------
@@ -87,13 +87,14 @@
 
  	-- SystemRequest
  	fileContent = f:read("*all")
- 	DefaultContant = fileContent:match('"rpcs".?:.?.?%{')
+ 	--DefaultContant = fileContent:match('"rpcs".?:.?.?%{')
+ 	DefaultContant = fileContent:match('"SystemRequest".?:.?.?%{.-%}')
 
  	if not DefaultContant then
-  	print ( " \27[31m  rpcs is not found in sdl_preloaded_pt.json \27[0m " )
+  	print ( " \27[31m  SystemRequest is not found in sdl_preloaded_pt.json \27[0m " )
  	else
-   	DefaultContant =  string.gsub(DefaultContant, '"rpcs".?:.?.?%{', '"rpcs": { \n"SystemRequest": {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n},')
-   	fileContent  =  string.gsub(fileContent, '"rpcs".?:.?.?%{', DefaultContant)
+   	DefaultContant =  string.gsub(DefaultContant, '"SystemRequest".?:.?.?%{.-%}', '"SystemRequest":  {\n "hmi_levels": [\n  "BACKGROUND",\n   "FULL",\n   "LIMITED" ,\n   "NONE" \n]\n}')
+   	fileContent  =  string.gsub(fileContent,'"SystemRequest".?:.?.?%{.-%}',DefaultContant)
  	end
 	
 	--[--[TODO: Shall be removed when APPLINK-26629: PASA_Ubuntu: Policy table can't be loaded when RPCs added in functional_group is greater than 50. is fixed
@@ -376,7 +377,6 @@
 	end
 
 	local function CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
-		--userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
 		local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
 
 		--hmi side: expect UI.SetGlobalProperties request
@@ -408,10 +408,6 @@
 		--mobile side: expect OnHashChange notification
 		EXPECT_NOTIFICATION("OnHashChange")
 		
-	end
-
-	local function CheckNOUpdateFile()
-		userPrint(31, "NEED CLARIFICATION of APPLINK-26640 / APPLINK-26644")
 	end
 ---------------------------------------------------------------------------------------------
 
@@ -608,7 +604,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -617,7 +612,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -627,8 +621,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -768,7 +761,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -929,7 +921,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -1341,7 +1332,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -1350,7 +1340,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -1360,8 +1349,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -1616,7 +1604,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -1625,7 +1612,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -1635,8 +1621,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -1887,7 +1872,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -1896,7 +1880,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -1906,8 +1889,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -2023,7 +2005,6 @@
 						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ menuTitle = "Menu Title"})
 
 						--hmi side: expect UI.SetGlobalProperties request
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 																{
 																	vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
@@ -2196,7 +2177,6 @@
 						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
 
 						--hmi side: expect UI.SetGlobalProperties request
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
 																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
@@ -2209,7 +2189,6 @@
 							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 						end)
 
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
@@ -2309,7 +2288,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -2318,7 +2296,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -2328,8 +2305,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -2449,7 +2425,6 @@
 						local cid = self.mobileSession:SendRPC("ResetGlobalProperties",{})
 			  			
 						--hmi side: expect UI.SetGlobalProperties request
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
 																vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
@@ -2461,7 +2436,6 @@
 							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 						end)
 
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
@@ -2634,7 +2608,6 @@
 																			{
 																				{
 																					text = "VR help item",
-																					--TODO: update after resolving APPLINK-16052
 																					image = 
 																									{
 																										imageType = "DYNAMIC",
@@ -2643,7 +2616,6 @@
 																					position = 1
 																			}	},
 															menuTitle = "Menu Title",
-															--TODO: update after resolving APPLINK-16052
 															menuIcon = 
 																				{
 																					imageType = "DYNAMIC",
@@ -2653,8 +2625,7 @@
 																				{
 																					keyboardLayout = "QWERTY",
 																					keypressMode = "SINGLE_KEYPRESS",
-																					--[=[ TODO: update after resolving APPLINK-16047
-																					limitedCharacterList = { "a" },]=]
+																					limitedCharacterList = { "a" },
 																					language = "EN-US",
 																					autoCompleteText = "Daemon, Freedom"
 																				},
@@ -2746,7 +2717,6 @@
 						local cid = self.mobileSession:SendRPC("ResetGlobalProperties",{})
 			  			
 						--hmi side: expect UI.SetGlobalProperties request
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						EXPECT_HMICALL("UI.SetGlobalProperties",
 															{
 																vrHelpTitle = "VR help title",
@@ -2754,12 +2724,11 @@
 																			{
 																				{
 																					text = "VR help item",
-																					--TODO: update after resolving APPLINK-16052
 																					image = 
 																									{
 																										imageType = "DYNAMIC",
 																										value = strAppFolder .. "action.png"
-																									},--
+																									},
 																					position = 1
 																}	},
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
@@ -2769,7 +2738,6 @@
 							self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 						end)
 
-						--TODO: Shall be updated when APPLINK-26640 / APPLINK-26644 are clarified.
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
@@ -2908,7 +2876,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -2917,7 +2884,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -2927,8 +2893,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -3153,7 +3118,6 @@
 																			{
 																				{
 																					text = "VR help item",
-																					--TODO: update after resolving APPLINK-16052
 																					image = 
 																									{
 																										imageType = "DYNAMIC",
@@ -3162,7 +3126,6 @@
 																					position = 1
 																			}	},
 															menuTitle = "Menu Title",
-															--TODO: update after resolving APPLINK-16052
 															menuIcon = 
 																				{
 																					imageType = "DYNAMIC",
@@ -3172,8 +3135,7 @@
 																				{
 																					keyboardLayout = "QWERTY",
 																					keypressMode = "SINGLE_KEYPRESS",
-																					--[=[ TODO: update after resolving APPLINK-16047
-																					limitedCharacterList = { "a" },]=]
+																					limitedCharacterList = { "a" },
 																					language = "EN-US",
 																					autoCompleteText = "Daemon, Freedom"
 																				},
@@ -3381,11 +3343,7 @@
 						
 						--mobile side: expect OnHashChange notification
 						EXPECT_NOTIFICATION("OnHashChange")
-						:Times(0)
-
-						CheckNOUpdateFile()
-
-						
+						:Times(0)						
 					end
 
 					Test["TC20_NoUpdateFile_HMI_UnsupportedAddCommand"] = function(self)
@@ -3509,7 +3467,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -3518,7 +3475,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -3528,8 +3484,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -3627,9 +3582,8 @@
 
 					Test["TC21_CheckInternalList_OneCommand"] = function(self)
 							
-							--TODO: Shall be updated after APPLINK-26644 is answered.
 							SGP_helpPrompt[1] ={
-																text = "Command" .. tostring(202), --menuName}
+																text = "Command" .. tostring(202),
 																type = "TEXT" }
 							SGP_helpPrompt[2] ={
 																text = "300",
@@ -3755,7 +3709,6 @@
 																		{
 																			{
 																				text = "VR help item",
-																				--TODO: update after resolving APPLINK-16052
 																				image = 
 																								{
 																									imageType = "DYNAMIC",
@@ -3764,7 +3717,6 @@
 																				position = 1
 																		}	},
 														menuTitle = "Menu Title",
-														--TODO: update after resolving APPLINK-16052
 														menuIcon = 
 																			{
 																				imageType = "DYNAMIC",
@@ -3774,8 +3726,7 @@
 																			{
 																				keyboardLayout = "QWERTY",
 																				keypressMode = "SINGLE_KEYPRESS",
-																				--[=[ TODO: update after resolving APPLINK-16047
-																				limitedCharacterList = { "a" },]=]
+																				limitedCharacterList = { "a" },
 																				language = "EN-US",
 																				autoCompleteText = "Daemon, Freedom"
 																			},
@@ -3867,9 +3818,8 @@
 
 			Test["TC22_CheckInternalList_OneCommand"] = function(self)
 							
-				--TODO: Shall be updated after APPLINK-26644 is answered.
 				SGP_helpPrompt[1] ={
-																text = "Command" .. tostring(202), --menuName}
+																text = "Command" .. tostring(202),
 																type = "TEXT" }
 				SGP_helpPrompt[2] ={
 																text = "300",
@@ -3912,7 +3862,6 @@
 
 					Test["TC22_NoUpdateFile_HMI_UnsupportedDeletCommand"] = function(self)
 							
-							--TODO: Shall be updated after APPLINK-26644 is answered.
 							SGP_helpPrompt[1] ={
 																text = "Command" .. tostring(202), --menuName}
 																type = "TEXT" }
@@ -4031,7 +3980,6 @@
 																				{
 																					{
 																						text = "VR help item",
-																						--TODO: update after resolving APPLINK-16052
 																						image = 
 																										{
 																											imageType = "DYNAMIC",
@@ -4040,7 +3988,6 @@
 																						position = 1
 																				}	},
 																menuTitle = "Menu Title",
-																--TODO: update after resolving APPLINK-16052
 																menuIcon = 
 																					{
 																						imageType = "DYNAMIC",
@@ -4050,8 +3997,7 @@
 																					{
 																						keyboardLayout = "QWERTY",
 																						keypressMode = "SINGLE_KEYPRESS",
-																						--[=[ TODO: update after resolving APPLINK-16047
-																						limitedCharacterList = { "a" },]=]
+																						limitedCharacterList = { "a" },
 																						language = "EN-US",
 																						autoCompleteText = "Daemon, Freedom"
 																					},
@@ -4158,7 +4104,7 @@
 					end
 					
 					helpPrompt_count = 5
-					--TODO: Shall be updated after APPLINK-26644 is answered.
+
 					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
 																text = "Command" .. tostring(cmdCount), --menuName}
 																type = "TEXT" }
@@ -4199,7 +4145,6 @@
 																				{
 																					{
 																						text = "VR help item",
-																						--TODO: update after resolving APPLINK-16052
 																						image = 
 																										{
 																											imageType = "DYNAMIC",
@@ -4208,7 +4153,6 @@
 																						position = 1
 																				}	},
 																menuTitle = "Menu Title",
-																--TODO: update after resolving APPLINK-16052
 																menuIcon = 
 																					{
 																						imageType = "DYNAMIC",
@@ -4218,8 +4162,7 @@
 																					{
 																						keyboardLayout = "QWERTY",
 																						keypressMode = "SINGLE_KEYPRESS",
-																						--[=[ TODO: update after resolving APPLINK-16047
-																						limitedCharacterList = { "a" },]=]
+																						limitedCharacterList = { "a" },
 																						language = "EN-US",
 																						autoCompleteText = "Daemon, Freedom"
 																					},
@@ -4382,7 +4325,6 @@
 																				{
 																					{
 																						text = "VR help item",
-																						--TODO: update after resolving APPLINK-16052
 																						image = 
 																										{
 																											imageType = "DYNAMIC",
@@ -4391,7 +4333,6 @@
 																						position = 1
 																				}	},
 																menuTitle = "Menu Title",
-																--TODO: update after resolving APPLINK-16052
 																menuIcon = 
 																					{
 																						imageType = "DYNAMIC",
@@ -4401,8 +4342,7 @@
 																					{
 																						keyboardLayout = "QWERTY",
 																						keypressMode = "SINGLE_KEYPRESS",
-																						--[=[ TODO: update after resolving APPLINK-16047
-																						limitedCharacterList = { "a" },]=]
+																						limitedCharacterList = { "a" },
 																						language = "EN-US",
 																						autoCompleteText = "Daemon, Freedom"
 																					},
@@ -4506,7 +4446,7 @@
 					end
 
 					helpPrompt_count = 5
-					--TODO: Shall be updated after APPLINK-26644 is answered.
+
 					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
 																text = "Command" .. tostring(cmdCount), --menuName}
 																type = "TEXT" }
@@ -4547,7 +4487,6 @@
 																				{
 																					{
 																						text = "VR help item",
-																						--TODO: update after resolving APPLINK-16052
 																						image = 
 																										{
 																											imageType = "DYNAMIC",
@@ -4556,7 +4495,6 @@
 																						position = 1
 																				}	},
 																menuTitle = "Menu Title",
-																--TODO: update after resolving APPLINK-16052
 																menuIcon = 
 																					{
 																						imageType = "DYNAMIC",
@@ -4566,8 +4504,7 @@
 																					{
 																						keyboardLayout = "QWERTY",
 																						keypressMode = "SINGLE_KEYPRESS",
-																						--[=[ TODO: update after resolving APPLINK-16047
-																						limitedCharacterList = { "a" },]=]
+																						limitedCharacterList = { "a" },
 																						language = "EN-US",
 																						autoCompleteText = "Daemon, Freedom"
 																					},

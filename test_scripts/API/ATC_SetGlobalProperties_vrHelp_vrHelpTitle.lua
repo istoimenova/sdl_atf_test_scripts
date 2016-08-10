@@ -65,7 +65,6 @@ config.deviceMAC              = "12ca17b49af2289436f303e0166030a21e525d266e20926
 config.defaultProtocolVersion = 2
 
 local function sleep(sec)
-  -- body
   os.execute("sleep " .. sec)
 end
 
@@ -76,28 +75,14 @@ end
 -- App sends the very first SetGlobalProperties_request in current ignition cycle WITH <VRHelp> and <VRHelpTitle> params
 -- ///////////////////////////////////////////////////////////////////////////////////////////////////
 
--- function Test:PreconditionUploadingAppsFiles(...)
--- 	-- body
--- 	custom.testHead()
--- 	local cid = self.mobileSession:SendRPC("PutFile",
--- 		{			
--- 			syncFileName = "action.png",
--- 			fileType	= "GRAPHIC_PNG",
--- 			persistentFile = true
--- 		}, "user_modules/icon.png")
-
--- 		EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
--- end
-
 Test["PreconditionRegisterApp" .. tostring(indexOfTests)] = function (self)
-	-- body
 	custom.preconditionHead()
 	custom.preconditionMessage("Registration of App")
 end
 indexOfTests = indexOfTests + 1
 
 function Test:AppSendsFirstSGPWithVrHelpItems(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends the very first SetGlobalProperties_request in current ignition cycle WITH <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL transfers vrHelp and vrHelpTitle via UI.SetGlobalProperties")
@@ -149,7 +134,7 @@ end
 -- Description: RestartSDL
 
 function Test:UnregisterApp(...)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("Graceful unregister of Application")
 
@@ -161,7 +146,7 @@ function Test:UnregisterApp(...)
 end
 
 Test["Stub"..tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("RestartSDL")
 end
@@ -194,7 +179,7 @@ end
 -- Begin Precondition.2
 -- Description: ResgisterApp
 Test["PreconditionRegisterApp" .. tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 
 	-- Register App
@@ -222,7 +207,7 @@ indexOfTests = indexOfTests + 1
 -- End Precondition.2
 
 function Test:AppSendsFirstSGPWithoutVrHelpItems1(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends the very first SetGlobalProperties_request in current ignition cycle WITHOUT <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL sends UI.SetGlobalProperties with DEFAULT vrHelpTitle constructed from appName")
@@ -280,7 +265,7 @@ end
 -- Description: RestartSDL
 
 function Test:UnregisterApp(...)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("Graceful unregister of Application")
 
@@ -292,7 +277,7 @@ function Test:UnregisterApp(...)
 end
 
 Test["Stub"..tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("RestartSDL")
 end
@@ -325,7 +310,7 @@ end
 -- Begin Precondition.2
 -- Description: ResgisterApp
 Test["PreconditionRegisterApp" .. tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	-- Register App
 	custom.preconditionMessage("Register Application with vrSynonyms but without commands")
@@ -376,7 +361,7 @@ indexOfTests = indexOfTests + 1
 -- End Precondition.2
 
 function Test:AppSendsFirstSGPWithoutVrHelpItems2(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends the very first SetGlobalProperties_request in current ignition cycle WITHOUT <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL sends DEFAULT vrHelp constructed from App's synonyms and DEFAULT vrHelpTitle constructed from appName")
@@ -439,7 +424,7 @@ end
 -- Description: RestartSDL
 
 function Test:UnregisterApp(...)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("Graceful unregister of Application")
 
@@ -451,7 +436,7 @@ function Test:UnregisterApp(...)
 end
 
 Test["Stub"..tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("RestartSDL")
 end
@@ -484,7 +469,7 @@ end
 -- Begin Precondition.2
 -- Description: ResgisterApp
 Test["PreconditionRegisterApp" .. tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	-- Register App
 	custom.preconditionMessage("Register Application with vrSynonyms and commands containing vrSynonyms")
@@ -580,7 +565,7 @@ end
 -- Begin Precondition.3	
 -- Description: Adding Commands
 function Test:PreconditionAddCommand(...)
-	-- body
+	
 	--mobile side: sending AddCommand request
 	local cid = self.mobileSession:SendRPC("AddCommand",
 		{
@@ -623,7 +608,7 @@ end
 -- End Precondition.3	
 
 function Test:AppSendsFirstSGPWithoutVrHelpItems3(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends the very first SetGlobalProperties_request in current ignition cycle WITHOUT <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL sends DEFAULT vrHelp constructed from App's synonyms and 1st synonyms of commands and DEFAULT vrHelpTitle")
@@ -689,7 +674,7 @@ function Test:AppSendsFirstSGPWithoutVrHelpItems3(...)
 end
 
 function Test:Sleep(...)
-	-- body
+	
 	sleep(2)
 end
 
@@ -698,7 +683,7 @@ end
 -- ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function Test:AppSendsNextSGPWithVrHelpItemsAfterDefaultProperties(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends next (not first) SetGlobalProperties_request in current ignition cycle WITH <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL sends UI.SetGlobalProperties with vrHelp and vrHelpTitle from last SetGlobalProperties")
@@ -747,7 +732,7 @@ end
 
 
 function Test:Sleep(...)
-	-- body
+	
 	sleep(2)
 end
 
@@ -756,7 +741,7 @@ end
 -- ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function Test:AppSendsNextSGPWithoutVrHelpItems(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("App sends next (not first) SetGlobalProperties_request in current ignition cycle WITHOUT <VRHelp> and <VRHelpTitle> params")
 	custom.info("Expected: SDL sends UI.SetGlobalProperties WITHOUT vrHelp and vrHelpTitle")
@@ -825,7 +810,7 @@ end
 -- Description: RestartSDL
 
 Test["Stub"..tostring(indexOfTests)] = function (self)
-	-- body
+	
 	custom.preconditionHead()
 	custom.preconditionMessage("RestartSDL")
 end
@@ -875,7 +860,7 @@ indexOfTests = indexOfTests + 1
 -- Begin Precondition.2
 -- Description: ResgisterApp
 function Test:GlobalPropertiesAfterResumption(...)
-	-- body
+	
 	custom.testHead()
 
 	-- Register App
@@ -915,7 +900,7 @@ end
 -- ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function Test:AfterResumptionNextSGPWithoutVrHelpItems(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("After resumption App sends next SetGlobalProperties WITHOUT vrHelp and vrHelpTitle")
 	custom.info("Expected: SDL omit vrHelp and vrHelpTitle in UI.SetGlobalProperties")
@@ -968,7 +953,7 @@ end
 
 
 function Test:Sleep(...)
-	-- body
+	
 	sleep(2)
 end
 
@@ -977,7 +962,7 @@ end
 -- ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function Test:AfterResumptionNextSGPWithVrHelpItems(...)
-	-- body
+	
 	custom.testHead()
 	custom.testMessage("After resumption App sends next SetGlobalProperties WITH vrHelp and vrHelpTitle")
 	custom.info("SDL sends UI.SetGlobalProperties with vrHelp and vrHelpTitle from last SetGlobalProperties")
