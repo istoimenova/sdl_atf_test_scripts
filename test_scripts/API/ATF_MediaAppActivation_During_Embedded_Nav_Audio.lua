@@ -341,8 +341,8 @@
 		--End Test case DifferentHMIStatus.3
 
 		--Begin Test case DifferentHMIStatus.4
-			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI, SDL
-				-- shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
+			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI after receiving TTS.Started -> TTS.Stopped, 
+			    -- SDL shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
 				--Requirement id in JIRA: APPLINK-20341
 				--Verification criteria: 
 				--SDL must send OnHMIStatus(FULL, AUDIBLE) in case user activates media app
@@ -401,7 +401,7 @@
 			end
 
 		--Begin Test case DifferentHMIStatus.5
-			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI, SDL
+			--Description: In case media app is (LIMITED, AUDIBLE) without receiving TTS.Started -> TTS.Stopped, SDL
 				-- shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
 				--Requirement id in JIRA: APPLINK-20341
 				--Verification criteria: 
@@ -524,10 +524,10 @@
 
 		--Begin Test case DifferentHMIStatus.7
 			--Description: In case media app is (BACKGROUND, NOT_AUDIBLE) due to embeded audio, SDL
-				-- shall set app to (LIMITED, AUDIBLE) in case receives BC.OnEventChanged(isActive = false)
+				-- shall set app to (FULL, AUDIBLE) in case receives BC.OnEventChanged(isActive = false)
 				--Requirement id in JIRA: APPLINK-20338
 				--Verification criteria:
-				--SDL must send OnHMIStatus(LIMITED, AUDIBLE) in case user activates media app
+				--SDL must send OnHMIStatus(FULL, AUDIBLE) in case user activates media app
 				Test["TC08_UserActivateApp_EmbeddedAudio_LIMITED"] = function(self)
 					userPrint(35,"======================================= Test Case 08 =============================================")
 
