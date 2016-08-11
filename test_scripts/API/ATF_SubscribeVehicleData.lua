@@ -6,9 +6,45 @@ local mobile_session = require('mobile_session')
 require('user_modules/AppTypes')
 local commonPreconditions = require ('/user_modules/shared_testcases/commonPreconditions')
 local commonSteps = require ('/user_modules/shared_testcases/commonSteps')
+local commonFunctions = require ('/user_modules/shared_testcases/commonFunctions')
+local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 
-local SVDValues = {gps="VEHICLEDATA_GPS", speed="VEHICLEDATA_SPEED", rpm="VEHICLEDATA_RPM", fuelLevel="VEHICLEDATA_FUELLEVEL", fuelLevel_State="VEHICLEDATA_FUELLEVEL_STATE", instantFuelConsumption="VEHICLEDATA_FUELCONSUMPTION", externalTemperature="VEHICLEDATA_EXTERNTEMP", prndl="VEHICLEDATA_PRNDL", tirePressure="VEHICLEDATA_TIREPRESSURE", odometer="VEHICLEDATA_ODOMETER", beltStatus="VEHICLEDATA_BELTSTATUS", bodyInformation="VEHICLEDATA_BODYINFO", deviceStatus="VEHICLEDATA_DEVICESTATUS", driverBraking="VEHICLEDATA_BRAKING", wiperStatus="VEHICLEDATA_WIPERSTATUS", headLampStatus="VEHICLEDATA_HEADLAMPSTATUS", engineTorque="VEHICLEDATA_ENGINETORQUE", accPedalPosition="VEHICLEDATA_ACCPEDAL", steeringWheelAngle="VEHICLEDATA_STEERINGWHEEL", eCallInfo="VEHICLEDATA_ECALLINFO", airbagStatus="VEHICLEDATA_AIRBAGSTATUS", emergencyEvent="VEHICLEDATA_EMERGENCYEVENT", clusterModeStatus="VEHICLEDATA_CLUSTERMODESTATUS", myKey="VEHICLEDATA_MYKEY"}
-local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
+
+APIName = "SubscribeVehicleData" -- set request name
+local AllVehicleDataResultCode = {"SUCCESS", "TRUNCATED_DATA", "DISALLOWED", "USER_DISALLOWED", "INVALID_ID", "VEHICLE_DATA_NOT_AVAILABLE", "DATA_ALREADY_SUBSCRIBED",  "DATA_NOT_SUBSCRIBED", "IGNORED"}
+
+local SVDValues = {	gps="VEHICLEDATA_GPS", 
+					speed="VEHICLEDATA_SPEED",
+					rpm="VEHICLEDATA_RPM",
+					fuelLevel="VEHICLEDATA_FUELLEVEL",
+					fuelLevel_State="VEHICLEDATA_FUELLEVEL_STATE",
+					instantFuelConsumption="VEHICLEDATA_FUELCONSUMPTION",
+					externalTemperature="VEHICLEDATA_EXTERNTEMP",
+					prndl="VEHICLEDATA_PRNDL",
+					tirePressure="VEHICLEDATA_TIREPRESSURE",
+					odometer="VEHICLEDATA_ODOMETER",
+					beltStatus="VEHICLEDATA_BELTSTATUS",
+					bodyInformation="VEHICLEDATA_BODYINFO",
+					deviceStatus="VEHICLEDATA_DEVICESTATUS",
+					driverBraking="VEHICLEDATA_BRAKING",
+					wiperStatus="VEHICLEDATA_WIPERSTATUS",
+					headLampStatus="VEHICLEDATA_HEADLAMPSTATUS",
+					engineTorque="VEHICLEDATA_ENGINETORQUE",
+					accPedalPosition="VEHICLEDATA_ACCPEDAL",
+					steeringWheelAngle="VEHICLEDATA_STEERINGWHEEL",
+					eCallInfo="VEHICLEDATA_ECALLINFO",
+					airbagStatus="VEHICLEDATA_AIRBAGSTATUS",
+					emergencyEvent="VEHICLEDATA_EMERGENCYEVENT",
+					clusterModeStatus="VEHICLEDATA_CLUSTERMODESTATUS",
+					myKey="VEHICLEDATA_MYKEY",
+					fuelRange="VEHICLEDATA_FUELRANGE",
+					abs_State="VEHICLEDATA_ABS_STATE",
+					tirePressureValue="VEHICLEDATA_TIREPRESSURE_VALUE",
+					tpms="VEHICLEDATA_TPMS",
+					turnSignal="VEHICLEDATA_TURNSIGNAL"}
+					
+local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey","fuelRange", "abs_State", "tirePressureValue", "tpms", "turnSignal"}
+
 local vehicleData = {"gps"}
 local infoMessageValue = string.rep("a",1000)
 
@@ -21,7 +57,6 @@ function DelayedExp(time)
               RAISE_EVENT(event, event)
             end, time)
 end
-
 
 function setSVDRequest(paramsSend)
 	local temp = {}	
@@ -101,6 +136,7 @@ function Test:subscribeVehicleDataSuccess(paramsSend, infoMessage)
 	
 	--mobile side: expect OnHashChange notification
 	EXPECT_NOTIFICATION("OnHashChange")
+	:Times(AnyNumber())
 end
 function Test:subscribeVehicleDataInvalidData(paramsSend)
 	--mobile side: sending SubscribeVehicleData request
@@ -114,20 +150,21 @@ function Test:subscribeVehicleDataInvalidData(paramsSend)
 	:Times(0)
 end
 function Test:unSubscribeVehicleDataSuccess(paramsSend)
-	local request = setSVDRequest(paramsSend)
-	local response = setSVDResponse(paramsSend)
+	
+	local USVDrequest = setSVDRequest(paramsSend)
+	local USVDresponse = setSVDResponse(paramsSend)
 		
 	--mobile side: sending UnsubscribeVehicleData request
-	local cid = self.mobileSession:SendRPC("UnsubscribeVehicleData",request)
+	local cid = self.mobileSession:SendRPC("UnsubscribeVehicleData",USVDrequest)
 	
 	--hmi side: expect UnsubscribeVehicleData request
-	EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData",request)
+	EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData",USVDrequest)
 	:Do(function(_,data)
 		--hmi side: sending VehicleInfo.UnsubscribeVehicleData response
-		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", USVDresponse)	
 	end)
 	
-	local expectedResult = createSuccessExpectedResult(response)
+	local expectedResult = createSuccessExpectedResult(USVDresponse)
 	
 	--mobile side: expect UnsubscribeVehicleData response
 	--EXPECT_RESPONSE(cid, expectedResult)
@@ -135,6 +172,7 @@ function Test:unSubscribeVehicleDataSuccess(paramsSend)
 	
 	--mobile side: expect OnHashChange notification
 	EXPECT_NOTIFICATION("OnHashChange")
+	:Times(AnyNumber())
 end
 function Test:subscribeVehicleDataIgnored(paramsSend)	
 	-- SubscribeVehicleData previously subscribed
@@ -145,7 +183,7 @@ function Test:subscribeVehicleDataIgnored(paramsSend)
 	--mobile side: sending SubscribeVehicleData request
 	local cid = self.mobileSession:SendRPC("SubscribeVehicleData",request)
 	
-	local expectedResult = createExpectedResult(false, "IGNORED", messageValue, response)
+	local expectedResult = createExpectedResult(true, "IGNORED", messageValue, response)
 	
 	--mobile side: expect SubscribeVehicleData response
 	EXPECT_RESPONSE(cid, expectedResult)
@@ -153,58 +191,256 @@ function Test:subscribeVehicleDataIgnored(paramsSend)
 	--mobile side: expect OnHashChange notification
 	EXPECT_NOTIFICATION("OnHashChange")
 end
+--This function sends a request from mobile and verify result on HMI and mobile for SUCCESS resultCode cases.
+function Test:verify_SUCCESS_Case(Request)
 
----------------------------------------------------------------------------------------------
-------------------------- General Precondition before ATF start -----------------------------
----------------------------------------------------------------------------------------------
---make backup copy of file sdl_preloaded_pt.json
-commonPreconditions:BackupFile("sdl_preloaded_pt.json")
--- TODO: Remove after implementation policy update
--- Precondition: remove policy table
-commonSteps:DeletePolicyTable()
+	--mobile side: sending the request
+	local cid = self.mobileSession:SendRPC(APIName, Request)
 
--- TODO: Remove after implementation policy update
--- Precondition: replace preloaded file with new one
-os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config.pathToSDL) .. "sdl_preloaded_pt.json")
+	--hmi side: expect VehicleInfo.SubscribeVehicleData request
+	local Response = setSVDResponse(vehicleData)
+	EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
 
+	--mobile side: expect the response
+	local ExpectedResponse = commonFunctions:cloneTable(Response)
+	ExpectedResponse["success"] = true
+	ExpectedResponse["resultCode"] = "SUCCESS"
+	EXPECT_RESPONSE(cid, ExpectedResponse)
+
+end
+--This function is used to send default request and response with specific valid data and verify SUCCESS resultCode
+function Test:verify_SUCCESS_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setSVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.SubscribeVehicleData request
+	EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	local ExpectedResponse = commonFunctions:cloneTable(Response)
+	ExpectedResponse["success"] = true
+	ExpectedResponse["resultCode"] = "SUCCESS"
+	EXPECT_RESPONSE(cid, ExpectedResponse)
+
+end
+--This function is used to send default request and response with specific invalid data and verify GENERIC_ERROR resultCode
+function Test:verify_GENERIC_ERROR_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setSVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.SubscribeVehicleData request
+	EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid message received from vehicle" })
+
+end
+
+function Test:unSubscribeVehicleData(paramsSend, rsCode, ParameterName, DataType)
+					local ResultCode = "SUCCESS"
+					local ResultSuccess = true
+					
+					if rsCode ~= nil
+					then 
+						ResultCode = rsCode
+					end
+					
+					local USVDrequest
+					if ResultCode == "SUCCESS" then
+						--if success Subscribe 2 params, should Unsubscript 2 params 
+						USVDrequest = setSVDRequest(paramsSend)
+					else
+						--if not success Subscribe 2 params, should Unsubscript only gps 
+						USVDrequest = setSVDRequest({"gps"})
+					end
+
+					local USVDresponse = setSVDResponse(paramsSend)
+					USVDresponse[ParameterName] = {
+						dataType = DataType,
+						resultCode = ResultCode
+					}
+					USVDresponse["gps"] = {
+						dataType = "VEHICLEDATA_GPS",
+						resultCode = "SUCCESS"
+					}
+								
+					--mobile side: sending UnsubscribeVehicleData request
+					local cid = self.mobileSession:SendRPC("UnsubscribeVehicleData",USVDrequest)
+					
+					--hmi side: expect UnsubscribeVehicleData request
+					EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData",USVDrequest)
+					:Do(function(_,data)
+						--hmi side: sending VehicleInfo.UnsubscribeVehicleData response
+						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", USVDresponse)	
+					end)
+					
+					
+					self.mobileSession:ExpectResponse(cid, { success = true, resultCode = "SUCCESS" })
+					
+					--mobile side: expect OnHashChange notification
+					EXPECT_NOTIFICATION("OnHashChange")
+					:Times(AnyNumber())
+end
+
+local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(ParameterName, DataType)
+
+				--Print new line to separate new test cases group
+				commonFunctions:newTestCasesGroup("PositiveResponseCheck: "..ParameterName)	
+				
+				local Response = setSVDResponse(vehicleData)						
+				Response[ParameterName] = {
+					dataType = DataType,
+					resultCode = "SUCCESS"
+				}
+				Response["gps"] = {
+					dataType = "VEHICLEDATA_GPS",
+					resultCode = "SUCCESS"
+				}
+
+				---------------------------------
+				----Verify Parameter
+				local Parameter = {ParameterName}
+				--1.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "SUCCESS")		
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--1.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--1.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				---------------------------------				
+				----Verify Parameter.dataType
+				local Parameter = {ParameterName, "dataType"}
+				--2.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")		
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+
+				--2.4. IsExistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..DataType, DataType, "SUCCESS")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsExistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.5. IsNonexistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsNoneExistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.6. DataTypeOfAnother
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_DataTypeOfAnother", "VEHICLEDATA_GPS", "SUCCESS")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsExistentValueOfAnother"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end	
+
+				---------------------------------
+				----Verify Parameter.resultCode
+				local Parameter = {ParameterName, "resultCode"}
+				--3.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end	
+				
+				--3.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--3.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+	
+				--3.4. IsExistentValue
+				for i = 1, #AllVehicleDataResultCode do
+					commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..AllVehicleDataResultCode[i], AllVehicleDataResultCode[i], "SUCCESS")
+				
+					Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_resultCode_"..AllVehicleDataResultCode[i]]=function(self)				
+						self:unSubscribeVehicleData(vehicleData, AllVehicleDataResultCode[i], ParameterName, DataType)
+						DelayedExp(2000)
+					end
+				end
+				
+				--3.5. IsNonexistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsNonexistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+		
+end
 
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
-	--Begin Precondition.1
-	--Description: Activation application		
-		function Test:ActivationApp()			
-			--hmi side: sending SDL.ActivateApp request
-			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
-			EXPECT_HMIRESPONSE(RequestId)
-			:Do(function(_,data)
-				if
-					data.result.isSDLAllowed ~= true then
-					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
-					
-					--hmi side: expect SDL.GetUserFriendlyMessage message response
-					--TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-					EXPECT_HMIRESPONSE(RequestId)
-					:Do(function(_,data)						
-						--hmi side: send request SDL.OnAllowSDLFunctionality
-						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+	--Print new line to separate Preconditions
+	commonFunctions:newTestCasesGroup("Preconditions")
 
-						--hmi side: expect BasicCommunication.ActivateApp request
-						EXPECT_HMICALL("BasicCommunication.ActivateApp")
-						:Do(function(_,data)
-							--hmi side: sending BasicCommunication.ActivateApp response
-							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
-						end)
-						:Times(AnyNumber())
-					end)
+	--Delete app_info.dat, logs and policy table
+	commonSteps:DeleteLogsFileAndPolicyTable()
 
-				end
-			end)
-			
-			--mobile side: expect notification
-			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
-		end
-	--End Precondition.1
+
+	--1. Activate application
+	commonSteps:ActivationApp()
+
+	--2. Update policy to allow request
+	testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")
 
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
@@ -225,7 +461,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
     	--Begin Test case CommonRequestCheck.1
     	--Description: This test is intended to check request with all parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.1")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-89
 
 			--Verification criteria: SubsribeVehicleData request subscribes application for specific published vehicle data items. The data is sent upon being changed on HMI. The application is notified by the onVehicleData notification whenever the new data is available.
@@ -242,6 +478,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 		
 		--Begin Test case CommonRequestCheck.2
 		--Description: This test is intended to check request with mandatory and conditional parameters
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.2 - Not applicable")		
 			--Not applicable
 		--End Test case CommonRequestCheck.2
 		
@@ -249,7 +486,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 		
 		--Begin Test case CommonRequestCheck.3
 		--Description: This test is intended to check processing requests without mandatory parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.3")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-576
 
 			--Verification criteria:
@@ -263,7 +500,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 		--Begin Test case CommonRequestCheck.4
 		--Description: Check processing request with different fake parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.4")
 			--Requirement id in JAMA/or Jira ID: APPLINK-4518
 
 			--Verification criteria: According to xml tests by Ford team all fake params should be ignored by SDL
@@ -353,7 +590,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 		--Begin Test case CommonRequestCheck.5
 		--Description: Check processing request with invalid JSON syntax 
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.5")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-576
 
 			--Verification criteria:  The request with wrong JSON syntax is sent, the response with INVALID_DATA result code is returned.
@@ -384,7 +621,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 --TODO: Requirement and Verification criteria need to be updated.
 		--Begin Test case CommonRequestCheck.6
 		--Description: Check processing requests with duplicate correlationID value
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.6")
 			--Requirement id in JAMA/or Jira ID: 
 
 			--Verification criteria: 
@@ -451,7 +688,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 			--Begin Test case PositiveRequestCheck.1
 			--Description: Check processing request with lower and upper bound values
-
+			commonFunctions:newTestCasesGroup("PositiveRequestCheck.1")
 				--Requirement id in JAMA: 
 					-- SDLAQ-CRS-89,
 					-- SDLAQ-CRS-575
@@ -481,7 +718,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 			--Begin Test case PositiveResponseCheck.1
 			--Description: Checking info parameter boundary conditions
-
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.1")
 				--Requirement id in JAMA:
 					--SDLAQ-CRS-90
 					
@@ -502,7 +739,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 				--Begin Test case PositiveResponseCheck.1.2
 				--Description:  Response with info parameter upper bound
-					function Test: SubscribeVehicleData_ResponseInfoLowerBound()						
+					function Test: SubscribeVehicleData_ResponseInfoUpperBound()						
 						self:subscribeVehicleDataSuccess(vehicleData, string.rep("a",1000))						
 					end
 					function Test:PostCondition_UnSubscribeVehicleData()				
@@ -510,9 +747,74 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 						DelayedExp(2000)
 					end
 				--End Test case PositiveResponseCheck.1.2				
+				
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.1.3
+				--Requirement: APPLINK-21379				
+				--Description:  Response with different values of fuelRange			
+				--<param name="fuelRange" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_fuelRange"] = function(self)
+					vehicleData = {"gps", "fuelRange"}
+				end
+				Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response("fuelRange", "VEHICLEDATA_FUELRANGE")			
+				--End Test case PositiveResponseCheck.1.3
+
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.1.4
+				--Requirement: APPLINK-21379				
+				--Description:  Response with different values of abs_State			
+				--<param name="abs_State" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_abs_State"] = function(self)
+					vehicleData = {"gps", "abs_State"}
+				end				
+				Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response("abs_State", "VEHICLEDATA_ABS_STATE")	
+				--End Test case PositiveResponseCheck.1.4	
+				
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.1.5
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of tirePressureValue			
+				--<param name="tirePressureValue" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_tirePressureValue"] = function(self)
+					vehicleData = {"gps", "tirePressureValue"}
+				end	
+				Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response("tirePressureValue", "VEHICLEDATA_TIREPRESSURE_VALUE")	
+				--End Test case PositiveResponseCheck.1.5
+				
+				-----------------------------------------------------------------------------------------
+				
+				--Begin Test case PositiveResponseCheck.1.6
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of tpms			
+				--<param name="tpms" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_tpms"] = function(self)
+					vehicleData = {"gps", "tpms"}
+				end	
+				Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response("tpms", "VEHICLEDATA_TPMS")	
+				--End Test case PositiveResponseCheck.1.6	
+
+				-----------------------------------------------------------------------------------------				
+				
+				--Begin Test case PositiveResponseCheck.1.7
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of turnSignal			
+				--<param name="turnSignal" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_turnSignal"] = function(self)
+					vehicleData = {"gps", "turnSignal"}
+				end					
+				Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response("turnSignal", "VEHICLEDATA_TURNSIGNAL")
+				--End Test case PositiveResponseCheck.1.7
+
+				Test["Postcondition_PositiveResponseCheck.1"] = function(self)
+					vehicleData = {"gps"}
+				end
+				
 			--End Test case PositiveResponseCheck.1
 		--End Test suit PositiveResponseCheck
-		
+	
 
 ----------------------------------------------------------------------------------------------
 ----------------------------------------III TEST BLOCK----------------------------------------
@@ -525,7 +827,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 	--Begin Test suit NegativeRequestCheck
 		--Description: check of each request parameter value out of bound, missing, with wrong type, empty, duplicate etc.
-
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck")
 			--Begin Test case NegativeRequestCheck.1
 			--Description: Check processing requests with out of lower and upper bound values 
 				
@@ -625,6 +927,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 		
 		--Begin Test suit NegativeResponseCheck
 		--Description: Check of each response parameter value out of bound, missing, with wrong type, empty, duplicate etc.
+			commonFunctions:newTestCasesGroup("NegativeResponseCheck")		
 --[[TODO: Check after APPLINK-14765 is resolved
 			--Begin Test case NegativeResponseCheck.1
 			--Description: Check processing response with outbound values
@@ -1448,7 +1751,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 	--Begin Test suit ResultCodeCheck
 	--Description:TC's check all resultCodes values in pair with success value
-
+	commonFunctions:newTestCasesGroup("ResultCodeCheck")
 		--Begin Test case ResultCodeCheck.1
 		--Description: Check OUT_OF_MEMORY result code
 
@@ -1509,10 +1812,10 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 		--End Test case ResultCodeCheck.3			
 		
 		-----------------------------------------------------------------------------------------
---[==[TODO: check after ATF defect APPLINK-13101 resolved		
+	
 		--Begin Test case ResultCodeCheck.4
 		--Description: Check IGNORED result code with success false
-
+	commonFunctions:newTestCasesGroup("ResultCodeCheck.4")
 			--Requirement id in JAMA: SDLAQ-CRS-581, APPLINK-8673
 
 			--Verification criteria: 
@@ -1738,7 +2041,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				end
 			--End Test Case ResultCodeCheck.4.3
 		--End Test case ResultCodeCheck.4		
---]==]
+
 		-----------------------------------------------------------------------------------------
 		
 		--Begin Test case ResultCodeCheck.5
@@ -1780,12 +2083,12 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 			--End Test Case ResultCodeCheck.5.1
 
 			--TODO: remove postcondition after resolving APPLINK-15019
-			function Test:PostCondition_UnSubscribeVehicleData()				
-				self:unSubscribeVehicleDataSuccess({"myKey"})
-			end
+			-- function Test:PostCondition_UnSubscribeVehicleData()				
+				-- self:unSubscribeVehicleDataSuccess({"myKey"})
+			-- end
 			
 			-----------------------------------------------------------------------------------------
---[[TODO: check after ATF defect APPLINK-13101 resolved				
+			
 			--Begin Test Case ResultCodeCheck.5.2
 			--Description: Check GENERIC_ERROR result code for the RPC from HMI with individual results of DISALLOWED 
 				function Test: SubscribeVehicleData_GENERIC_ERROR()
@@ -2346,7 +2649,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				function Test:Precondition_UserAllowedSubscribeVehicleData()					
 					self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = 193465391, name = "New"}}, source = "GUI"})					
 				end
-	--]]
+
 				function Test: SubscribeVehicleData_REJECTED_FromHMI()
 					--mobile side: sending SubscribeVehicleData request
 					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
@@ -2374,11 +2677,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				end
 			--End Test Case ResultCodeCheck.7.1
 
-			--TODO: remove postcondition after resolving APPLINK-15019
-			function Test:PostCondition_UnSubscribeVehicleData()				
-				self:unSubscribeVehicleDataSuccess({"myKey"})
-			end
-			
+		
 			-----------------------------------------------------------------------------------------
 --[[TODO: Check after APPLINK-14765 is resolved
 			--Begin Test Case ResultCodeCheck.7.2
@@ -2656,12 +2955,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				:Times(0)
 			end
 		--End Test case HMINegativeCheck.1	
-
-		--TODO: remove postcondition after resolving APPLINK-15019
-			function Test:PostCondition_UnSubscribeVehicleData()				
-				self:unSubscribeVehicleDataSuccess({"gps"})
-			end
-		
+	
 		-----------------------------------------------------------------------------------------
 --[[TODO: update according to APPLINK-14765
 		--Begin Test case HMINegativeCheck.2
@@ -2859,9 +3153,9 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 			end
 
 			--TODO: remove postcondition after resolving APPLINK-15019
-			function Test:PostCondition_UnSubscribeVehicleData()				
-				self:unSubscribeVehicleDataSuccess({"gps"})
-			end
+			-- function Test:PostCondition_UnSubscribeVehicleData()				
+				-- self:unSubscribeVehicleDataSuccess({"gps"})
+			-- end
 		--End Test case HMINegativeCheck.5		
 	--End Test suit HMINegativeCheck		
 
@@ -3263,7 +3557,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 	--Begin Test suit DifferentHMIlevel
 	--Description: processing API in different HMILevel
-	
+	commonFunctions:newTestCasesGroup("DifferentHMIlevel")	
 		--Begin Test case DifferentHMIlevel.1
 		--Description: Check SubscribeVehicleData when current HMI is NONE
 
@@ -3273,7 +3567,7 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 			--Verification criteria: 
 				-- SDL rejects SubscribeVehicleData request with REJECTED resultCode when current HMI level is NONE.				
 
---[==[TODO: check after ATF defect APPLINK-13101 is resolved
+
 				function Test:Precondition_PolicyUpdate()
 					--hmi side: sending SDL.GetURLS request
 					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
@@ -3390,9 +3684,13 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				end
 				
 				for i=1, #allVehicleData do
+
 					Test["SubscribeVehicleData_HMILevelNone_"..allVehicleData[i]] = function(self)
 						--mobile side: sending SubscribeVehicleData request
-						local cid = self.mobileSession:SendRPC("SubscribeVehicleData",{allVehicleData[i]})
+						local request = {}						
+						request[allVehicleData[i]] = true
+				
+						local cid = self.mobileSession:SendRPC("SubscribeVehicleData",request)
 						
 						--mobile side: expected SubscribeVehicleData response
 						EXPECT_RESPONSE(cid, { success = false, resultCode = "DISALLOWED" })
@@ -3442,10 +3740,11 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 
 					--mobile side: expect OnHMIStatus notification
 					EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"})	
+			
 				end	
 				
 		--End Test case DifferentHMIlevel.1
---]==]			
+			
 		-----------------------------------------------------------------------------------------
 
 		--Begin Test case DifferentHMIlevel.2
@@ -3563,11 +3862,16 @@ os.execute('cp ./files/PTU_AllowedAndUserDisallowedSVD.json ' .. tostring(config
 				self:unSubscribeVehicleDataSuccess(allVehicleData)
 			end
 
-			-- Postcondition: restoring sdl_preloaded_pt file
-			-- TODO: Remove after implementation policy update
-			function Test:Postcondition_Preloadedfile()
-			  print ("restoring sdl_preloaded_pt.json")
-			  commonPreconditions:RestoreFile("sdl_preloaded_pt.json")
-			end
 		--End Test case DifferentHMIlevel.3		
 	--End Test suit DifferentHMIlevel
+
+---------------------------------------------------------------------------------------------
+-------------------------------------------Postcondition-------------------------------------
+---------------------------------------------------------------------------------------------
+
+	--Print new line to separate Postconditions
+	commonFunctions:newTestCasesGroup("Postconditions")
+	testCasesForPolicyTable:Restore_preloaded_pt()
+	Test["Stop_SDL"] = function(self)
+		StopSDL()
+	end 

@@ -4,8 +4,16 @@ local events = require('events')
 local mobile_session = require('mobile_session')
 
 require('user_modules/AppTypes')
+local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
+local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
+local doubleParameterInResponse = require('user_modules/shared_testcases/testCasesForDoubleParameterInResponse')
+local enumerationParameterInResponse = require('user_modules/shared_testcases/testCasesForEnumerationParameterInResponse')
 
+---------------------------------------------------------------------------------------------
+------------------------------------ Common Variables ---------------------------------------
+---------------------------------------------------------------------------------------------
+APIName = "GetVehicleData" -- set request name
 local compassDirectionValues = {"NORTH", "NORTHWEST", "WEST", "SOUTHWEST", "SOUTH", "SOUTHEAST", "EAST", "NORTHEAST"}
 local dimensionValues = {"NO_FIX", "2D", "3D"}
 local componentVolumeStatus = {"UNKNOWN", "NORMAL", "LOW", "FAULT", "ALERT", "NOT_SUPPORTED"}
@@ -26,6 +34,13 @@ local powerModeStatusValues = {"KEY_OUT", "KEY_RECENTLY_OUT", "KEY_APPROVED_0", 
 local vehicleDataStatus = {"NO_DATA_EXISTS", "OFF", "ON"}
 local emergencyEventTypeValues = {"NO_EVENT", "FRONTAL", "SIDE", "REAR", "ROLLOVER", "NOT_SUPPORTED", "FAULT"}
 local fuelCutoffStatusValues = {"TERMINATE_FUEL", "NORMAL_OPERATION", "FAULT"}
+local absStateValues = {"INACTIVE", "ACTIVE"}
+local tpmsValues = {"UNKNOWN", "SYSTEM_FAULT", "SENSOR_FAULT", "LOW", "SYSTEM_ACTIVE", "TRAIN_LF_TIRE", "TRAIN_RF_TIRE", "TRAIN_RR_TIRE", "TRAIN_ORR_TIRE", "TRAIN_IRR_TIRE", "TRAIN_LR_TIRE", "TRAIN_OLR_TIRE", "TRAIN_ILR_TIRE", "TRAINING_COMPLETE", "TIRES_NOT_TRAINED"}
+local turnSignalValues = {"OFF", "LEFT", "RIGHT", "UNUSED"}
+local tirePressureValueParams = {"leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear", "frontRecommended", "rearRecommended"}
+local beltStatusParams = {"driverBeltDeployed", "passengerBeltDeployed", "passengerBuckleBelted", "driverBuckleBelted", "leftRow2BuckleBelted", "passengerChildDetected", "rightRow2BuckleBelted", "middleRow2BuckleBelted", "middleRow3BuckleBelted", "leftRow3BuckleBelted", "rightRow3BuckleBelted", "leftRearInflatableBelted", "rightRearInflatableBelted", "middleRow1BeltDeployed", "middleRow1BuckleBelted"}
+local airbagStatusParams = {"driverAirbagDeployed", "driverSideAirbagDeployed", "driverCurtainAirbagDeployed", "passengerAirbagDeployed", "passengerCurtainAirbagDeployed", "driverKneeAirbagDeployed", "passengerSideAirbagDeployed", "passengerKneeAirbagDeployed"}
+
 local vehicleDataValues = {
 						gps = {
 								longitudeDegrees = 25.5, 
@@ -35,13 +50,27 @@ local vehicleDataValues = {
 						rpm = 1000, 
 						fuelLevel= 50.5, 
 						fuelLevel_State="NORMAL", 
-						instantFuelConsumption=1000.5, 
+						instantFuelConsumption=1000.5,
+						fuelRange = 50.5,
+						abs_State = "ACTIVE",
 						externalTemperature=55.5,
 						vin = "123456",
 						prndl="DRIVE", 
 						tirePressure={
 								pressureTelltale = "ON",								
-							}, 
+							},
+						tirePressureValue ={
+							leftFront = 50.5,
+							rightFront = 50.5,
+							leftRear = 50.5,
+							rightRear = 50.5,
+							innerLeftRear = 50.5,
+							innerRightRear = 50.5,
+							frontRecommended = 50.5,
+							rearRecommended = 50.5
+							},
+						tpms = "UNKNOWN",
+						turnSignal = "UNUSED",
 						odometer= 8888, 
 						beltStatus={
 								driverBeltDeployed = "NOT_SUPPORTED"
@@ -96,9 +125,12 @@ local vehicleDataValues = {
 							e911Override = "NO_DATA_EXISTS"
 						}
 					}
-local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin"}
+local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", "externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin"}
+local vehicleData = {"gps"}
 local infoMessageValue = string.rep("a",1000)
-
+---------------------------------------------------------------------------------------------
+-------------------------- Overwrite These Functions For This Script-------------------------
+---------------------------------------------------------------------------------------------
 function DelayedExp(time)
 	local event = events.Event()
   event.matches = function(self, e) return self == e end
@@ -305,9 +337,8 @@ end
 
 --Description: Checking GetVehicleData response with correct value
 	--response: vehicle data response from HMI
-	-- TODO: update after resolving APPLINK-1605
 function Test:getVehicleData_ResponseSuccess(response)
-	local request = setGVDRequest(allVehicleData)	
+	local request = setGVDRequest(vehicleData)	
 		
 	--mobile side: sending GetVehicleData request
 	local cid = self.mobileSession:SendRPC("GetVehicleData",request)
@@ -341,7 +372,7 @@ end
 --Description: Checking GetVehicleData response with invalid value
 	--response: vehicle data response from HMI
 function Test:getVehicleData_ResponseInvalidData(response)
-	local request = setGVDRequest(allVehicleData)	
+	local request = setGVDRequest(vehicleData)	
 		
 	--mobile side: sending GetVehicleData request
 	local cid = self.mobileSession:SendRPC("GetVehicleData",request)
@@ -354,49 +385,72 @@ function Test:getVehicleData_ResponseInvalidData(response)
 	end)		
 	
 	--mobile side: expect GetVehicleData response
-	EXPECT_RESPONSE(cid, {success = false, resultCode = "INVALID_DATA"})
+	EXPECT_RESPONSE(cid, {success = false, resultCode = "GENERIC_ERROR", info = "Invalid message received from vehicle"})--change Result code from "INVALID_DATA" to "GENERIC_ERROR" according to APPLINK-15494
 	
 	DelayedExp(300)
 end
 
+--This function is used to send default request and response with specific valid data and verify SUCCESS resultCode
+function Test:verify_SUCCESS_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setGVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.GetVehicleData request
+	EXPECT_HMICALL("VehicleInfo.GetVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	local ExpectedResponse = commonFunctions:cloneTable(Response)
+	ExpectedResponse["success"] = true
+	ExpectedResponse["resultCode"] = "SUCCESS"
+	EXPECT_RESPONSE(cid, ExpectedResponse)
+	
+	DelayedExp(500)
+
+end
+--This function is used to send default request and response with specific invalid data and verify GENERIC_ERROR resultCode
+function Test:verify_GENERIC_ERROR_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setGVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.GetVehicleData request
+	EXPECT_HMICALL("VehicleInfo.GetVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid message received from vehicle" })
+
+	DelayedExp(500)
+	
+end
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
-	--Begin Precondition.1
-	--Description: Activation application		
-		function Test:ActivationApp()			
-			--hmi side: sending SDL.ActivateApp request
-			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
-			EXPECT_HMIRESPONSE(RequestId)
-			:Do(function(_,data)
-				if
-					data.result.isSDLAllowed ~= true then
-					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
-					
-					--hmi side: expect SDL.GetUserFriendlyMessage message response
-					 --TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-					EXPECT_HMIRESPONSE(RequestId)
-					:Do(function(_,data)						
-						--hmi side: send request SDL.OnAllowSDLFunctionality
-						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+		
+	--Print new line to separate Preconditions
+	commonFunctions:newTestCasesGroup("Preconditions")
 
-						--hmi side: expect BasicCommunication.ActivateApp request
-						EXPECT_HMICALL("BasicCommunication.ActivateApp")
-						:Do(function(_,data)
-							--hmi side: sending BasicCommunication.ActivateApp response
-							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
-						end)
-						:Times(2)
-					end)
+	--Delete app_info.dat, logs and policy table
+	commonSteps:DeleteLogsFileAndPolicyTable()
 
-				end
-			end)
-			
-			--mobile side: expect notification
-			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
-		end
-	--End Precondition.1
 
+	--1. Activate application
+	commonSteps:ActivationApp()
+
+	--2. Update policy to allow request
+	policyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")
+	
+	
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
 --CommonRequestCheck: Check of mandatory/conditional request's parameters (mobile protocol)--
@@ -419,14 +473,14 @@ end
 
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-97
 
-			--Verification criteria: GetVehicleData request allows to receive the current data values for any of the following listed items: gps, speed, rpm, fuelLevel, fuelLevel_State, instantFuelConsumption, externalTemperature, vin, prndl, tirePressure, odometer, beltStatus, bodyInformation, deviceStatus, driverBraking, wiperStatus, headLampStatus, engineTorque, accPedalPosition, steeringWheelAngle, eCallInfo, airbagStatus, emergencyEvent, clusterModeStatus, myKey.
+			--Verification criteria: GetVehicleData request allows to receive the current data values for any of the following listed items: gps, speed, rpm, fuelLevel, fuelLevel_State, instantFuelConsumption, externalTemperature, vin, prndl, tirePressure, odometer, beltStatus, bodyInformation, deviceStatus, driverBraking, wiperStatus, headLampStatus, engineTorque, accPedalPosition, steeringWheelAngle, eCallInfo, airbagStatus, emergencyEvent, clusterModeStatus, myKey, fuelRange, abs_State, tirePressureValue, tpms, turnSignal.
 									--The response contains data values for requested items.
-									
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.1")									
 			function Test:GetVehicleData_Positive() 				
 				self:getVehicleDataSuccess(allVehicleData)				
 			end
 		--End Test case CommonRequestCheck.1
-		
+	
 		-----------------------------------------------------------------------------------------
 		
 		--Begin Test case CommonRequestCheck.2
@@ -434,9 +488,9 @@ end
 			
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-97
 
-			--Verification criteria: GetVehicleData request allows to receive the current data values for any of the following listed items: gps, speed, rpm, fuelLevel, fuelLevel_State, instantFuelConsumption, externalTemperature, vin, prndl, tirePressure, odometer, beltStatus, bodyInformation, deviceStatus, driverBraking, wiperStatus, headLampStatus, engineTorque, accPedalPosition, steeringWheelAngle, eCallInfo, airbagStatus, emergencyEvent, clusterModeStatus, myKey.
+			--Verification criteria: GetVehicleData request allows to receive the current data values for any of the following listed items: gps, speed, rpm, fuelLevel, fuelLevel_State, instantFuelConsumption, externalTemperature, vin, prndl, tirePressure, odometer, beltStatus, bodyInformation, deviceStatus, driverBraking, wiperStatus, headLampStatus, engineTorque, accPedalPosition, steeringWheelAngle, eCallInfo, airbagStatus, emergencyEvent, clusterModeStatus, myKey, fuelRange, abs_State, tirePressureValue, tpms, turnSignal.
 									--The response contains data values for requested items.			
-			
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.2 - Not applicable")				
 			--Not applicable
 			
 		--End Test case CommonRequestCheck.2
@@ -450,6 +504,7 @@ end
 
 			--Verification criteria:
 				--The request sent with NO parameters receives INVALID_DATA response code.
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.3")					
 				function Test:GetVehicleData_AllParamsMissing() 
 					self:getVehicleDataInvalidData({})
 				end			
@@ -463,7 +518,7 @@ end
 			--Requirement id in JAMA/or Jira ID: APPLINK-4518
 
 			--Verification criteria: According to xml tests by Ford team all fake params should be ignored by SDL
-
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.4")	
 			--Begin Test case CommonRequestCheck4.1
 			--Description: With fake parameters				
 				function Test:GetVehicleData_FakeParams()										
@@ -545,6 +600,7 @@ end
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-609
 
 			--Verification criteria:  The request with wrong JSON syntax is sent, the response with INVALID_DATA result code is returned.
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.5")				
 			function Test:GetVehicleData_InvalidJSON()
 				  self.mobileSession.correlationId = self.mobileSession.correlationId + 1
 
@@ -575,6 +631,7 @@ end
 
 			--Verification criteria: 
 				--
+			commonFunctions:newTestCasesGroup("CommonRequestCheck.6")					
 			function Test:GetVehicleData_correlationIdDuplicateValue()
 				--mobile side: send GetVehicleData request 
 				local CorIdGetVehicleData = self.mobileSession:SendRPC("GetVehicleData", {speed = true})
@@ -629,7 +686,7 @@ end
 
 		--Begin Test suit PositiveRequestCheck
 		--Description: check of each request parameter value in bound and boundary conditions
-
+		commonFunctions:newTestCasesGroup("PositiveRequestCheck")	
 			--Begin Test case PositiveRequestCheck.1
 			--Description: Check processing request with lower and upper bound values
 
@@ -665,7 +722,7 @@ end
 					
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription. 
-	
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.1")	
 				--Begin Test case PositiveResponseCheck.1.1
 				--Description: Response with info parameter lower bound
 					function Test:GetVehicleData_ResponseInfoLowerBound()						
@@ -693,7 +750,7 @@ end
 					
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription. 
-				
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.2")				
 				--Begin Test case PositiveResponseCheck.2.1
 				--Description: Response with longitudeDegrees parameter lower bound
 					function Test:GetVehicleData_ResponseLowerBound_longitudeDegrees()						
@@ -1334,7 +1391,6 @@ end
 
 				--Begin Test case PositiveResponseCheck.2.57
 				--Description: Response with beltStatus parameter in bound
-					local beltStatusParams = {"driverBeltDeployed", "passengerBeltDeployed", "passengerBuckleBelted", "driverBuckleBelted", "leftRow2BuckleBelted", "passengerChildDetected", "rightRow2BuckleBelted", "middleRow2BuckleBelted", "middleRow3BuckleBelted", "leftRow3BuckleBelted", "rightRow3BuckleBelted", "leftRearInflatableBelted", "rightRearInflatableBelted", "middleRow1BeltDeployed", "middleRow1BuckleBelted"}
 					for j=1, #beltStatusParams do
 						for i=1, #vehicleDataEventStatus do
 							Test["GetVehicleData_"..beltStatusParams[j].."_"..vehicleDataEventStatus[i]] = function(self)
@@ -1713,7 +1769,6 @@ end
 
 				--Begin Test case PositiveResponseCheck.2.89
 				--Description: Response with airbagStatus parameter in bound
-					local airbagStatusParams = {"driverAirbagDeployed", "driverSideAirbagDeployed", "driverCurtainAirbagDeployed", "passengerAirbagDeployed", "passengerCurtainAirbagDeployed", "driverKneeAirbagDeployed", "passengerSideAirbagDeployed", "passengerKneeAirbagDeployed"}
 					for j=1, #airbagStatusParams do
 						for i=1, #vehicleDataEventStatus do
 							Test["GetVehicleData_"..airbagStatusParams[j].."_"..vehicleDataEventStatus[i]] = function(self)
@@ -1851,9 +1906,9 @@ end
 						self:getVehicleData_ResponseSuccess(response)
 					end
 				--End Test case PositiveResponseCheck.2.99	
-				
+			
 				-----------------------------------------------------------------------------------------
-				
+	
 				--Begin Test case PositiveResponseCheck.2.100
 				--Description: Response with e911Override parameter in bound
 					for i=1, #vehicleDataStatus do
@@ -1863,9 +1918,108 @@ end
 							self:getVehicleData_ResponseSuccess(response)							
 						end
 					end
-				--End Test case PositiveResponseCheck.2.100				
-			--End Test case PositiveResponseCheck.2
+				--End Test case PositiveResponseCheck.2.100		
+
+				-----------------------------------------------------------------------------------------
 			
+				--Begin Test case PositiveResponseCheck.2.101
+				--Requirement: APPLINK-21379
+				--Description: Response with fuelRange parameter
+				--<param name="fuelRange" type="Double" mandatory="false">
+				--TODO: boundary value is in question: APPLINK-26668
+				local response = setGVDResponse({"fuelRange"})						
+				response["fuelRange"] = 1
+				Test["Precondition_PositiveResponseCheck_fuelRange"] = function(self)
+					vehicleData = {"fuelRange"}
+				end
+				doubleParameterInResponse:verify_Double_Parameter(response,{"fuelRange"},{0,100},false)			
+				--End Test case PositiveResponseCheck.2.101				
+				
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.2.102
+				--Requirement: APPLINK-21379				
+				--Description: Response with fuelRange parameter
+				--<param name="abs_State" type="ABS_STATE" mandatory="false">
+				local response = setGVDResponse({"abs_State"})
+				Test["Precondition_PositiveResponseCheck_abs_State"] = function(self)
+					vehicleData = {"abs_State"}
+				end	
+				response.abs_State = {}				
+				enumerationParameterInResponse:verify_Enum_String_Parameter(response,{"abs_State"},absStateValues,false)
+				--End Test case PositiveResponseCheck.2.102	
+					
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.2.103
+				--Requirement: APPLINK-21379
+				--Description: Response with fuelRange parameter
+				--<param name="tirePressureValue" type="TirePressureValue" mandatory="false">
+				--TODO: boundary value is in question: APPLINK-26668				
+				commonFunctions:newTestCasesGroup("Test Suite For Parameter: tirePressureValue")
+				local response = setGVDResponse({"tirePressureValue"})
+				response.tirePressureValue ={
+					
+						leftFront = 50.5,
+						rightFront = 50.5,
+						leftRear = 50.5,
+						rightRear = 50.5,
+						innerLeftRear = 50.5,
+						innerRightRear = 50.5,
+						frontRecommended = 50.5,
+						rearRecommended = 50.5
+							
+				}
+				Test["Precondition_PositiveResponseCheck_tirePressureValue"] = function(self)
+					vehicleData = {"tirePressureValue"}
+				end					
+				-- tirePressureValue IsEmpty
+				commonFunctions:TestCaseForResponse(self, response, {"tirePressureValue"}, "IsEmpty", {}, "SUCCESS")
+				
+				-- tirePressureValue IsWrongType: 
+				commonFunctions:TestCaseForResponse(self, response, {"tirePressureValue"}, "IsWrongType", 123, "GENERIC_ERROR")
+				
+				-- Check for all sub-params
+				local paramBoundary = {{0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}, {0,100}}
+					
+				for i = 1, #tirePressureValueParams do
+					doubleParameterInResponse:verify_Double_Parameter(response,{"tirePressureValue", tirePressureValueParams[i]},paramBoundary[i],false)
+				end
+				--End Test case PositiveResponseCheck.2.103
+					
+				-----------------------------------------------------------------------------------------
+				
+				--Begin Test case PositiveResponseCheck.2.104
+				--Requirement: APPLINK-21379
+				--Description: Response with fuelRange parameter
+				--<param name="tpms" type="TPMS" mandatory="false">
+				local response = setGVDResponse({"tpms"})
+				response.tpms = {}
+				Test["Precondition_PositiveResponseCheck_tpms"] = function(self)
+					vehicleData = {"tpms"}
+				end	
+				enumerationParameterInResponse:verify_Enum_String_Parameter(response,{"tpms"},tpmsValues,false)
+				--End Test case PositiveResponseCheck.2.104	
+
+				-----------------------------------------------------------------------------------------				
+				
+				--Begin Test case PositiveResponseCheck.2.105
+				--Requirement: APPLINK-21379
+				--Description: Response with fuelRange parameter
+				--<param name="turnSignal" type="TurnSignal" mandatory="false">
+				local response = setGVDResponse({"turnSignal"})
+				response.turnSignal = {}
+				Test["Precondition_PositiveResponseCheck_turnSignal"] = function(self)
+					vehicleData = {"turnSignal"}
+				end
+				enumerationParameterInResponse:verify_Enum_String_Parameter(response,{"turnSignal"},turnSignalValues,false)
+				--End Test case PositiveResponseCheck.2.105
+
+				Test["Postcondition_PositiveResponseCheck.2"] = function(self)
+					vehicleData = {"gps"}
+				end			
+			--End Test case PositiveResponseCheck.2
+		
 			-----------------------------------------------------------------------------------------
 
 			--Begin Test case PositiveResponseCheck.3
@@ -1876,9 +2030,9 @@ end
 					
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription. 
-	
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.3")		
 				--Begin Test case PositiveResponseCheck.3.1
-				--Description: Response with only mandatory in gps structure
+				--Description: Response with only mandatory in gps structure		
 					function Test:GetVehicleData_Response_OnlyMandatoryGPS()						
 						local response = { 
 											gps = {
@@ -1921,9 +2075,8 @@ end
 							}
 					for i=1, #response do
 						Test["GetVehicleData_Only_"..response[i].param.."InTirePressure"] = function(self)
-							-- TODO: update after resolving APPLINK-16052
-							-- self:getVehicleData_ResponseSuccess(response[i].value)
-							self:getVehicleData_ResponseSuccess({})
+							self:getVehicleData_ResponseSuccess(response[i].value)
+							--self:getVehicleData_ResponseSuccess({})
 						end
 					end	
 				--End Test case PositiveResponseCheck.3.3
@@ -1984,7 +2137,7 @@ end
 
 			--Begin Test case NegativeRequestCheck.1
 			--Description: Check processing requests with out of lower and upper bound values 
-				
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.1 - Not applicable")					
 				--Not applicable
 				
 			--End Test case NegativeRequestCheck.1
@@ -2022,7 +2175,7 @@ end
 						6.21 The request with empty "clusterModeStatus" parameter value is sent, the response with INVALID_DATA result code is returned.
 						6.22 The request with empty "myKey" parameter value is sent, the response with INVALID_DATA result code is returned.
 					--]]
-					
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.2 - already covered")					
 				--Covered by INVALID_JSON case
 					
 			--End Test case NegativeRequestCheck.2
@@ -2036,6 +2189,7 @@ end
 
 				--Verification criteria: 
 					-- The request with wrong type of parameter value is sent, the response with INVALID_DATA result code is returned.
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.3")					
 					for i=1, #allVehicleData do
 						Test["GetVehicleData_WrongType_"..allVehicleData[i]] = function(self)
 							local temp = {}
@@ -2049,7 +2203,7 @@ end
 			
 			--Begin Test case NegativeRequestCheck.4
 			--Description: Check processing request with Special characters
-
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.4 - Not applicable")
 				-- Not applicable
 			
 			--End Test case NegativeRequestCheck.4
@@ -2064,7 +2218,7 @@ end
 				--Verification criteria: 
 					-- The request with the wrong name parameter (the one that does not exist in the list of valid parameters for GetVehicleData) and with correctly named other parameters is processed by SDL the valid request (such parameter is ignored). The responseCode is "SUCCESS" if there are no other errors. General resultCode is success="true"
 					-- Vehicle Data requested in GetVehicleData request with false attribute value receives the response with no data value for this VehicleData parameter. In case of no errors and getting data for other requested vehicle data attributes the response is returned with SUCCES resultCode and success="true".
-					
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.5")					
 				--Begin Test case NegativeRequestCheck.5.1
 				--Description: Check processing request with wrong name parameter
 					function Test:GetVehicleData_ParameterWrongName()
@@ -2169,6 +2323,7 @@ end
 		
 		--Begin Test suit NegativeResponseCheck
 		--Description: Check of each response parameter value out of bound, missing, with wrong type, empty, duplicate etc.
+		commonFunctions:newTestCasesGroup("NegativeResponseCheck")			
 --[[TODO: Check after APPLINK-14765 is resolved
 			--Begin Test case NegativeResponseCheck.1
 			--Description: Check processing response with outbound values
@@ -4527,10 +4682,10 @@ end
 		--End Test case ResultCodeCheck.4
 
 		-----------------------------------------------------------------------------------------
---[[TODO: Update according to APPLINK-15825
+
 		--Begin Test case ResultCodeCheck.5
 		--Description: Check VEHICLE_DATA_NOT_AVAILABLE result code
-
+		commonFunctions:newTestCasesGroup("ResultCodeCheck.5")
 			--Requirement id in JAMA: SDLAQ-CRS-617
 
 			--Verification criteria:
@@ -4582,7 +4737,7 @@ end
 				end
 			--End Test Case ResultCodeCheck.5.2			
 		--End Test case ResultCodeCheck.5
---]]		
+		
 		-----------------------------------------------------------------------------------------
 --[[TODO: check after ATF defect APPLINK-13101 is resolved	
 		--Begin Test case ResultCodeCheck.6
@@ -4708,7 +4863,7 @@ end
 				EXPECT_RESPONSE(cid, {success = false, resultCode = "REJECTED", info = "Error Message"})
 			end
 		--End Test case ResultCodeCheck.8
-		
+	
 		-----------------------------------------------------------------------------------------
 
 		--Begin Test case ResultCodeCheck.9
@@ -4821,7 +4976,7 @@ end
 		--End Test case HMINegativeCheck.2
 --]]		
 		-----------------------------------------------------------------------------------------
---[[TODO: check after APPLINK-15236 is resolved due to core dump	
+
 		--Begin Test case HMINegativeCheck.3
 		--Description: 
 			-- Several response to one request
@@ -4976,7 +5131,7 @@ end
 
 			--Verification criteria:
 				-- The System must not allow an application to request a single piece of data more frequently than once per second or what is allowed by the policy table.
---[[TODO: check after APPLINK-15236 is resolved
+
 			local getVDRequest = 6
 			local getVDRejectedCount = 0
 			local getVDSuccessCount = 0
@@ -5038,7 +5193,8 @@ end
 				:Times(6)
 			end			
 		--End Test case SequenceCheck.1
-]]
+--]]
+
 	--End Test suit SequenceCheck
 ----------------------------------------------------------------------------------------------
 -----------------------------------------VII TEST BLOCK----------------------------------------
@@ -5087,7 +5243,7 @@ end
 				self.mobileSession:ExpectNotification("OnHMIStatus",{hmiLevel = "FULL", systemContext = "MAIN"})										
 			end
 		--End Test case DifferentHMIlevel.1
-		
+	
 		-----------------------------------------------------------------------------------------
 
 		--Begin Test case DifferentHMIlevel.2
@@ -5233,3 +5389,13 @@ end
 			end
 		--End Test case DifferentHMIlevel.3		
 	--End Test suit DifferentHMIlevel
+---------------------------------------------------------------------------------------------
+-------------------------------------------Postcondition-------------------------------------
+---------------------------------------------------------------------------------------------
+
+	--Print new line to separate Postconditions
+	commonFunctions:newTestCasesGroup("Postconditions")
+	policyTable:Restore_preloaded_pt()
+	Test["Stop_SDL"] = function(self)
+		StopSDL()
+	end 

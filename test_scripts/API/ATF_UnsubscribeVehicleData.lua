@@ -1,63 +1,54 @@
 -- ATF verstion: 2.2
-local commonSteps   = require('user_modules/shared_testcases/commonSteps')
-local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
-
-  
-function DeleteLog_app_info_dat_policy()
-    commonSteps:CheckSDLPath()
-    local SDLStoragePath = config.pathToSDL .. "storage/"
-
-    --Delete app_info.dat and log files and storage
-    if commonSteps:file_exists(config.pathToSDL .. "app_info.dat") == true then
-      os.remove(config.pathToSDL .. "app_info.dat")
-    end
-
-    if commonSteps:file_exists(config.pathToSDL .. "SmartDeviceLinkCore.log") == true then
-      os.remove(config.pathToSDL .. "SmartDeviceLinkCore.log")
-    end
-
-    if commonSteps:file_exists(SDLStoragePath .. "policy.sqlite") == true then
-      os.remove(SDLStoragePath .. "policy.sqlite")
-    end
-
-    if commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") == true then
-      os.remove(config.pathToSDL .. "policy.sqlite")
-    end
-print("path = " .."rm -r " ..config.pathToSDL .. "storage")
-    os.execute("rm -r " ..config.pathToSDL .. "storage")
-end
-
-DeleteLog_app_info_dat_policy()
-
-function UpdatePolicy()
-    commonPreconditions:BackupFile("sdl_preloaded_pt.json")
-    local src_preloaded_json = config.pathToSDL .."sdl_preloaded_pt.json"
-    local dest               = "files/JSONUnsubscribeVehicleData.json"
-    
-    local filecopy = "cp " .. dest .."  " .. src_preloaded_json
-
-    os.execute(filecopy)
-end
-
-UpdatePolicy()
-
+local commonSteps   = require('/user_modules/shared_testcases/commonSteps')
+local commonPreconditions = require('/user_modules/shared_testcases/commonPreconditions')
+local commonFunctions = require ('/user_modules/shared_testcases/commonFunctions')
+local testCasesForPolicyTable = require('/user_modules/shared_testcases/testCasesForPolicyTable')
+local enumerationParameterInResponse = require('user_modules/shared_testcases/testCasesForEnumerationParameterInResponse')
+ 
 Test = require('connecttest')
 require('cardinalities')
 local events = require('events')
 local mobile_session = require('mobile_session')
-
-config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
---ToDo: shall be removed when APPLINK-16610 is fixed
-config.defaultProtocolVersion = 2
-
-
 require('user_modules/AppTypes')
 
-local USVDValues = {gps="VEHICLEDATA_GPS", speed="VEHICLEDATA_SPEED", rpm="VEHICLEDATA_RPM", fuelLevel="VEHICLEDATA_FUELLEVEL", fuelLevel_State="VEHICLEDATA_FUELLEVEL_STATE", instantFuelConsumption="VEHICLEDATA_FUELCONSUMPTION", externalTemperature="VEHICLEDATA_EXTERNTEMP", prndl="VEHICLEDATA_PRNDL", tirePressure="VEHICLEDATA_TIREPRESSURE", odometer="VEHICLEDATA_ODOMETER", beltStatus="VEHICLEDATA_BELTSTATUS", bodyInformation="VEHICLEDATA_BODYINFO", deviceStatus="VEHICLEDATA_DEVICESTATUS", driverBraking="VEHICLEDATA_BRAKING", wiperStatus="VEHICLEDATA_WIPERSTATUS", headLampStatus="VEHICLEDATA_HEADLAMPSTATUS", engineTorque="VEHICLEDATA_ENGINETORQUE", accPedalPosition="VEHICLEDATA_ACCPEDAL", steeringWheelAngle="VEHICLEDATA_STEERINGWHEEL", eCallInfo="VEHICLEDATA_ECALLINFO", airbagStatus="VEHICLEDATA_AIRBAGSTATUS", clusterModeStatus="VEHICLEDATA_CLUSTERMODESTATUS", myKey="VEHICLEDATA_MYKEY"}
---ToDo: Some Items are <!-- Ford Specific Data Items --> See MOBILE_API.xml
-local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
---Genivi Data items
---local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle"}
+config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+
+APIName = "UnsubscribeVehicleData" -- set request name
+
+local AllVehicleDataResultCode = {"SUCCESS", "TRUNCATED_DATA", "DISALLOWED", "USER_DISALLOWED", "INVALID_ID", "VEHICLE_DATA_NOT_AVAILABLE", "DATA_ALREADY_SUBSCRIBED",  "DATA_NOT_SUBSCRIBED", "IGNORED"}
+
+local USVDValues = {gps="VEHICLEDATA_GPS", 
+					speed="VEHICLEDATA_SPEED",
+					rpm="VEHICLEDATA_RPM",
+					fuelLevel="VEHICLEDATA_FUELLEVEL",
+					fuelLevel_State="VEHICLEDATA_FUELLEVEL_STATE",
+					instantFuelConsumption="VEHICLEDATA_FUELCONSUMPTION",
+					externalTemperature="VEHICLEDATA_EXTERNTEMP",
+					prndl="VEHICLEDATA_PRNDL",
+					tirePressure="VEHICLEDATA_TIREPRESSURE",
+					odometer="VEHICLEDATA_ODOMETER",
+					beltStatus="VEHICLEDATA_BELTSTATUS",
+					bodyInformation="VEHICLEDATA_BODYINFO",
+					deviceStatus="VEHICLEDATA_DEVICESTATUS",
+					driverBraking="VEHICLEDATA_BRAKING",
+					wiperStatus="VEHICLEDATA_WIPERSTATUS",
+					headLampStatus="VEHICLEDATA_HEADLAMPSTATUS",
+					engineTorque="VEHICLEDATA_ENGINETORQUE",
+					accPedalPosition="VEHICLEDATA_ACCPEDAL",
+					steeringWheelAngle="VEHICLEDATA_STEERINGWHEEL",
+					eCallInfo="VEHICLEDATA_ECALLINFO",
+					airbagStatus="VEHICLEDATA_AIRBAGSTATUS",
+					emergencyEvent="VEHICLEDATA_EMERGENCYEVENT",
+					clusterModeStatus="VEHICLEDATA_CLUSTERMODESTATUS",
+					myKey="VEHICLEDATA_MYKEY",
+					fuelRange="VEHICLEDATA_FUELRANGE",
+					abs_State="VEHICLEDATA_ABS_STATE",
+					tirePressureValue="VEHICLEDATA_TIREPRESSURE_VALUE",
+					tpms="VEHICLEDATA_TPMS",
+					turnSignal="VEHICLEDATA_TURNSIGNAL"}
+
+local allVehicleData = {"fuelRange", "abs_State", "tirePressureValue", "tpms", "turnSignal", "gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
+
 local vehicleData = {"gps"}
 local infoMessageValue = string.rep("a",1000)
 
@@ -208,139 +199,193 @@ function Test:unsubscribeVehicleDataIgnored(paramsSend, bSuccess)
 	DelayedExp(2000)
 end
 
+--This function sends a request from mobile and verify result on HMI and mobile for SUCCESS resultCode cases.
+function Test:verify_SUCCESS_Case(Request)
+
+	--mobile side: sending the request
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.UnsubscribeVehicleData request
+	local Response = setUSVDResponse(vehicleData)
+	EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	local ExpectedResponse = commonFunctions:cloneTable(Response)
+	ExpectedResponse["success"] = true
+	ExpectedResponse["resultCode"] = "SUCCESS"
+	EXPECT_RESPONSE(cid, ExpectedResponse)
+
+end
+--This function is used to send default request and response with specific valid data and verify SUCCESS resultCode
+function Test:verify_SUCCESS_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setUSVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.UnsubscribeVehicleData request
+	EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	local ExpectedResponse = commonFunctions:cloneTable(Response)
+	ExpectedResponse["success"] = true
+	ExpectedResponse["resultCode"] = "SUCCESS"
+	EXPECT_RESPONSE(cid, ExpectedResponse)
+
+end
+--This function is used to send default request and response with specific invalid data and verify GENERIC_ERROR resultCode
+function Test:verify_GENERIC_ERROR_Response_Case(Response)
+
+	--mobile side: sending the request
+	local Request = setUSVDRequest(vehicleData)
+	local cid = self.mobileSession:SendRPC(APIName, Request)
+
+	--hmi side: expect VehicleInfo.UnsubscribeVehicleData request
+	EXPECT_HMICALL("VehicleInfo.UnsubscribeVehicleData", Request)
+	:Do(function(_,data)
+		--hmi side: sending response
+		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", Response)
+	end)
+
+	--mobile side: expect the response
+	EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid message received from vehicle" })
+
+end
+
+local function Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response(ParameterName, DataType)
+
+				--Print new line to separate new test cases group
+				commonFunctions:newTestCasesGroup("PositiveResponseCheck: "..ParameterName)	
+				
+				local Response = setUSVDResponse(vehicleData)						
+				Response[ParameterName] = {
+					dataType = DataType,
+					resultCode = "SUCCESS"
+				}
+
+				---------------------------------
+				----Verify Parameter
+				local Parameter = {ParameterName}
+				--1.1. IsMissed
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_IsMissed"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end	
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "SUCCESS")		
+				
+				--1.2. IsWrongDataType
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_IsWrongDataType"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end					
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+
+				
+				--1.3. IsEmpty
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_IsEmpty"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+
+				
+				---------------------------------				
+				----Verify Parameter.dataType
+				local Parameter = {ParameterName, "dataType"}
+				--2.1. IsMissed
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_IsMissed"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")		
+				
+				--2.2. IsWrongDataType
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_IsWrongDataType"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				
+				--2.3. IsEmpty
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_IsEmpty"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+
+				--2.4. IsExistentValue
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_IsExistentValue"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..DataType, DataType, "SUCCESS")
+				
+				--2.5. IsNonexistentValue
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_IsNonExistentValue"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end	
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+				
+				--2.6. DataTypeOfAnother
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_DataType_ValueOfAnother"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end			
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_DataTypeOfAnother", "VEHICLEDATA_GPS", "SUCCESS")
+
+				---------------------------------
+				----Verify Parameter.resultCode
+				local Parameter = {ParameterName, "resultCode"}
+				--3.1. IsMissed
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_ResultCode_IsMissed"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")
+				
+				--3.2. IsWrongDataType
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_ResultCode_IsWrongDataType"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				
+				--3.3. IsEmpty
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_ResultCode_IsEmpty"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end			
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+		
+	
+				--3.4. IsExistentValue
+				for i = 1, #AllVehicleDataResultCode do
+					Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_ResultCode_Is_"..AllVehicleDataResultCode[i]] = function(self)				
+						self:subscribeVehicleDataSuccess(vehicleData)						
+					end					
+					commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..AllVehicleDataResultCode[i], AllVehicleDataResultCode[i], "SUCCESS")
+				end
+				
+				--3.5. IsNonexistentValue
+				Test["PreCondition_SubscribeVehicleData_"..ParameterName.."_ResultCode_IsNoneExistentValue"] = function(self)				
+					self:subscribeVehicleDataSuccess(vehicleData)						
+				end				
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+		
+end
 ---------------------------------------------------------------------------------------------
 -------------------------------------------PreConditions-------------------------------------
 ---------------------------------------------------------------------------------------------
-	--Begin PreCondition.1
-	--Description: Activation application		
-		function Test:ActivationApp()			
-			--hmi side: sending SDL.ActivateApp request
-			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application"]})
-			EXPECT_HMIRESPONSE(RequestId)
-			:Do(function(_,data)
-				if
-					data.result.isSDLAllowed ~= true then
-					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
-					
-					--hmi side: expect SDL.GetUserFriendlyMessage message response
-					--TODO: Update after resolving APPLINK-16094 EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-					EXPECT_HMIRESPONSE(RequestId)
-					:Do(function(_,data)						
-						--hmi side: send request SDL.OnAllowSDLFunctionality
-						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+	--Print new line to separate Preconditions
+	commonFunctions:newTestCasesGroup("Preconditions")
 
-						--hmi side: expect BasicCommunication.ActivateApp request
-						EXPECT_HMICALL("BasicCommunication.ActivateApp")
-						:Do(function(_,data)
-							--hmi side: sending BasicCommunication.ActivateApp response
-							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
-						end)
-						:Times(AnyNumber())
-					end)
+	--Delete app_info.dat, logs and policy table
+	commonSteps:DeleteLogsFileAndPolicyTable()
 
-				end
-			end)
-			
-			--mobile side: expect notification
-			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL"}) 
-		end
-	--End PreCondition.1
 
-	-----------------------------------------------------------------------------------------
---[[TODO: check after ATF defect APPLINK-13101 is resolved	
-	--Begin PreCondition.2
-	--Description: Updated policy to allowed all vehicle data
-		function Test:PreCondition_PolicyUpdate()
-						--hmi side: sending SDL.GetURLS request
-						local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-						
-						--hmi side: expect SDL.GetURLS response from HMI
-						EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-						:Do(function(_,data)
-							--print("SDL.GetURLS response is received")
-							--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-							self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-								{
-									requestType = "PROPRIETARY",
-									fileName = "filename"
-								}
-							)
-							--mobile side: expect OnSystemRequest notification 
-							EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-							:Do(function(_,data)
-								--print("OnSystemRequest notification is received")
-								--mobile side: sending SystemRequest request 
-								local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-									{
-										fileName = "PolicyTableUpdate",
-										requestType = "PROPRIETARY"
-									},
-								"files/PTU_AllowedUSVDAllVehicleData.json")
-								
-								local systemRequestId
-								--hmi side: expect SystemRequest request
-								EXPECT_HMICALL("BasicCommunication.SystemRequest")
-								:Do(function(_,data)
-									systemRequestId = data.id
-									--print("BasicCommunication.SystemRequest is received")
-									
-									--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-									self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-										{
-											policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-										}
-									)
-									function to_run()
-										--hmi side: sending SystemRequest response
-										self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-									end
-									
-									RUN_AFTER(to_run, 500)
-								end)
-								
-								--hmi side: expect SDL.OnStatusUpdate
-								EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", { status =  "UP_TO_DATE"})
-								:Do(function(_,data)
-									--print("SDL.OnStatusUpdate is received")
-									
-									--hmi side: expect SDL.OnAppPermissionChanged
-									
-									
-								end)
-								:Timeout(2000)
-								
-								--mobile side: expect SystemRequest response
-								EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-								:Do(function(_,data)
-									--print("SystemRequest is received")
-									--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-									local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-									
-									--hmi side: expect SDL.GetUserFriendlyMessage response
-									EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-									:Do(function(_,data)
-										--print("SDL.GetUserFriendlyMessage is received")
-										
-										--hmi side: sending SDL.GetListOfPermissions request to SDL
-										local RequestIdGetListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {appID = self.applications["Test Application"]})
-										
-										-- hmi side: expect SDL.GetListOfPermissions response
-										EXPECT_HMIRESPONSE(RequestIdGetListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions", allowedFunctions = {{ id = 193465391, name = "New"}}}})
-										:Do(function(_,data)
-											--print("SDL.GetListOfPermissions response is received")
-											
-											--hmi side: sending SDL.OnAppPermissionConsent
-											self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = false, id = 193465391, name = "New"}}, source = "GUI"})
-											end)
-									end)
-								end)
-								:Timeout(2000)
-								
-							end)
-						end)
-					end
-	--End PreCondition.2
-]]	
+	--1. Activate application
+	commonSteps:ActivationApp()
+
+	--2. Update policy to allow request
+	testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")
+
 ---------------------------------------------------------------------------------------------
 -----------------------------------------I TEST BLOCK----------------------------------------
 --CommonRequestCheck: Check of mandatory/conditional request's parameters (mobile protocol)--
@@ -360,7 +405,7 @@ end
 
     	--Begin Test case CommonRequestCheck.1
     	--Description: This test is intended to check request with all parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.1")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-93
 
 			--Verification criteria: SubsribeVehicleData request subscribes application for specific published vehicle data items. The data is sent upon being changed on HMI. The application is notified by the onVehicleData notification whenever the new data is available.
@@ -377,6 +422,7 @@ end
 		
 		--Begin Test case CommonRequestCheck.2
 		--Description: This test is intended to check request with mandatory and conditional parameters
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.2 - Not applicable")		
 			--Not applicable
 		--End Test case CommonRequestCheck.2
 		
@@ -384,7 +430,7 @@ end
 		
 		--Begin Test case CommonRequestCheck.3
 		--Description: This test is intended to check processing requests without mandatory parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.3")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-598
 
 			--Verification criteria:
@@ -398,7 +444,7 @@ end
 
 		--Begin Test case CommonRequestCheck.4
 		--Description: Check processing request with different fake parameters
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.4")
 			--Requirement id in JAMA/or Jira ID: APPLINK-4518
 
 			--Verification criteria: According to xml tests by Ford team all fake params should be ignored by SDL
@@ -488,7 +534,7 @@ end
 
 		--Begin Test case CommonRequestCheck.5
 		--Description: Check processing request with invalid JSON syntax 
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.5")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-598
 
 			--Verification criteria:  The request with wrong JSON syntax is sent, the response with INVALID_DATA result code is returned.
@@ -519,7 +565,7 @@ end
 		
 		--Begin Test case CommonRequestCheck.6
 		--Description: Check processing requests with duplicate correlationID value
-
+		commonFunctions:newTestCasesGroup("CommonRequestCheck.6")
 			--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-597
 
 			--Verification criteria: 
@@ -587,7 +633,7 @@ end
 
 			--Begin Test case PositiveRequestCheck.1
 			--Description: Check processing request with lower and upper bound values
-
+			commonFunctions:newTestCasesGroup("PositiveRequestCheck.1")
 				--Requirement id in JAMA: 
 					-- SDLAQ-CRS-93,
 					-- SDLAQ-CRS-597
@@ -617,7 +663,7 @@ end
 
 			--Begin Test case PositiveResponseCheck.1
 			--Description: Checking info parameter boundary conditions
-
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.1")
 				--Requirement id in JAMA:
 					--SDLAQ-CRS-94
 					
@@ -645,9 +691,71 @@ end
 						self:unsubscribeVehicleDataSuccess(vehicleData, string.rep("a",1000))						
 					end
 				--End Test case PositiveResponseCheck.1.2				
-			--End Test case PositiveResponseCheck.1
-		--End Test suit PositiveResponseCheck
-		
+
+				--Begin Test case PositiveResponseCheck.1.3
+				--Requirement: APPLINK-21379				
+				--Description:  Response with different values of fuelRange			
+				--<param name="fuelRange" type="Common.VehicleDataResult" mandatory="false">	
+				Test["Precondition_PositiveResponseCheck_fuelRange"] = function(self)
+					vehicleData = {"gps", "fuelRange"}
+				end				
+				Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response("fuelRange", "VEHICLEDATA_FUELRANGE")
+				--End Test case PositiveResponseCheck.1.3
+
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.1.4
+				--Requirement: APPLINK-21379				
+				--Description:  Response with different values of abs_State			
+				--<param name="abs_State" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_abs_State"] = function(self)
+					vehicleData = {"gps", "abs_State"}
+				end					
+				Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response("abs_State", "VEHICLEDATA_ABS_STATE")	
+				--End Test case PositiveResponseCheck.1.4	
+				
+				-----------------------------------------------------------------------------------------
+			
+				--Begin Test case PositiveResponseCheck.1.5
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of tirePressureValue			
+				--<param name="tirePressureValue" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_tirePressureValue"] = function(self)
+					vehicleData = {"gps", "tirePressureValue"}
+				end	
+				Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response("tirePressureValue", "VEHICLEDATA_TIREPRESSURE_VALUE")	
+				--End Test case PositiveResponseCheck.1.5
+				
+				-----------------------------------------------------------------------------------------
+				
+				--Begin Test case PositiveResponseCheck.1.6
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of tpms			
+				--<param name="tpms" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_tpms"] = function(self)
+					vehicleData = {"gps", "tpms"}
+				end	
+				Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response("tpms", "VEHICLEDATA_TPMS")	
+				--End Test case PositiveResponseCheck.1.6	
+
+				-----------------------------------------------------------------------------------------				
+				
+				--Begin Test case PositiveResponseCheck.1.7
+				--Requirement: APPLINK-21379
+				--Description:  Response with different values of turnSignal			
+				--<param name="turnSignal" type="Common.VehicleDataResult" mandatory="false">
+				Test["Precondition_PositiveResponseCheck_turnSignal"] = function(self)
+					vehicleData = {"gps", "turnSignal"}
+				end	
+				Verify_UnsubscribeVehicleData_Enum_String_Parameter_In_Response("turnSignal", "VEHICLEDATA_TURNSIGNAL")
+				--End Test case PositiveResponseCheck.1.7			
+				
+				Test["Postcondition_PositiveResponseCheck.1"] = function(self)
+					vehicleData = {"gps"}
+				end
+			--End Test case PositiveResponseCheck.1			
+			
+		--End Test suit PositiveResponseCheck				
 
 ----------------------------------------------------------------------------------------------
 ----------------------------------------III TEST BLOCK----------------------------------------
@@ -663,7 +771,7 @@ end
 
 			--Begin Test case NegativeRequestCheck.1
 			--Description: Check processing requests with out of lower and upper bound values 
-				
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.1")				
 				--Not applicable
 				
 			--End Test case NegativeRequestCheck.1
@@ -672,7 +780,7 @@ end
 			
 			--Begin Test case NegativeRequestCheck.2
 			--Description: Check processing requests with empty values
-
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.2")
 				--Requirement id in JAMA/or Jira ID: 
 					--SDLAQ-CRS-598
 
@@ -710,7 +818,7 @@ end
 			
 			--Begin Test case NegativeRequestCheck.3
 			--Description: Check processing requests with wrong type of parameters
-
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.3")
 				--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-598
 
 				--Verification criteria: 
@@ -728,7 +836,7 @@ end
 			
 			--Begin Test case NegativeRequestCheck.4
 			--Description: Check processing request with Special characters
-
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.4 - Not applicable")
 				-- Not applicable
 			
 			--End Test case NegativeRequestCheck.4
@@ -737,7 +845,7 @@ end
 			
 			--Begin Test case NegativeRequestCheck.5
 			--Description: Check processing request with value not existed
-			
+			commonFunctions:newTestCasesGroup("NegativeRequestCheck.5")			
 				--Requirement id in JAMA/or Jira ID: SDLAQ-CRS-598
 
 				--Verification criteria: 
@@ -1376,7 +1484,7 @@ end
 			
 			--Begin Test case NegativeResponseCheck.5
 			--Description: SDL behaviour: cases when SDL must transfer "info" parameter via corresponding RPC to mobile app
-
+			commonFunctions:newTestCasesGroup("NegativeResponseCheck.5")
 				--Requirement id in JAMA/or Jira ID: 
 					--SDLAQ-CRS-94
 					--APPLINK-13276
@@ -1588,7 +1696,7 @@ end
 
 		--Begin Test case ResultCodeCheck.1
 		--Description: Check OUT_OF_MEMORY result code
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.1 - Not applicable")
 			--Requirement id in JAMA: SDLAQ-CRS-599
 
 			--Verification criteria: 
@@ -1602,7 +1710,7 @@ end
 		
 		--Begin Test case ResultCodeCheck.2
 		--Description: Check of TOO_MANY_PENDING_REQUESTS result code
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.2")
 			--Requirement id in JAMA: SDLAQ-CRS-600
 
 			--Verification criteria: 
@@ -1617,7 +1725,7 @@ end
 		
 		--Begin Test case ResultCodeCheck.3
 		--Description: Check APPLICATION_NOT_REGISTERED result code 
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.3")
 			--Requirement id in JAMA: SDLAQ-CRS-601
 
 			--Verification criteria: 
@@ -1649,7 +1757,7 @@ end
 	
 		--Begin Test case ResultCodeCheck.4
 		--Description: Check IGNORED result code with success false/true
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.4")
 			--Requirement id in JAMA: SDLAQ-CRS-602, APPLINK-8673
 
 			--Verification criteria: 
@@ -1859,7 +1967,7 @@ end
 		
 		--Begin Test case ResultCodeCheck.5
 		--Description: Check GENERIC_ERROR result code with success false
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.5")
 			--Requirement id in JAMA: SDLAQ-CRS-603
 
 			--Verification criteria: 
@@ -2420,7 +2528,7 @@ end
 		
 		--Begin Test case ResultCodeCheck.7
 		--Description: Check REJECTED result code with success false
-
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.7")
 			--Requirement id in JAMA: SDLAQ-CRS-2278
 
 			--Verification criteria: 
@@ -2524,6 +2632,7 @@ end
 
 		--Begin Test Case ResultCodeCheck.8
 			--Description: Check SUCCESS result code 
+			commonFunctions:newTestCasesGroup("ResultCodeCheck.8")			
 				--Precondition: Update Policy
 				function Test:PreCondition_PolicyUpdate()
 					--hmi side: sending SDL.GetURLS request
@@ -2713,7 +2822,7 @@ end
 		--Begin Test case HMINegativeCheck.1
 		--Description: 
 			-- Check SDL behaviour in case of absence of responses from HMI
-
+			commonFunctions:newTestCasesGroup("HMINegativeCheck.1")
 			--Requirement id in JAMA:
 				--SDLAQ-CRS-603
 				--APPLINK-8585				
@@ -2801,7 +2910,7 @@ end
 		--Begin Test case HMINegativeCheck.3
 		--Description: 
 			-- Several response to one request
-
+			commonFunctions:newTestCasesGroup("HMINegativeCheck.3")
 			--Requirement id in JAMA:
 				--SDLAQ-CRS-94
 				
@@ -2843,7 +2952,7 @@ end
 		--Begin Test case HMINegativeCheck.4
 		--Description: 
 			-- Check processing response with fake parameters
-
+			commonFunctions:newTestCasesGroup("HMINegativeCheck.4")
 			--Requirement id in JAMA:
 				--SDLAQ-CRS-94
 				
@@ -2928,7 +3037,7 @@ end
 		--Begin Test case HMINegativeCheck.5
 		--Description: 
 			-- Wrong response with correct HMI correlation id
-
+			commonFunctions:newTestCasesGroup("HMINegativeCheck.5")
 			--Requirement id in JAMA:
 				--SDLAQ-CRS-94
 				
@@ -2971,10 +3080,10 @@ end
 	--Description: TC's checks SDL behaviour by processing
 		-- different request sequence with timeout
 		-- with emulating of user's actions
-	
+
 		--Begin Test case SequenceCheck.1
 		--Description: Checking VEHICLE_DATA_NOT_AVAILABLE of VehicleDataResultCode
-		
+			commonFunctions:newTestCasesGroup("SequenceCheck.1")			
 			--Requirement id in JAMA: 
 				-- SDLAQ-CRS-1100
 
@@ -3013,7 +3122,7 @@ end
 
 		--Begin Test case SequenceCheck.2
 		--Description: Subscription to the parameter already subscribed by other application
-		
+			commonFunctions:newTestCasesGroup("SequenceCheck.2")		
 			--Requirement id in JAMA: 
 				-- SDLAQ-CRS-3127
 				-- APPLINK-13345
@@ -3326,7 +3435,7 @@ end
 		
 		--Begin Test case SequenceCheck.3
 		--Description: Check Unsubscribe on PRNDL vehicle data
-		
+			commonFunctions:newTestCasesGroup("SequenceCheck.3")		
 			--Requirement id in JAMA: 
 				-- SDLAQ-CRS-93
 
@@ -3343,9 +3452,9 @@ end
 						:Times(0)
 					end
 				end	
-		--End Test case SequenceCheck.3
-		
+		--End Test case SequenceCheck.3	
 	--End Test suit SequenceCheck
+
 ----------------------------------------------------------------------------------------------
 -----------------------------------------VII TEST BLOCK----------------------------------------
 --------------------------------------Different HMIStatus-------------------------------------
@@ -3357,7 +3466,7 @@ end
 	
 		--Begin Test case DifferentHMIlevel.1
 		--Description: 
-
+			commonFunctions:newTestCasesGroup("DifferentHMIlevel.1")
 			--Requirement id in JAMA:
 				-- SDLAQ-CRS-799
 				
@@ -3559,12 +3668,14 @@ end
 					--self:subscribeVehicleDataSuccess(allVehicleData)
 					--{"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle"}
 					
-				 	self:subscribeVehicleDataSuccess({"gps", "speed", "rpm", "prndl", "headLampStatus"})
+				 	--self:subscribeVehicleDataSuccess({"gps", "speed", "rpm", "prndl", "headLampStatus"})
+					self:subscribeVehicleDataSuccess(allVehicleData)
 				end
 			
 				for i=1, #allVehicleData do
 					Test["UnsubscribeVehicleData_HMILevelLimited_"..allVehicleData[i]] = function(self)						
-						self:unsubscribeVehicleDataSuccess({allVehicleData[i]})						
+						self:unsubscribeVehicleDataSuccess({allVehicleData[i]})
+						DelayedExp(2000)
 					end
 				end
 			--End Test case DifferentHMIlevel.1.2
@@ -3605,7 +3716,8 @@ end
 						
 				for i=1, #allVehicleData do
 					Test["UnsubscribeVehicleData_HMILevelBackground_"..allVehicleData[i]] = function(self)						
-						self:unsubscribeVehicleDataSuccess({allVehicleData[i]})						
+						self:unsubscribeVehicleDataSuccess({allVehicleData[i]})	
+						DelayedExp(3000)
 					end
 				end
 			--End Test case DifferentHMIlevel.1.3
@@ -3619,6 +3731,11 @@ end
 -------------------------------------------Postconditions------------------------------------
 ---------------------------------------------------------------------------------------------
 
-		function Test:RemoveConfigurationFiles()    
-    		commonPreconditions:RestoreFile("sdl_preloaded_pt.json")
-		end
+
+	--Print new line to separate Postconditions
+	commonFunctions:newTestCasesGroup("Postconditions")
+	testCasesForPolicyTable:Restore_preloaded_pt()
+	Test["Stop_SDL"] = function(self)
+		StopSDL()
+	end 
+
