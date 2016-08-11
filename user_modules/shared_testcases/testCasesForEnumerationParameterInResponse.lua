@@ -1,6 +1,6 @@
 --This script contains all test cases to verify String enumeration parameter
 --How to use:
-	--1. local enumerationParameter = require('user_modules/shared_testcases/testCasesForEnumerationParameter')
+	--1. local enumerationParameterInResponse = require('user_modules/shared_testcases/testCasesForEnumerationParameterInResponse')
 	--2. enumerationParameter:verify_Enum_String_Parameter(Request, Parameter, ExistentValues, Mandatory)
 ---------------------------------------------------------------------------------------------
 
@@ -20,7 +20,7 @@ local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
 
 --Contains all test cases
-function testCasesForEnumerationParameter:verify_Enum_String_Parameter(Request, Parameter, ExistentValues, Mandatory)
+function testCasesForEnumerationParameterInResponse:verify_Enum_String_Parameter(Request, Parameter, ExistentValues, Mandatory)
 
 		
 		--Print new line to separate new test cases group
@@ -55,4 +55,4 @@ end
 ---------------------------------------------------------------------------------------------
 
 
-return testCasesForEnumerationParameter
+return testCasesForEnumerationParameterInResponse
