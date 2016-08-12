@@ -565,7 +565,7 @@ local requestTypeEnum = {"HTTP", "FILE_RESUME", "AUTH_REQUEST", "AUTH_CHALLENGE"
   "PHONE", "CLIMATE", "SETTINGS", "VEHICLE_DIAGNOSTICS", "EMERGENCY", "MEDIA", "FOTA"}
 
 for k, v in pairs( requestTypeEnum ) do
-  Test["CheckDefaultRequestType" .. v] = function(self)
+  Test["CheckRequestTypeTC1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -636,7 +636,7 @@ end
 
 
 for k, v in pairs( requestTypeEnum ) do
-  Test["CheckPreDataRequestType" .. v] = function(self)
+  Test["CheckRequestTypeTC2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -725,13 +725,13 @@ function Test:checkRequestTypeInSystemRequestIsDisallowed(request_type)
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC3_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC3_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -782,13 +782,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC3_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC3_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -857,13 +857,13 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC4_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC4_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -913,13 +913,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC4_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC4_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -982,13 +982,13 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC5_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC5_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1038,13 +1038,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC5_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC5_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1116,13 +1116,13 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC6_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC6_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1176,13 +1176,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC6_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC6_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1247,13 +1247,13 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1303,13 +1303,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1382,13 +1382,13 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_1_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_2_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
@@ -1438,13 +1438,13 @@ function Test:CheckOnAppRegisteredHasDeafultRequestType()
 end
 
 for k, v in pairs( temp ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_3_" .. v] = function(self)
     self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
-  Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
+  Test["CheckRequestTypeTC7_4_" .. v] = function(self)
     self:checkRequestTypeInSystemRequest(v)
   end
 end
