@@ -247,111 +247,6 @@ function Test:IgnitionOffFromHMI()
 	IGNITION_OFF(self,appNumberForIGNOFF)
 end
 
-local function CreatePtuFile()
-  -- body
-  local json = require("json")
-  
-  local data = {}
-  data.policy_table = {}
-  
-  data.policy_table.module_config = {}
-  data.policy_table.module_config.preloaded_pt = true
-  data.policy_table.module_config.preloaded_date = 2015-12-02
-  data.policy_table.module_config.exchange_after_x_ignition_cycles = 100
-  data.policy_table.module_config.exchange_after_x_kilometers = 1800
-  data.policy_table.module_config.exchange_after_x_days = 30
-  data.policy_table.module_config.timeout_after_x_seconds = 60
-  
-  data.policy_table.module_config.seconds_between_retries = {}
-  data.policy_table.module_config.seconds_between_retries[1] = 1
-  data.policy_table.module_config.seconds_between_retries[2] = 5
-  data.policy_table.module_config.seconds_between_retries[3] = 25
-  data.policy_table.module_config.seconds_between_retries[4] = 125
-  data.policy_table.module_config.seconds_between_retries[5] = 625
-
-  data.policy_table.module_config.endpoints = {}
-  data.policy_table.module_config.endpoints["0x07"] = {}
-  data.policy_table.module_config.endpoints["0x07"].default = {}
-  data.policy_table.module_config.endpoints["0x07"].default[1] = "http://policies.telematics.ford.com/api/policies"
-  data.policy_table.module_config.endpoints["0x04"] = {}
-  data.policy_table.module_config.endpoints["0x04"].default = {}
-  data.policy_table.module_config.endpoints["0x04"].default[1] = "http://ivsu.software.ford.com/api/getsoftwareupdates"
-  
-  data.policy_table.module_config.notifications_per_minute_by_priority = {}
-  data.policy_table.module_config.notifications_per_minute_by_priority.EMERGENCY = 60
-  data.policy_table.module_config.notifications_per_minute_by_priority.NAVIGATION = 15
-  data.policy_table.module_config.notifications_per_minute_by_priority.VOICECOM = 20
-  data.policy_table.module_config.notifications_per_minute_by_priority.COMMUNICATION = 6
-  data.policy_table.module_config.notifications_per_minute_by_priority.NORMAL = 4
-  data.policy_table.module_config.notifications_per_minute_by_priority.NONE = 0
-
-  data.policy_table.functional_groupings = {}
-
-  func_groups = { PreDataConsent = {"RegisterAppInterface", "UnregisterAppInterface", "OnHMIStatus", "OnPermissionsChange", "SystemRequest"}, 
-                DefaultRpcs = {"RegisterAppInterface", "UnregisterAppInterface", "OnHMIStatus", "OnPermissionsChange", "SystemRequest", "ListFiles"}}
-
-  for k in pairs( func_groups ) do
-    data.policy_table.functional_groupings[k] = {}
-    data.policy_table.functional_groupings[k].rpcs = {}
-  end
-
-  for k, v in pairs( func_groups ) do
-    for key,value in pairs(v) do
-      -- print(value)
-      data.policy_table.functional_groupings[k].rpcs[value] = {}
-      data.policy_table.functional_groupings[k].rpcs[value].hmi_levels = {}
-      data.policy_table.functional_groupings[k].rpcs[value].hmi_levels[1] = "NONE"
-      data.policy_table.functional_groupings[k].rpcs[value].hmi_levels[2] = "BACKGROUND"
-      data.policy_table.functional_groupings[k].rpcs[value].hmi_levels[3] = "LIMITED"
-      data.policy_table.functional_groupings[k].rpcs[value].hmi_levels[4] = "FULL"
-    end
-  end
-
-  data.policy_table.consumer_friendly_messages = {}
-  data.policy_table.consumer_friendly_messages.version = "001.001.021"
-  data.policy_table.consumer_friendly_messages.messages = {}
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions = {}
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages = {}
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages["en-us"] = {}
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages["en-us"].tts = "%appName% is and permissions: %functionalGroupLabels%. Press yes"
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages["en-us"].line1 = "Allowed"
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages["en-us"].line2 = "What?"
-  data.policy_table.consumer_friendly_messages.messages.AppPermissions.languages["en-us"].textBody = "Text"
-
-  applications_policies = {"default", "device", "pre_DataConsent"}
-  
-  data.policy_table.app_policies = {}
-
-  for k,v in pairs(applications_policies) do
-    data.policy_table.app_policies[v] = {}
-    data.policy_table.app_policies[v].keep_context = false
-    data.policy_table.app_policies[v].steal_focus = false
-    data.policy_table.app_policies[v].priority = "NONE"
-    data.policy_table.app_policies[v].default_hmi = "NONE"
-    data.policy_table.app_policies[v].RequestType = {}
-  end
-
-  data.policy_table.app_policies.default.groups = {}
-  data.policy_table.app_policies.default.groups[1] = "DefaultRpcs"
-
-  data.policy_table.app_policies.device.groups = {}
-  data.policy_table.app_policies.device.groups[1] = "PreDataConsent"
-
-  data.policy_table.app_policies.pre_DataConsent.groups = {}
-  data.policy_table.app_policies.pre_DataConsent.groups[1] = "PreDataConsent"
-
-  data.policy_table.app_policies.default.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
-  data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
-  data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
-
-  data = json.encode(data)
-
-  pathToFile = "/tmp/ptu_update.json"
-  file = io.open(pathToFile, "w")
-  file:write(data)
-  file:close()
-end
-
 function Test:convertPreloadedToJson()
   -- body
   -- Create PTU from sdl_preloaded_pt.json
@@ -436,11 +331,6 @@ function Test:StartSesionAfterChangeIniFile()
 	CreateSession(self)
 end
 
--- function Test:PreconditionClearLog(...)
--- 	-- body
--- 	os.execute("cat /dev/null > " .. tostring(config.pathToSDL) .. "SmartDeviceLinkCore.log")
--- end
-
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -506,11 +396,6 @@ function Test:PrecondRegisterApp1(...)
       -- RegisterApplication(self, config.application1.registerAppInterfaceParams)
 		end)
 end
-
--- function Test:PreconditionClearLog(...)
---  -- body
---  os.execute("cat /dev/null > " .. tostring(config.pathToSDL) .. "SmartDeviceLinkCore.log")
--- end
 
 function Test:ptu()
 
@@ -637,8 +522,41 @@ function Test:CheckOnAppRegisteredHasEmptyRequestType( ... )
   self:checkOnAppRegistered({})
 end
 
+function Test:checkRequestTypeInSystemRequest(request_type)
+  userPrint(34, "=================== Test Case ===================")
+    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
+        {
+          fileName = "PolicyTableUpdate",
+          requestType = request_type
+        },
+      "files/jsons/QUERY_APP/query_app_response.json")
 
-
+    local systemRequestId
+    --hmi side: expect SystemRequest request
+    if request_type ~= "QUERY_APPS" then
+      EXPECT_HMICALL("BasicCommunication.SystemRequest")
+      :ValidIf(function (self, data)
+            -- body
+            if data.params.requestType == request_type then
+              return true
+            else
+              return false
+            end
+      end)
+      :Do(function(_,data)
+            --hmi side: sending SystemRequest response
+          self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
+      end)
+    end
+    if request_type ~= "QUERY_APPS" then
+      EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
+      :Timeout(5000)
+    else
+      -- according to CRQ "SDL behaviour in case SDL 4.0 feature is required to be ommited in implementation"
+      EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "UNSUPPORTED_RESOURCE"})        
+      :Timeout(5000)
+    end
+end
 
 
 local requestTypeEnum = {"HTTP", "FILE_RESUME", "AUTH_REQUEST", "AUTH_CHALLENGE", 
@@ -648,32 +566,7 @@ local requestTypeEnum = {"HTTP", "FILE_RESUME", "AUTH_REQUEST", "AUTH_CHALLENGE"
 
 for k, v in pairs( requestTypeEnum ) do
   Test["CheckDefaultRequestType" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -726,9 +619,6 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUPreData()
   self:ptu()
 end
 
@@ -747,34 +637,7 @@ end
 
 for k, v in pairs( requestTypeEnum ) do
   Test["CheckPreDataRequestType" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, v)
-          -- userPrint(20, data.params.requestType)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -816,88 +679,15 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
 end
 
-function Test:TriggerPTU( ... )
+function Test:TriggerPTUForOmmitedRequestType( ... )
   -- body
   userPrint(35, "================= Precondition ==================")
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUPreData()
   self:ptu()
 end
 
--- --DB query
--- local function Exec(cmd) 
---     local function trim(s)
---       return s:gsub("^%s+", ""):gsub("%s+$", "")
---     end
---     local aHandle = assert(io.popen(cmd , 'r'))
---     local output = aHandle:read( '*a' )
---     return trim(output)
--- end
-
--- local function DataBaseQuery(self,  DBQueryV)
-
---     local function query_success(output)
---         if output == "" or DBQueryValue == " " then return false end
---         local f, l = string.find(output, "Error:")
---         if f == 1 then return false end
---         return true;
---     end
---     for i=1,10 do 
---         local DBQuery = 'sqlite3 ' .. config.pathToSDL .. StoragePath .. '/policy.sqlite "' .. tostring(DBQueryV) .. '"'
---         DBQueryValue = Exec(DBQuery)
---         if query_success(DBQueryValue) then
---             return DBQueryValue
---         end
---         os.execute(" sleep 1 ")
---     end
---     return false
--- end
-
-function Test:checkPolicyDb(checkedParams)
-  userPrint(34, "=================== Test Case ===================")
-  -- body
-  local commandtoExecute = "sqlite3 " .. config.pathToSDL .. "/storage/policy.sqlite 'select * from request_type;'"
-  local f = assert(io.popen(commandtoExecute, 'r'))
-  local s = assert(f:read('*a'))
-  f:close()
-  -- print(s)
-  local function query_success(output)
-    if output == "" or DBQueryValue == " " then return false end
-    local f, l = string.find(output, "Error:")
-    if f == 1 then return false end
-    return true;
-  end
-  local is_db_locked = true
-  for i = 1, 10 do
-    if query_success(s) then 
-      is_db_locked = false
-      break 
-    else 
-      os.execute("sleep 1") 
-    end
-  end
-
-  if is_db_locked == false then
-    self:FailTestCase("DB is locked")
-  end
-
-  if string.find(tostring(s), checkedParams[1]) ~= nil
-      and string.find(tostring(s), checkedParams[2]) ~= nil
-      and string.find(tostring(s), checkedParams[3]) ~= nil then
-      --do
-      return true
-  else
-    self:FailTestCase("Policy DB was not updated") 
-  end
-end
-
-function Test:CheckPolicyDB1()
-  self:checkPolicyDb({"PROPRIETARY|default", "QUERY_APPS|default", "LAUNCH_APP|default"})
-end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
@@ -906,10 +696,6 @@ end
 function Test:CheckOnAppRegisteredHasDeafultRequestType()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
-
-
-
-
 
 local temp = {}
 
@@ -920,56 +706,33 @@ for k,v in pairs(requestTypeEnum) do
   end
 end
 
+function Test:checkRequestTypeInSystemRequestIsDisallowed(request_type)
+  userPrint(34, "=================== Test Case ===================")
+  local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
+      {
+        fileName = "PolicyTableUpdate",
+        requestType = request_type
+      },
+    "files/jsons/QUERY_APP/query_app_response.json")
+
+  local systemRequestId
+  --hmi side: expect SystemRequest request
+  EXPECT_HMICALL("BasicCommunication.SystemRequest")
+  :Times(0)
+
+  EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
+  :Timeout(5000)
+end
+
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1007,64 +770,26 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
+  self:ptu()
 end
 
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
 
-function Test:PrecondPTUWithOmmitedDefault()
-  self:ptu()
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1080,8 +805,7 @@ end
       --Requirement id: APPLINK-14723
 
       -- Verification criteria: PoliciesManager must: 
-      -- assign "RequestType" field from "<default>" or 
-      -- "<pre_DataConsent>" section of PolicyDataBase to such app 
+      -- assign "RequestType" field from "<pre_DataConsent>" section of PolicyDataBase to such app 
 
 function Test:CreatePTUValidRequestTypeDefault(...)
   userPrint(35, "================= Precondition ==================")
@@ -1116,16 +840,9 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-
-function Test:PrecondPTUPreDataWithValidValues()
   self:ptu()
 end
 
-function Test:CheckPolicyDB2()
-  self:checkPolicyDb({"PROPRIETARY|pre_DataConsent", "QUERY_APPS|pre_DataConsent", "LAUNCH_APP|pre_DataConsent"})
-end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
@@ -1139,60 +856,15 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-
-
-
-
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-  userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1225,68 +897,30 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUWithOmmitedRequestTypePreData()
   self:ptu()
 end
 
-function Test:PrecondMakeDeviceUntrustedOmmitedPreData3( ... )
+function Test:PrecondMakeDeviceUntrustedOmmitedPreData22()
   self:makeDeviceUntrusted()
+end
+
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
+
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1304,8 +938,8 @@ end
       --Requirement id: APPLINK-14722
 
       -- Verification criteria: Policies Manager must: 
-      -- ignore invalid values in "RequestType" array of "<default>" or "<pre_DataConsent>" policies 
-      -- copy valid values of "RequestType" array of "<default>" or "<pre_DataConsent>" policies
+      -- ignore invalid values in "RequestType" array of "<default>" policies 
+      -- copy valid values of "RequestType" array of "<default>" policies
  
 function Test:CreatePTUValidRequestTypeDefault(...)
   userPrint(35, "================= Precondition ==================")
@@ -1336,14 +970,7 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUWithValidValuesRequestTypeDefault1()
   self:ptu()
-end
-
-function Test:CheckPolicyDB3()
-  self:checkPolicyDb({"PROPRIETARY|default", "QUERY_APPS|default", "LAUNCH_APP|default"})
 end
 
 function Test:PrecondExitApp()
@@ -1354,62 +981,15 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-
-
-
-
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1446,64 +1026,26 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
+  self:ptu()
 end
 
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
 
-function Test:PrecondPTURequestTypeWithInvalidValuesDefault()
-  self:ptu()
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1521,8 +1063,8 @@ end
       --Requirement id: APPLINK-14722
 
       -- Verification criteria: Policies Manager must: 
-      -- ignore invalid values in "RequestType" array of "<default>" or "<pre_DataConsent>" policies 
-      -- copy valid values of "RequestType" array of "<default>" or "<pre_DataConsent>" policies
+      -- ignore invalid values in "RequestType" array of "<pre_DataConsent>" policies 
+      -- copy valid values of "RequestType" array of "<pre_DataConsent>" policies
 
 function Test:CreatePTUValidRequestTypeDefault(...)
   userPrint(35, "================= Precondition ==================")
@@ -1557,15 +1099,9 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTURequestTypeHasValidVauesPreData()
   self:ptu()
 end
 
-function Test:CheckPolicyDB4()
-  self:checkPolicyDb({"PROPRIETARY|pre_DataConsent", "QUERY_APPS|pre_DataConsent", "LAUNCH_APP|pre_DataConsent"})
-end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
@@ -1579,62 +1115,15 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-
-
-
-
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1671,66 +1160,30 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTURequestTypeWithInvalidValuesPreData()
   self:ptu()
 end
 
--- TODO: Add check of Policy DB
+function Test:PrecondMakeDeviceUntrustedOmmitedPreData22()
+  self:makeDeviceUntrusted()
+end
+
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
+
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
+end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1749,8 +1202,8 @@ end
       --Requirement id: APPLINK-14721
 
       -- Verification criteria: Policies Manager must: 
-      -- ignore the invalid values in "RequestType" array of "<default>" or "<pre_DataConsent>" policies 
-      -- copy and assign the values of "RequestType" array of "<default>" or "<pre_DataConsent>" policies from PolicyDataBase before updating without any changes
+      -- ignore the invalid values in "RequestType" array of "<default>" policies 
+      -- copy and assign the values of "RequestType" array of "<default>" policies from PolicyDataBase before updating without any changes
 
 function Test:CreatePTUValidRequestTypeDefault(...)
   userPrint(35, "================= Precondition ==================")
@@ -1781,15 +1234,9 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUWithValidValuesRequestTypeDefault1()
   self:ptu()
 end
 
-function Test:CheckPolicyDB5()
-  self:checkPolicyDb({"PROPRIETARY|default", "QUERY_APPS|default", "LAUNCH_APP|default"})
-end
 
 function Test:PrecondExitApp()
   self:unregisterApp()
@@ -1799,62 +1246,15 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-
-
-
-
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1865,7 +1265,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
   local data = self:convertPreloadedToJson()
 
   -- data.policy_table.app_policies.default.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
-  data.policy_table.app_policies.default.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP", "IVSU", "IGOR"}
+  data.policy_table.app_policies.default.RequestType = {"IVSU", "IGOR"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
 
@@ -1891,65 +1291,26 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
+  self:ptu()
 end
 
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
 
-function Test:PrecondPTURequestTypeWithInvalidValuesDefault()
-  self:ptu()
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -1968,8 +1329,8 @@ end
       --Requirement id: APPLINK-14721
 
       -- Verification criteria: Policies Manager must: 
-      -- ignore the invalid values in "RequestType" array of "<default>" or "<pre_DataConsent>" policies 
-      -- copy and assign the values of "RequestType" array of "<default>" or "<pre_DataConsent>" policies from PolicyDataBase before updating without any changes
+      -- ignore the invalid values in "RequestType" array of "<pre_DataConsent>" policies 
+      -- copy and assign the values of "RequestType" array of "<pre_DataConsent>" policies from PolicyDataBase before updating without any changes
 
 function Test:CreatePTUValidRequestTypeDefault(...)
   userPrint(35, "================= Precondition ==================")
@@ -2004,15 +1365,9 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
-end
-
-function Test:PrecondPTUWithValidValuesRequestTypeDefault1()
   self:ptu()
 end
 
-function Test:CheckPolicyDB5()
-  self:checkPolicyDb({"PROPRIETARY|pre_DataConsent", "QUERY_APPS|pre_DataConsent", "LAUNCH_APP|pre_DataConsent"})
-end
 
 function Test:PrecondExitApp()
   self:unregisterApp()
@@ -2026,61 +1381,15 @@ function Test:CheckOnAppRegisteredHasEmptyRequestTypePreData( ... )
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
-
-
-
-
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
@@ -2093,7 +1402,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
   -- data.policy_table.app_policies.default.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
-  data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP", "IVSU", "IGOR"}
+  data.policy_table.app_policies.pre_DataConsent.RequestType = {"IVSU", "IGOR"}
 
   local json = require("json")
   data = json.encode(data)
@@ -2113,65 +1422,30 @@ function Test:TriggerPTU( ... )
 
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
+  self:ptu()
 end
 
+function Test:PrecondMakeDeviceUntrustedOmmited( ... )
+  self:makeDeviceUntrusted()
+end
 
-function Test:PrecondPTURequestTypeWithInvalidValuesDefault()
-  self:ptu()
+function Test:PrecondExitAppPreData()
+  self:unregisterApp()
+end
+
+function Test:CheckOnAppRegisteredHasDeafultRequestType()
+  self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
 for k, v in pairs( temp ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :Times(0)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequestIsDisallowed(v)
   end
 end
 
 for k, v in pairs( {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"} ) do
   Test["CheckRequestTypeRemainsDefault" .. v] = function(self)
-    userPrint(34, "=================== Test Case ===================")
-    
-    local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-        {
-          fileName = "PolicyTableUpdate",
-          requestType = v
-        },
-      "files/jsons/QUERY_APP/correctJSON.json")
-
-    local systemRequestId
-    --hmi side: expect SystemRequest request
-    EXPECT_HMICALL("BasicCommunication.SystemRequest")
-    :ValidIf(function (self, data)
-          -- body
-          -- userPrint(20, data.params.requestType)
-          -- userPrint(20, v)
-          if data.params.requestType == v then
-            return true
-          else
-            return false
-          end
-    end)
-    :Do(function(_,data)
-          --hmi side: sending SystemRequest response
-        self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
-    end)
-
-    EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
-    :Timeout(5000)
+    self:checkRequestTypeInSystemRequest(v)
   end
 end
 
