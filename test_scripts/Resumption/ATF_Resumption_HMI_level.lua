@@ -1107,6 +1107,10 @@ end
 commonPreconditions:BackupFile("smartDeviceLink.ini")
 
 commonSteps:DeleteLogsFileAndPolicyTable()
+if ( commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") == true ) then
+		print("policy.sqlite is found in bin folder")
+  	os.remove(config.pathToSDL .. "policy.sqlite")
+	end
 
 -- Test cases are executed with UseDBForResumptionArray=false in first iteration and with UseDBForResumptionArray=true in second one
 for u=1, #UseDBForResumptionArray do
@@ -2708,8 +2712,6 @@ for u=1, #UseDBForResumptionArray do
 
 	end
 end
-
---Note: Testing coverage of APPLINK-23349
 
 --////////////////////////////////////////////////////////////////////////////////////////////--
 	--Resumption of HMIlevel after unexpected disconnect due to DEACTIVATE_HMI reason - APPLINK-23349
