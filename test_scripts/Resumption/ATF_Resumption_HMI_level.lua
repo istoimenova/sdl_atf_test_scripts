@@ -830,6 +830,7 @@ local function RegisterAppInterface2(self)
       })
       :Do(function(_,data)
         self.applications[config.application1.registerAppInterfaceParams.appName] = data.params.application.appID
+        HMIAppID = data.params.application.appID
       end)
       --mobile side: expect response
       self.mobileSession:ExpectResponse(CorIdRegister,
@@ -888,13 +889,14 @@ local function RestartSDL_InitHMI_ConnectMobile_ActivateApp(self)
 	 															})
 	 			:Do(function(_,data)					
 	 		  		self.applications[data.params.application.appName] = data.params.application.appID
+	 		  		HMIAppID = data.params.application.appID
 	 			end)
 
 	 			self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
 	 			:Timeout(2000)
 
 	 			self.mobileSession:ExpectNotification("OnHMIStatus", 
-	 													{hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+	 													{hmiLevel = "NONE", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 	 			:Do(function(_,data)
 	 				--print("0: currentHMILevel = " ..currentHMILevel)
 					currentHMILevel = data.payload.hmiLevel
@@ -921,7 +923,7 @@ local function RestartSDL_InitHMI_ConnectMobile_ActivateApp(self)
 end
 
 --Send on EventChanged is Active 
-local function OnEventChanged(self, enable , hmilevel,case)
+local function SendOnEventChanged(self, enable , hmilevel,case)
 	
 	if (case == nil) 
 		then case = 1 end
@@ -957,7 +959,7 @@ local function OnEventChanged(self, enable , hmilevel,case)
 end
 
 --Send on EventChanged is Inactive
-local function OnEventChanged2(self, disable , hmilevel,case)
+local function SendOnEventChanged2(self, disable , hmilevel,case)
 	
 	if (case == nil) 
 		then case = 1 end
@@ -1105,6 +1107,10 @@ end
 commonPreconditions:BackupFile("smartDeviceLink.ini")
 
 commonSteps:DeleteLogsFileAndPolicyTable()
+if ( commonSteps:file_exists(config.pathToSDL .. "policy.sqlite") == true ) then
+		print("policy.sqlite is found in bin folder")
+  	os.remove(config.pathToSDL .. "policy.sqlite")
+	end
 
 -- Test cases are executed with UseDBForResumptionArray=false in first iteration and with UseDBForResumptionArray=true in second one
 for u=1, #UseDBForResumptionArray do
@@ -2707,8 +2713,6 @@ for u=1, #UseDBForResumptionArray do
 	end
 end
 
---Note: Testing coverage of APPLINK-23349
-
 --////////////////////////////////////////////////////////////////////////////////////////////--
 	--Resumption of HMIlevel after unexpected disconnect due to DEACTIVATE_HMI reason - APPLINK-23349
 --////////////////////////////////////////////////////////////////////////////////////////////--
@@ -2724,7 +2728,7 @@ RestartSDL_InitHMI_ConnectMobile_ActivateApp (self)
 -- CarPlay mode is activated and OnEventChanged with DEACTIVATE_HMI, isActive=true is sent 
 function Test:DEACIVATE_HMI_ON_FULL()
 
-  OnEventChanged(self,true, "NONE")
+  SendOnEventChanged(self,true, "NONE")
 end
 
 --Session is Closed
@@ -2752,7 +2756,7 @@ end
 --OnEventChanged with DEACTIVATE_HMI, isActive=false
 function Test:DEACIVATE_HMI_OFF_FULL()
 
-  OnEventChanged2(self,true, "NONE")
+  SendOnEventChanged2(self,true, "NONE")
 end
 
 --Close session due to CarPlay Deactivation
@@ -2786,7 +2790,7 @@ RestartSDL_InitHMI_ConnectMobile_ActivateApp (self)
 -- CarPlay mode is activated and OnEventChanged with DEACTIVATE_HMI, isActive=true is sent 
 function Test:OnEventChanged_DEACIVATE_HMI_FULL_ON()
 
-  OnEventChanged(self,true, "NONE")
+  SendOnEventChanged(self,true, "NONE")
 end
 
 --Session is Closed
@@ -2845,7 +2849,7 @@ end
 -- CarPlay mode is activated and OnEventChanged with DEACTIVATE_HMI, isActive=true is sent 
 function Test:DEACIVATE_HMI_ON_LIMITED()
 
-  OnEventChanged(self,true, "NONE")
+  SendOnEventChanged(self,true, "NONE")
 end
 
 --Session is Closed
@@ -2873,7 +2877,7 @@ end
 --OnEventChanged with DEACTIVATE_HMI, isActive=false
 function Test:DEACIVATE_HMI_OFF_LIMITED()
 
-  OnEventChanged2(self,true, "NONE")
+  SendOnEventChanged2(self,true, "NONE")
 end
 
 --Close session due to CarPlay Deactivation
@@ -2913,7 +2917,7 @@ end
 -- CarPlay mode is activated and OnEventChanged with DEACTIVATE_HMI, isActive=true is sent 
 function Test:OnEventChanged_DEACIVATE_HMI_LIMITED_ON()
 
-   OnEventChanged(self,true, "NONE")
+   SendOnEventChanged(self,true, "NONE")
 end
 
 -- --Session is Closed

@@ -158,6 +158,9 @@ end
 		EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"}) 
 end
 	--End Precondition.3
+
+	--Update policy to allow request
+	policyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")
 	
 ---------------------------------------------------------------------------------------------
 ----------------------------------------------------------------------------------------------

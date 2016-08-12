@@ -1,7 +1,7 @@
 ---------------------------------------------------------------------------------------------
 -- Author: I.Stoimenova
--- Creation date: 19.07.2016
--- Last update date: 22.07.2016
+-- Creation date: 29.07.2016
+-- Last update date: 10.08.2016
 -- ATF version: 2.2
 
 ---------------------------------------------------------------------------------------------
@@ -82,76 +82,6 @@
 		print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
 	end
 
-	-- --local function Precondition_RegisterApp(self, nameTC)
-	-- function Precondition_RegisterApp(self, nameTC)
-	-- 	TextPrint(nameTC .."_Precondition")
-	-- 	commonSteps:UnregisterApplication(nameTC .."_UnregisterApplication")	
-
-	-- 	commonSteps:StartSession(nameTC .."_StartSession")
-
-	-- 	Test[nameTC .."_RegisterApp"] = function(self)
-
-	-- 		self.mobileSession:StartService(7)
-	-- 		:Do(function()	
-	-- 			local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface", config.application1.registerAppInterfaceParams)
-	-- 			EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", 
-	-- 															{
-	-- 			  												application = {	appName = config.application1.registerAppInterfaceParams.appName }
-	-- 															})
-	-- 			:Do(function(_,data)					
-	-- 		  		self.applications[data.params.application.appName] = data.params.application.appID
-	-- 			end)
-
-	-- 			self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
-	-- 			:Timeout(2000)
-
-	-- 			self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-	-- 		end)
-	-- 	end		
-	-- end
-
-	-- local function NewIgnitionCycle(self, numberTC)
-		
-	-- 	Test[numberTC .."_Precondition_Suspend"] = function(self)
-	-- 		self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",{ reason = "SUSPEND" })	
-	-- 		EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLPersistenceComplete")
-	-- 	end
-
-	-- 	Test[numberTC .."_Precondition_Ignion_OFF"] = function(self)
-
-	-- 		StopSDL()
-						
-	-- 		-- hmi side: sends OnExitAllApplications (IGNITION_OFF)
-	-- 		self.hmiConnection:SendNotification("BasicCommunication.OnExitAllApplications",{ reason = "IGNITION_OFF"	})
-
-	-- 		-- hmi side: expect OnSDLClose notification
-	-- 		EXPECT_HMINOTIFICATION("BasicCommunication.OnSDLClose")
-
-	-- 		-- hmi side: expect OnAppUnregistered notification
-	-- 		EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered")
-	-- 	end
-					
-	-- 	Test[numberTC .."_Precondition_StartSDL"] = function(self)
-					
-	-- 		StartSDL(config.pathToSDL, config.ExitOnCrash)
-	-- 	end
-
-	-- 	Test[numberTC .."_Precondition_InitHMI"] = function(self)
-					
-	-- 		self:initHMI()
-	-- 	end
-
-	-- 	Test[numberTC .."_Precondition_InitHMIOnReady"] = function(self)
-
-	-- 		self:initHMI_onReady()
-	-- 	end
-
-	-- 	Test[numberTC .."_Precondition_ConnectMobile"] = function (self)
-
-	-- 		self:connectMobile()
-	-- 	end
-	-- end
-
 	local function ActivationApp(self)
 
 		--hmi side: sending SDL.ActivateApp request
@@ -169,7 +99,6 @@
 				EXPECT_HMIRESPONSE(RequestId)
 				:Do(function(_,data)						
 					--hmi side: send request SDL.OnAllowSDLFunctionality
-					--self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
 					self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = deviceMAC, name = "127.0.0.1"}})
 
 					--hmi side: expect BasicCommunication.ActivateApp request
@@ -196,7 +125,7 @@
 ---------------------------------------------------------------------------------------------
 --Description: MixingAudioSupported is checked in smartDeviceLink.ini
 		--Requirement id in JIRA: APPLINK-21529
-		--Verification criteria: in file smartDeviceLink.ini shall be MixingAudioSupported
+		--Verification criteria: Parameter MixingAudioSupported is present in file smartDeviceLink.ini
 	Test["TC01_INIfile_MixingAudioSupported"] = function(self)
 		userPrint(35,"======================================= Test Case 01 =============================================")
 		if(MixingAudioSupported == "true") then
@@ -412,8 +341,8 @@
 		--End Test case DifferentHMIStatus.3
 
 		--Begin Test case DifferentHMIStatus.4
-			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI, SDL
-				-- shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
+			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI after receiving TTS.Started -> TTS.Stopped, 
+			    -- SDL shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
 				--Requirement id in JIRA: APPLINK-20341
 				--Verification criteria: 
 				--SDL must send OnHMIStatus(FULL, AUDIBLE) in case user activates media app
@@ -472,7 +401,7 @@
 			end
 
 		--Begin Test case DifferentHMIStatus.5
-			--Description: In case media app is (LIMITED, AUDIBLE) due to EMBEDDED_NAVI, SDL
+			--Description: In case media app is (LIMITED, AUDIBLE) without receiving TTS.Started -> TTS.Stopped, SDL
 				-- shall set app to (FULL, AUDIBLE) in case receives SDL.ActivateApp from HMI(user activates media app)
 				--Requirement id in JIRA: APPLINK-20341
 				--Verification criteria: 
@@ -533,9 +462,8 @@
 				--Requirement id in JIRA: APPLINK-20338
 				--Verification criteria:
 				--SDL must send OnHMIStatus(FULL, AUDIBLE) in case user activates media app
-
 				Test["TC07_UserActivateApp_EmbeddedAudio_FULL"] = function(self)
-				userPrint(35,"======================================= Test Case 07 =============================================")
+					userPrint(35,"======================================= Test Case 07 =============================================")
 
 					if(app_HMIlevel ~= "BACKGROUND") then
   			 		self:FailTestCase("Test can't be executed because hmiLevel is not BACKGROUND, real: " ..app_HMIlevel)
@@ -596,10 +524,10 @@
 
 		--Begin Test case DifferentHMIStatus.7
 			--Description: In case media app is (BACKGROUND, NOT_AUDIBLE) due to embeded audio, SDL
-				-- shall set app to (LIMITED, AUDIBLE) in case receives BC.OnEventChanged(isActive = false)
+				-- shall set app to (FULL, AUDIBLE) in case receives BC.OnEventChanged(isActive = false)
 				--Requirement id in JIRA: APPLINK-20338
 				--Verification criteria:
-				--SDL must send OnHMIStatus(LIMITED, AUDIBLE) in case user activates media app
+				--SDL must send OnHMIStatus(FULL, AUDIBLE) in case user activates media app
 				Test["TC08_UserActivateApp_EmbeddedAudio_LIMITED"] = function(self)
 					userPrint(35,"======================================= Test Case 08 =============================================")
 
@@ -619,7 +547,7 @@
 						EXPECT_HMIRESPONSE(RequestId, {result = {code = 0, method = "SDL.ActivateApp"}})						
 						:Do(function(_,data)
 							--Expect mobile notification OnHMIStatus
-							EXPECT_NOTIFICATION ("OnHMIStatus", {systemContext = "MAIN", hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE"})
+							EXPECT_NOTIFICATION ("OnHMIStatus", {systemContext = "MAIN", hmiLevel = "FULL", audioStreamingState = "AUDIBLE"})
 							:Do(function (_,data)
 								app_audioStreaming = data.payload.audioStreamingState
 								app_HMIlevel = data.payload.hmiLevel

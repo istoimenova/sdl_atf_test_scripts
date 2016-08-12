@@ -90,6 +90,8 @@ end
 		commonSteps:ActivationApp()
 	--End Precondition.1
 	
+	--Update policy to allow request
+	policyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/PTU_ForVehicleData.json")	
 	-----------------------------------------------------------------------------------------
 	
 	--[[TODO: check after ATF defect APPLINK-13101 is resolved	
