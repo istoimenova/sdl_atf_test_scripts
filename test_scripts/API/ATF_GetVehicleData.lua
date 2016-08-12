@@ -9,7 +9,7 @@ local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 local doubleParameterInResponse = require('user_modules/shared_testcases/testCasesForDoubleParameterInResponse')
 local enumerationParameterInResponse = require('user_modules/shared_testcases/testCasesForEnumerationParameterInResponse')
-
+local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 ---------------------------------------------------------------------------------------------
 ------------------------------------ Common Variables ---------------------------------------
 ---------------------------------------------------------------------------------------------
@@ -5118,14 +5118,579 @@ end
 -------------------------Sequence with emulating of user's action(s)------------------------
 ----------------------------------------------------------------------------------------------
 
-	--Begin Test suit SequenceCheck
-	--Description: TC's checks SDL behaviour by processing
+	-- Begin Test suit SequenceCheck
+	-- Description: TC's checks SDL behaviour by processing
 		-- different request sequence with timeout
 		-- with emulating of user's actions
 	
-		--Begin Test case SequenceCheck.1
-		--Description: Checking GetVehicleData frequency
+		-- Begin Test case SequenceCheck.1
+		-- CRQ: APPLINK-24201
+		-- Description: Check allowance of parameters in Policies
+		 local function GetVehicleData_PoliciesAllowanceChecking()
 		
+		--Requirement: APPLINK-21166 
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.1: Parameters are emtpy at Base4 in Polices")
+		local PermissionLines_ParametersIsEmpty = 
+				[[					
+					"GetVehicleData": {
+						"hmi_levels": [
+							"BACKGROUND",
+							"FULL",
+							"LIMITED"
+						],
+						"parameters": [
+
+						]
+					}
+				]]
+		local PermissionLinesForApp1=
+				[[			"]].."0000001" ..[[":{
+						"keep_context": true,
+						"steal_focus": true,
+						"priority": "NONE",
+						"default_hmi": "BACKGROUND",
+						"groups": ["Base-4"]
+					}
+				]]	
+		local PermissionLinesForBase4 = PermissionLines_ParametersIsEmpty .. ", \n" 
+		local PermissionLinesForGroup1 = nil
+		local PermissionLinesForApplication = PermissionLinesForApp1.. ", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)		
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_WithEmptyParameters")
+		
+		-- SDL responds "DISALLOWED" with info when all parameter are empty
+		function Test:GetVehicleData_EmptyParameters_InBase4()
+			
+			local request = setGVDRequest(allVehicleData)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request)
+			
+			--hmi side: not expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",{})
+			:Times(0)	
+			
+			EXPECT_RESPONSE(cid, {  success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies"})
+			commonTestCases:DelayedExp(1000)
+		
+		end
+		-------------------------------------------------------------------------------------------------------------
+		
+		-- RequirementID: APPLINK-20280 
+		-- TODO: expected result needs to update when APPLINK-26935 is DONE
+		-- Description:GetVehicleData is present in Base4 with some allowed params and disallowed myKey by policies.
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: 1 param is disallowed at Base 4 in Policies")
+	
+		local PermissionLines_GetVehicleData_DisallowedMyKey = 
+				[[					
+					"GetVehicleData": {
+						"hmi_levels": [
+							"BACKGROUND",
+							"FULL",
+							"LIMITED"
+						],
+						"parameters": [
+							"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", "externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "vin"
+						]
+					}
+				]]
+		local PermissionLinesForApp1=
+				[[			"]].."0000001" ..[[":{
+								"keep_context": true,
+								"steal_focus": true,
+								"priority": "NONE",
+								"default_hmi": "BACKGROUND",
+								"groups": ["Base-4"]
+							}
+				]]	
+		local PermissionLinesForBase4 = PermissionLines_GetVehicleData_DisallowedMyKey .. ", \n" 
+		local PermissionLinesForGroup1 = nil
+		local PermissionLinesForApplication = PermissionLinesForApp1.. ", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_InBase4_WithDisallowedMyKey")
+		
+		-- SDL responds "DISALLOWED" with info when send GetVehicleData request with only one disallowed param in Base4 by Policies.
+		local Request = {myKey = true}
+		function Test:GetVehicleData_InBase4_WithOnlyOneDisallowedParam()
+			
+			--mobile side: sending the request
+			local cid = self.mobileSession:SendRPC("GetVehicleData", Request)	
+			
+			--hmi side: not expect VehicleInfo.GetVehicleData
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})				
+			:Times(0)																
+			--mobile side: expect response 
+			EXPECT_RESPONSE(cid, {resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies",  success = false})
+			commonTestCases:DelayedExp(1000)
+			
+		end	
+
+		-- SDL responds "SUCCESS" when send GetVehicleData request with some allowed params in Base4 by Policies
+		local AllVehicleParams_InBase4_Without_MyKey = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", "externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "vin"}
+		
+		function Test:GetVehicleData_AllVehicleParams_InBase4_Without_MyKey()
+			self:getVehicleDataSuccess(AllVehicleParams_InBase4_Without_MyKey)				
+		end
+		
+		-- SDL responds "SUCCESS" with info about disallowed params when send GetVehicleData request with allowed params and 1 disallowed param.
+		function Test:GetVehicleData_InBase4_WithAllowedParams_DisallowedMyKey()
+			local request_FromApp = setGVDRequest(allVehicleData)
+		
+			local request_HMIExpect = setGVDRequest(AllVehicleParams_InBase4_Without_MyKey)
+		
+			local response = setGVDResponse(AllVehicleParams_InBase4_Without_MyKey)
+		
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.myKey then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain mykey parameter in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'myKey' disallowed by policies.", resultCode = "SUCCESS"})			
+			
+		end
+		-------------------------------------------------------------------------------------------------------------
+		
+		-- RequirementID: APPLINK-20280
+		-- TODO: expected result need to update when APPLINK-26935 is DONE
+		-- Description: GetVehicleData is present in Base4 with some allowed params and some disallowed params by policies
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: Some params are disallowed at Base 4 in Policies")
+		
+		local PermissionLines_GetVehicleData_AllowedForBase4_SomeParams = 
+				[[				
+					"GetVehicleData": {
+						"hmi_levels": [
+							"BACKGROUND",
+							"FULL",
+							"LIMITED"
+						],
+						"parameters": [	
+							"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", "externalTemperature", "prndl"						
+					   ]
+					  }
+				]]
+		local PermissionLinesForApp1=
+				[[			"]].."0000001" ..[[":{
+							"keep_context": true,
+							"steal_focus": true,
+							"priority": "NONE",
+							"default_hmi": "BACKGROUND",
+							"groups": ["Base-4"]
+						}
+				]]					  
+		local PermissionLinesForBase4 = PermissionLines_GetVehicleData_AllowedForBase4_SomeParams .. ", \n" 
+		local PermissionLinesForGroup1 = nil 
+		local PermissionLinesForApplication = PermissionLinesForApp1 .. ", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_DisallowedSomeParams_AllowBase4")
+		
+		-- SDL responds "DISALLOWED" with info when send GetVehicleData request with some disallowed parameters.
+		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "mykey"}
+		local Request_WithAllowedParams_InBase4 = {"tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "vin"}
+		
+		function Test:GetVehicleData_With_SomeDisallowedParams_Base4()
+			--mobile side: sending GetVehicleData request
+			local request_FromApp = setGVDRequest(Request_WithDisallowedParams_InBase4)
+			local cid = self.mobileSession:SendRPC("GetVehicleData", request_FromApp)
+		
+			--hmi side: not expect VehicleInfo.GetVehicleData
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})
+			:Times(0)
+			
+			--mobile side: expect response 
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies"})
+			commonTestCases:DelayedExp(1000)
+		
+		end	
+		
+		-- SDL responds "SUCCESS" with info about some disallowed params when send GetVehicleData request with some allowed parameters and some disallowed parameters by policies.
+		function Test:GetVehicleData_InBase4_With_SomeAllowedParams_And_SomeDisallowedParams()
+		
+			local request_FromApp = setGVDRequest(allVehicleData)
+			local request_HMIExpect = setGVDRequest(Request_WithAllowedParams_InBase4)
+			local response = setGVDResponse(request_HMIExpect)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.tirePressure or data.params.tirePressureValue or data.params.tpms or data.params.turnSignal or data.params.odometer or data.params.beltStatus or data.params.bodyInformation or data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.vin then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer', 'beltStatus', 'bodyInformation', 'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'vin' disallowed by policies.", resultCode = "SUCCESS"})			
+
+		end
+		-------------------------------------------------------------------------------------------------------------
+		-- RequirementID: APPLINK-20280
+		-- TODO: expected result need to update when APPLINK-26935 is DONE
+		-- Description: GetVehicleData with some params exists at Base4, GetVehicleData with some params exists at group1 in Policies and some params are not presented in Policies.
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: Some params are in Base 4, Group1 and some params are disallowed in Policies")
+		
+		local PermissionLines_AllowedForBase4 = 
+				[[				
+					"GetVehicleData": {
+						"hmi_levels": [
+							"BACKGROUND",
+							"FULL",
+							"LIMITED"
+						],
+						"parameters": [	
+							"beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin"		
+					   ]
+					}
+				]]
+		local PermissionLines_AllowedForGroup1 = 
+				[[				
+					"GetVehicleData": {
+						"hmi_levels": [
+							"BACKGROUND",
+							"FULL",
+							"LIMITED"
+						],
+						"parameters": [		
+							"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State"					
+						]
+					}
+				]]
+		
+		local PermissionLinesForApp1=
+				[[			"]].."0000001" ..[[":{
+							"keep_context": true,
+							"steal_focus": true,
+							"priority": "NONE",
+							"default_hmi": "BACKGROUND",
+							"groups": ["group1","Base-4"]
+						}
+				]]	
+				
+		local PermissionLinesForBase4 = PermissionLines_AllowedForBase4 .. ", \n" 
+		local PermissionLinesForGroup1 = PermissionLines_AllowedForGroup1  
+		local PermissionLinesForApplication = PermissionLinesForApp1 ..", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_PresentGroup1AndBase4_AssignedToApp")
+
+		local Request_WithParams_InBase4 = {"beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin"}
+		local Request_WithParams_InGroup1 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State"}
+		local Request_WithParams_NotPresented = {"externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer"}	
+		
+		-- RequirementID:  APPLINK-19318: RPC contains the PolicyTable group(s) assigned to the application but no user's consent 
+		-- SDL responds "DISALLOWED" with info when send GetVehicleData request with disallowed params by user does not answer for consent.
+		function Test:GetVehicleData_ParamsInGroup1_User_Not_Answer_Consent()
+		
+			--mobile side: sending GetVehicleData request
+			local request_FromApp = setGVDRequest(Request_WithParams_InGroup1)
+			local cid = self.mobileSession:SendRPC("GetVehicleData", request_FromApp)					
+
+			--hmi side: not expect VehicleInfo.GetVehicleData
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})
+			:Times(0)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by policies."})
+			commonTestCases:DelayedExp(1000)
+		
+		end
+		
+		-- SDL responds "SUCCESS" with info GetVehicleData with allowed params in Base4 and params in group1 when user does not answer consent for group1.
+		local Request_ParamsInBase4_ParamInGroup1 = {"beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin", "gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State"}
+		
+		function Test:GetVehicleData_AllowedParamsInBase4_ParamInGroup1_User_Not_Answer_Consent()
+
+			local request_FromApp = setGVDRequest(Request_ParamsInBase4_ParamInGroup1)
+			local request_HMIExpect = setGVDResponse(Request_WithParams_InBase4)
+			local response = setGVDResponse(Request_WithParams_InBase4)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.fuelRange or data.params.abs_State then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+				
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' are disallowed by policies.", resultCode = "SUCCESS"})			
+			
+		end
+		
+		-- SDL responds "DISALLOWED" with info about disallowed params when send GetVehicleData with allowed params in Base4, disallowed params by policies and params in group1 when user does not answer consent for group1.
+		function Test:GetVehicleData_AllowedParamsBase4_ParamsNotPresentedInPolicies_NotAnswerForConsentGroup1()
+			local request_FromApp = setGVDRequest(allVehicleData)
+			local request_HMIExpect = setGVDRequest(Request_WithParams_InBase4)
+			local response = setGVDResponse(Request_WithParams_InBase4)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.externalTemperature or data.params.prndl or data.params.tirePressure or data.params.tirePressureValue or data.params.tpms or data.params.turnSignal or data.params.odometer or data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.fuelRange or data.params.abs_State then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State', 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' disallowed by policies.", resultCode = "SUCCESS"})			
+		end
+
+		policyTable:userConsent(false, "group1", "UserConsent_Answer_No")
+		
+		--RequirementID: APPLINK-19584: SDL must return 'USER_DISALLOWED, success:false' to mobile app in case the requested RPC is included to the group disallowed by the user.
+		-- TODO: expected result need to update when APPLINK-26935 is done
+		
+		-- SDL responds "USER_DISALLOWED" with info when send GetVehicleData with params are disallowed by user
+		function Test:GetVehicleData_ParamsInGroup1_User_Answer_NO()
+				
+			--mobile side: sending GetVehicleData request
+			local request_FromApp = setGVDRequest(Request_WithParams_InGroup1)
+			local cid = self.mobileSession:SendRPC("GetVehicleData", request_FromApp)					
+
+			--hmi side: not expect VehicleInfo.GetVehicleData
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})
+			:Times(0)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "RPC is disallowed by the user."})
+			commonTestCases:DelayedExp(1000)
+			
+		end
+		
+		-- TODO: expected result need to update when APPLINK-26935 is done
+		-- SDL responds "SUCCESS" with info of user_disallowed param when sending GetVehicleData with some params are allowed by Policies and some params are disallowed by User.
+		function Test:GetVehicleData_ParamsInBase4_ParamInGroup1_User_Answer_NO()
+
+			local request_FromApp = setGVDRequest(Request_ParamsInBase4_ParamInGroup1)
+			local request_HMIExpect = setGVDRequest(Request_WithParams_InBase4)
+			local response = setGVDResponse(Request_WithParams_InBase4)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.fuelRange or data.params.abs_State then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+				
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' disallowed by user.", resultCode = "SUCCESS"})			
+			
+		end
+		
+		-- TODO: expected result need to update when APPLINK-26935 is done
+		-- SDL responds "USER_DISALLOWED" when send GetVehicleData with some params are disallowed by Policies and some params are disallowed by User. 
+		
+		local Request_ParamsNotPresented_ParamInGroup1 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State",  "externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer"}
+		function Test:GetVehicleData_With_DisallowedParamsByPolicies_ParamInGroup1_UserAnswerNO()
+
+			local request_FromApp = setGVDRequest(Request_ParamsNotPresented_ParamInGroup1)
+			local cid = self.mobileSession:SendRPC("GetVehicleData", request_FromApp)					
+
+			--hmi side: not expect VehicleInfo.GetVehicleData
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})
+			:Times(0)
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "Several of requested parameters are disallowed by user.'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' disallowed by user; 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' disallowed by policies"})
+			commonTestCases:DelayedExp(1000)
+				
+		end
+		
+		-- TODO: expected result need to update when APPLINK-26935 is done
+		-- SDL responds "SUCCESS" with info about disallowed params when send GetVehicleData with some params are allowed, disallowed by Policies and some params are disallowed by User. 
+		function Test:GetVehicleData_AlowedParamsInBase4_ParamsNotPresentedInPolicies_DisallowedParamsByUser()
+
+			local request_FromApp = setGVDRequest(allVehicleData)
+			local request_HMIExpect = setGVDRequest(Request_WithParams_InBase4)
+			local response = setGVDResponse(Request_WithParams_InBase4)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.fuelRange or data.params.abs_State then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+				
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' are disallowed by user; 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies.", resultCode = "SUCCESS"})			
+			
+		end
+		
+		
+		policyTable:userConsent(true, "group1", "UserConsent_ANSWER_YES")
+		
+		-- TODO: expected result need to update when APPLINK-26935 is DONE
+		-- SDL respond "SUCCESS" with info about disalowed params when send GetVehicleData with allowed params by policies and user with info of disallowed param
+		function Test:GetVehicleData_AllowedParamsInBase4_ParamsNotPresentedInPolicies_AllowedParamsInGroup1()
+
+			local request_FromApp = setGVDRequest(allVehicleData)
+			local request_HMIExpect = setGVDRequest(Request_ParamsInBase4_ParamInGroup1)
+			local response = setGVDResponse(Request_ParamsInBase4_ParamInGroup1)
+			--mobile side: sending GetVehicleData request
+			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
+		
+			--hmi side: expect GetVehicleData request
+			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
+			:Do(function(_,data)
+				--hmi side: sending VehicleInfo.GetVehicleData response
+				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
+			end)
+			:ValidIf(function(_,data)
+					if data.params.externalTemperature or data.params.prndl or data.params.tirePressure or data.params.tirePressureValue or data.params.tpms or data.params.turnSignal or data.params.odometer  then
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
+						return false
+					else
+						return true
+					end
+				end)
+				
+			--mobile side: expect GetVehicleData response
+			EXPECT_RESPONSE(cid, {success = true, info = "'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies.", resultCode = "SUCCESS"})			
+		
+		end
+		
+		-- SDL responds "SUCCESS" when send GetVehicleData request with allowed params by user.
+		function Test:GetVehicleData_AllParamsInGroup1_UserAnswerYES()
+			self:getVehicleDataSuccess(Request_WithParams_InGroup1)
+		end
+		
+		-- SDL responds "SUCCESS" when send GetVehicleData request with allowed params by user and allowed params by policies
+		function Test:GetVehicleData_AllowedParamsBase4_ParamsInGroup1_UserAnswerYES()
+			self:getVehicleDataSuccess(Request_ParamsInBase4_ParamInGroup1)
+		end
+		
+		-------------------------------------------------------------------------------------------------------------
+		
+		--Description: All parameters are presented at Base4 in Policy. 
+		
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: All params are in Base 4 and sallowed in Policies")
+		
+		local PermissionLines_AllParameters = 
+				[[				
+					"GetVehicleData": {
+										"hmi_levels": [
+											"BACKGROUND",
+											"FULL",
+											"LIMITED"
+										],
+										"parameters": [
+											"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", 
+											"externalTemperature", "prndl", "tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer",
+											"beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin"
+										]
+					}
+				]]
+		local PermissionLinesForApp1=[[			"]].."0000001" ..[[":{
+								"keep_context": true,
+								"steal_focus": true,
+								"priority": "NONE",
+								"default_hmi": "BACKGROUND",
+								"groups": ["Base-4"]
+							}
+							]]	
+		local PermissionLinesForBase4 = PermissionLines_AllParameters .. ", \n" 
+		local PermissionLinesForGroup1 = nil
+		local PermissionLinesForApplication = PermissionLinesForApp1.. ", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+		
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_Base4_WithAllParams")
+		
+		-- SDL responds "SUCCESS" when send GetVehicleData request with allowed params by Policy.
+		function Test:GetVehicleData_AllowedAllParams()
+			self:getVehicleDataSuccess(allVehicleData)
+		end
+		
+		-------------------------------------------------------------------------------------------------------------
+		--RequirementID: APPLINK-24224
+		--Description: All parameters are omitted on Policy. SDL must allow all parameter.
+		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: All params are omitted in Policies")
+		
+		local PermissionLines_OmittedParameters = 
+				[[					
+						"GetVehicleData": {
+							"hmi_levels": [
+								"BACKGROUND",
+								"FULL",
+								"LIMITED"
+							]
+
+						}
+				]]
+		local PermissionLinesForApp1=
+			[[			"]].."0000001" ..[[":{
+									"keep_context": true,
+									"steal_focus": true,
+									"priority": "NONE",
+									"default_hmi": "BACKGROUND",
+									"groups": ["Base-4"]
+								}
+			]]	
+		local PermissionLinesForBase4 = PermissionLines_OmittedParameters .. ", \n" 
+		local PermissionLinesForGroup1 = nil
+		local PermissionLinesForApplication = PermissionLinesForApp1.. ", \n"
+		local PTName = policyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLinesForGroup1, PermissionLinesForApplication)	
+		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_OmittedAllParam")
+		
+		-- SDL responds "SUCCESS" when send GetVehicleData request with allowed params by Policy.
+		function Test:GetVehicleData_OmitedAllParams_InBase4()
+			self:getVehicleDataSuccess(allVehicleData)
+		end
+		
+		commonFunctions:newTestCasesGroup("End Test Suite for coverage of APPLINK-24201")
+	end
+	GetVehicleData_PoliciesAllowanceChecking()	
+	
 			--Requirement id in JAMA: 
 				-- APPLINK-7616 
 
