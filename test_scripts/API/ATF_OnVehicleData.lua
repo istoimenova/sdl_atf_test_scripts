@@ -4554,7 +4554,7 @@ local function Test_Block_VIII()
 		
 		testCasesForPolicyTable:updatePolicy(pathToPT, nil, "APPLINK_24215_UpdatePolicy_OnVehicleData_InBase4_allows_some_parameters")
 
-		Test["APPLINK_24215_OnVehicleData_Only_Allowed_Parameters_InBase4"] = function(self)
+		Test["APPLINK_24215_OnVehicleData_Only_Allowed_Parameters_InBase4_And_Disallowed"] = function(self)
 
 			local OnVehicleData_Notification = {
 
