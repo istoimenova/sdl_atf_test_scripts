@@ -4752,7 +4752,6 @@ local function Test_Block_VIII()
 				--parameters in function group that has not been consented yet.
 				speed = 0.0,
 				fuelLevel = -6.000000,
-				driverBraking = "NO_EVENT",
 				
 				--Allowed in base-4
 				airbagStatus = {
