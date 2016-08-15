@@ -2253,7 +2253,7 @@ end
 	--13.driverBraking: type=Common.VehicleDataEventStatus mandatory=false
 	--14.wiperStatus: type=Common.WiperStatus mandatory=false
 	--Enumerations:
-	local PRNDL = {"PARK", "REVERSE", "NEUTRAL", "DRIVE", "SPORT", "LOWGEAR", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "UNKNOWN", "FAULT"}
+	local PRNDL = {"PARK", "REVERSE", "NEUTRAL", "DRIVE", "SPORT", "LOWGEAR", "FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH", "FAULT"}
 	local ComponentVolumeStatus = {"UNKNOWN", "NORMAL", "LOW", "FAULT", "ALERT", "NOT_SUPPORTED"}
 	local VehicleDataEventStatus = {"NO_EVENT", "NO", "YES", "NOT_SUPPORTED", "FAULT"}	
 	local WiperStatus = {"OFF","AUTO_OFF","OFF_MOVING","MAN_INT_OFF","MAN_INT_ON","MAN_LOW","MAN_HIGH", "MAN_FLICK","WASH","AUTO_LOW","AUTO_HIGH","COURTESYWIPE","AUTO_ADJUST","STALLED","NO_DATA_EXISTS"}

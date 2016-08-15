@@ -4705,7 +4705,7 @@ end
 					EXPECT_HMICALL("VehicleInfo.GetVehicleData",{rpm = true})					
 					:Do(function(_,data)
 						--hmi side: sending VehicleInfo.GetVehicleData response
-						self.hmiConnection:SendResponse(data.id, data.method, "VEHICLE_DATA_NOT_AVAILABLE", {})	
+						self.hmiConnection:SendResponse(data.id, data.method, "DATA_NOT_AVAILABLE", {})	
 					end)
 					
 					--mobile side: expect GetVehicleData response
@@ -4729,7 +4729,7 @@ end
 					EXPECT_HMICALL("VehicleInfo.GetVehicleData",{rpm = true, speed = true})					
 					:Do(function(_,data)
 						--hmi side: sending VehicleInfo.GetVehicleData response
-						self.hmiConnection:SendResponse(data.id, data.method, "VEHICLE_DATA_NOT_AVAILABLE", {speed = 50.5})	
+						self.hmiConnection:SendResponse(data.id, data.method, "DATA_NOT_AVAILABLE", {speed = 50.5})	
 					end)
 					
 					--mobile side: expect GetVehicleData response
