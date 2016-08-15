@@ -44,8 +44,6 @@ strMaxLengthFileName255 = string.rep("a", 251) .. ".png" -- set max length file 
 
 local storagePath = config.pathToSDL .. SDLConfig:GetValue("AppStorageFolder") .. "/" .. tostring(config.application1.registerAppInterfaceParams.appID .. "_" .. tostring(config.deviceMAC) .. "/")
 
---Debug = {"graphic", "value"} --use to print request before sending to SDL.
---Debug = {} -- empty {}: script will do not print request on console screen.
 
 ---------------------------------------------------------------------------------------------
 -------------------------- Overwrite These Functions For This Script-------------------------
@@ -71,7 +69,6 @@ end
 function Test:createUIParameters(RequestParams)
   local param = {}
 
-  --locationImage
   if RequestParams["wayPointType"] ~= nil then
     param["wayPointType"] = RequestParams["wayPointType"]
 
@@ -308,7 +305,7 @@ policyTable:precondition_updatePolicy_AllowFunctionInHmiLeves({"BACKGROUND", "FU
 --2. IsMissed
 --3. IsWrongTypeData
 --4. IsNoneExistenValue
---5. IsEmpty
+--5. IsEmpty: without wayPointType
 -----------------------------------------------------------------------------------------------
 -- <param name="wayPointType" type="WayPointType" defvalue="ALL" mandatory="true">
 -----------------------------------------------------------------------------------------------
@@ -329,19 +326,18 @@ enumerationParameter:verify_Enum_String_Parameter(Request, {"wayPointType"}, Way
 ----------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------
 --Requirement id in JAMA or JIRA:
--- APPLINK-14765
 -- APPLINK-16739
+-- APPLINK-4518
 
 --Verification criteria:
--- SDL must cut off the fake parameters from requests, responses and notifications received from HMI
 -- In case the request comes to SDL with wrong json syntax, SDL must respond with resultCode "INVALID_DATA" and success:"false" value.
+-- SDL must cut off the fake parameters from mobile requests
 
 -----------------------------------------------------------------------------------------
 --List of test cases for softButtons type parameter:
 --1. InvalidJSON
---2. CorrelationIdIsDuplicated
+--2. CorrelationIdIsDuplicated 
 --3. FakeParams and FakeParameterIsFromAnotherAPI
---4. MissedAllParameters
 -----------------------------------------------------------------------------------------------
 
 local function SpecialRequestChecks()
@@ -381,6 +377,7 @@ local function SpecialRequestChecks()
 
   --Begin Test case NegativeRequestCheck.2
   --Description: Check CorrelationId duplicate value
+  --TODO: Expected result of this TC should be update when APPLINK-19834 is implementation
 
   function Test:GetWayPoints_CorrelationIdIsDuplicated()
 
@@ -418,7 +415,6 @@ local function SpecialRequestChecks()
     --response on mobile side
     EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
     :Times(2)
-    :Timeout(1000)
   end
 
   --End Test case NegativeRequestCheck.2
@@ -509,6 +505,7 @@ SpecialRequestChecks()
 -- -- 1. APPLINK-14551: SDL behavior: cases when SDL must transfer "info" parameter via corresponding RPC to mobile app
 -- -- 2. APPLINK-25599: [GENERIC_ERROR] Response from HMI contains wrong characters
 -- -- 3. APPLINK-25602: [GENERIC_ERROR] Response from HMI contains empty String param
+-- -- 4. APPLINK-9736: SDL must ignore the invalid notifications from HMI
 ------------------------------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------------------------
@@ -873,7 +870,6 @@ verify_method_parameter()
 -- end)
 
 -- --mobile side: expect the response
--- -- TODO: update after resolving APPLINK-14765
 -- -- EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR"})
 -- EXPECT_RESPONSE(cid, { success = false, resultCode = "INVALID_DATA"})
 -- :ValidIf (function(_,data)
@@ -1348,6 +1344,9 @@ end
 ------------------------------Check special cases of HMI response-----------------------------
 ----------------------------------------------------------------------------------------------
 --Requirement: APPLINK-14765: SDL must cut off the fake parameters from requests, responses and notifications received from HMI
+--Requirement: APPLINK-21610: p3: GetWayPoints-No active route If there is no active route set then the system shall provide a response of SUCCESS with Number Of Waypoints set to 0.
+--Requirement: APPLINK-25599: Response from HMI contains wrong characters (not implemented APPLINK-24135)
+--Requirement: APPLINK-25602: Response from HMI contains empty String param (not implemented APPLINK-24135)
 -----------------------------------------------------------------------------------------------
 
 --List of test cases for:
@@ -1357,7 +1356,7 @@ end
 --3. FakeParams and FakeParameterIsFromAnotherAPI
 --4. MissedAllPArameters
 --5. NoResponse
---6. SeveralResponsesToOneRequest with the same and different resultCode
+--6. SeveralResponsesToOneRequest with the same and different resultCode 
 -----------------------------------------------------------------------------------------------
 
 local function SpecialResponseChecks()
@@ -1371,7 +1370,7 @@ local function SpecialResponseChecks()
   --Begin Test case NegativeResponseCheck.1
   --Description: Invalid JSON
 
-  --[[ToDo: Check after APPLINK-14765 is resolved
+  --ToDo: Check after APPLINK-14765 is resolved
 
   function Test:GetWayPoints_InvalidJsonSyntaxResponse()
 
@@ -1393,7 +1392,7 @@ local function SpecialResponseChecks()
     EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
   end
   --End Test case NegativeResponseCheck.1
-  ]]
+  
   -----------------------------------------------------------------------------------------
 
   --Begin Test case NegativeResponseCheck.2
@@ -1430,6 +1429,7 @@ local function SpecialResponseChecks()
 
   --Begin Test case NegativeResponseCheck.3.1
   --Description: Parameter is not from API
+   --[[ToDo: Check after APPLINK-14765 is resolved
   function Test:GetWayPoints_FakeParamsInResponse()
 
     --mobile side: sending the request
@@ -1483,7 +1483,7 @@ local function SpecialResponseChecks()
         else
           return true
         end
-      end)
+      end)]]
   end
   --End Test case NegativeResponseCheck.3.2
   --End Test case NegativeResponseCheck.3
@@ -1492,7 +1492,7 @@ local function SpecialResponseChecks()
 
   --Begin NegativeResponseCheck.4
   --Description: Check processing response without all parameters
-  --[[TODO: Check after APPLINK-14765 is resolved
+
   function Test:GetWayPoints_Response_MissedAllPArameters()
     --mobile side: sending the request
     local RequestParams = Test:createRequest()
@@ -1511,13 +1511,14 @@ local function SpecialResponseChecks()
     --mobile side: expect the response
     EXPECT_RESPONSE(cid, { success = false, resultCode = "GENERIC_ERROR", info = "Invalid response from system"})
   end
-  ]]
+  
   --End NegativeResponseCheck.4
 
   -----------------------------------------------------------------------------------------
 
   --Begin Test case NegativeResponseCheck.5
   --Description: Request without responses from HMI
+
 
   function Test:GetWayPoints_NoResponse()
     --mobile side: sending the request
@@ -1535,7 +1536,7 @@ local function SpecialResponseChecks()
   --End NegativeResponseCheck.5
 
   -----------------------------------------------------------------------------------------
-
+--[[ ToDo: Check after APPLINK-19834. ATF functionality to send messages with the same correlatioID is not implemented yet
   --Begin Test case NegativeResponseCheck.6
   --Description: Several response to one request
 
@@ -1560,7 +1561,7 @@ local function SpecialResponseChecks()
   --End Test case NegativeResponseCheck.6
 
   -----------------------------------------------------------------------------------------
-  --TODO: Check after APPLINK-14765 is resolved
+  --TODO: ToDo: Check after APPLINK-19834. ATF functionality to send messages with the same correlatioID is not implemented yet
   --Begin Test case NegativeResponseCheck.7
   --Description: Wrong response to correct correlationID
   function Test:GetWayPoints_WrongResponse()
@@ -1585,8 +1586,8 @@ local function SpecialResponseChecks()
 
 end
 
-SpecialResponseChecks()
-
+ecialResponseChecks()
+]]
 
 ----------------------------------------------------------------------------------------------
 -----------------------------------------TEST BLOCK VI----------------------------------------
@@ -1640,7 +1641,7 @@ end
 
 --Check GetWayPoints Response For Each App APPLINK-21890
 --------------------------------------------------------------------------------------------
-
+--[[ Defect APPLINK-26784. Check after fix
 -- Precondition Openning new session
 function Test:Precondition_SecondSession()
   --mobile side: start new session
@@ -1695,8 +1696,8 @@ function Test:Precondition_ActivateSecondApp()
   --hmi side: expect SDL.ActivateApp response
   EXPECT_HMIRESPONSE(RequestId)
   :Do(function(_,data)
-      if
-      data.result.isSDLAllowed ~= true then
+ 
+        if data.result.isSDLAllowed ~= true then
         local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
 
         --hmi side: expect SDL.GetUserFriendlyMessage message response
@@ -1725,117 +1726,88 @@ function Test:Precondition_ActivateSecondApp()
 end
 
 function Test:GetWayPointse_Response_For_Each_App()
+  
+      --mobile side: sending the request
+      local Request = {wayPointType = "ALL"}
+      local Request2 = {wayPointType = "DESTINATION"}
+      
+      local cid = self.mobileSession:SendRPC("GetWayPoints", Request)
+      local cid2 = self.mobileSession1:SendRPC("GetWayPoints", Request2)
 
-  --mobile side: sending the request
-  local Request = {
-    wayPointType = "ALL",
 
-  }
+      EXPECT_HMICALL("Navigation.GetWayPoints", UIRequest, UIRequest2)
+      :Do(function(_,data)
+         --hmi side: sending response
+            self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+      end)
+      :Times(2)
 
-  local cid = self.mobileSession:SendRPC("GetWayPoints", Request)
-
-  local Request2 = {
-    wayPointType = "ALL"
-  }
-
-  --hmi side: expect the request
-  local UIRequest = Request
-  UIRequest.appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-  local UIRequest2 = Request2
-  UIRequest2.appID = self.applications["Test Application2"]
-
-  EXPECT_HMICALL("Navigation.GetWayPoints", UIRequest, UIRequest2)
-  :Do(function(_,data)
-
-      if exp.occurences == 1 then
-        local function sendSecondRequest()
-
-          local cid2 = self.mobileSession1:SendRPC("GetWayPoints", Request2)
-
-        end
-        RUN_AFTER(sendSecondRequest, 1000)
-
-        local function sendReponse()
-
-          --hmi side: sending response
-          self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-
-        end
-        RUN_AFTER(sendReponse, 2000)
-
-      else
-        --hmi side: sending response
-        self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-      end
-
-    end)
-  :Times(2)
-
-  --mobile side: expect the response
-  EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-
-end
+      self.mobileSession:ExpectResponse(cid, { success = true, resultCode = "SUCCESS"})
+      self.mobileSession1:ExpectResponse(cid2, { success = true, resultCode = "SUCCESS"})
+    
+end ]]
 
 -- Check IN_USE result code if the same app sends GetWayPoints request during another GetWayPoints request in progress on HMI
 -----------------------------------------------------------------------------------------------------------------------------------
 function Test:GetWayPoints_IN_USE_ResultCode_If_Another_GetWayPoints_Is_Active_On_HMI_Same_App()
+  
+      --mobile side: sending the request
+      local Request = {
+                wayPointType = "ALL",
 
-  --mobile side: sending the request
-  local Request = {
-    wayPointType = "ALL",
+              }
+      
+      local cid = self.mobileSession:SendRPC("GetWayPoints", Request)
 
-  }
+      local Request2 = {
+                wayPointType = "DESTINATION"
+              }
+              
+      --hmi side: expect the request
+      local UIRequest = Request
+      UIRequest.appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+      local UIRequest2 = Request2
+      UIRequest2.appID = self.applications[config.application1.registerAppInterfaceParams.appName]
+      EXPECT_HMICALL("Navigation.GetWayPoints", UIRequest, UIRequest2)
+      :Do(function(_,data)
+        
+        if exp.occurences == 1 then
+        
+          local function sendSecondRequest()        
+            local cid2 = self.mobileSession:SendRPC("GetWayPoints", Request2)
 
-  local cid = self.mobileSession:SendRPC("GetWayPoints", Request)
-
-  local Request2 = {
-    wayPointType = "ALL"
-  }
-
-  --hmi side: expect the request
-  local UIRequest = Request
-  UIRequest.appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-  local UIRequest2 = Request2
-  UIRequest2.appID = self.applications[config.application1.registerAppInterfaceParams.appName]
-  EXPECT_HMICALL("Navigation.GetWayPoints", UIRequest, UIRequest2)
-  :Do(function(_,data)
-
-      if exp.occurences == 1 then
-
-        local function sendSecondRequest()
-          local cid2 = self.mobileSession:SendRPC("GetWayPoints", Request2)
-
-          --EXPECT_RESPONSE(cid2, { success = false, resultCode = "IN_USE"})
-        end
-        RUN_AFTER(sendSecondRequest, 1000)
-
-        local function sendReponse()
-
+            EXPECT_RESPONSE(cid2, { success = false, resultCode = "IN_USE"})
+          end
+          RUN_AFTER(sendSecondRequest, 1000)
+          
+          local function sendReponse()
+            
+            --hmi side: sending response
+            self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
+            
+          end
+          RUN_AFTER(sendReponse, 2000)
+          
+        else
           --hmi side: sending response
-          self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-
+          self.hmiConnection:SendResponse(data.id, data.method, "IN_USE", {})
         end
-        RUN_AFTER(sendReponse, 2000)
+            
+      end)
+      :Times(2)
 
-      else
-        --hmi side: sending response
-        self.hmiConnection:SendResponse(data.id, data.method, "IN_USE", {})
-      end
-
-    end)
-  :Times(2)
-
-  --mobile side: expect the response
-  EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
-
-end
+      
+      --mobile side: expect the response
+      EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS"})
+    
+  end
 
 -----------------------------------------------------------------------------------------------
 -------------------------------------------TEST BLOCK V----------------------------------------
 -------------------------------------Checks All Result Codes-----------------------------------
 -----------------------------------------------------------------------------------------------
 
---Requirement id in JAMA: APPLINK-24151
+--Requirement id in Jira: APPLINK-24151
 --Verification criteria:
 --[[
 --An RPC request is not allowed by the backend. Policies Manager validates it as "disallowed".
@@ -2038,23 +2010,25 @@ function Test:Activate_Media_App2()
   --HMI send ActivateApp request
   local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications["Test Application2"]})
   EXPECT_HMIRESPONSE(RequestId)
-  :Do(function(_,data)
+      :Do(function(_,data)
 
-      if data.result.isSDLAllowed ~= true then
-        local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
-        EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-        :Do(function(_,data)
+        if data.result.isSDLAllowed and data.result.isSDLAllowed ~= true then
+          local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+          EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+          :Do(function(_,data)
             --hmi side: send request SDL.OnAllowSDLFunctionality
             self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = 1, name = "127.0.0.1"}})
           end)
 
-        EXPECT_HMICALL("BasicCommunication.ActivateApp")
-        :Do(function(_,data)
+          EXPECT_HMICALL("BasicCommunication.ActivateApp")
+          :Do(function(_,data)
             self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
           end)
-        :Times(2)
-      end
-    end)
+          :Times(2)
+        end
+      end)
+      :Timeout(5000)
+
 
   self.mobileSession2:ExpectNotification("OnHMIStatus", {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
   :Timeout(12000)
