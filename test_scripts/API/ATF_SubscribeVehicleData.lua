@@ -48,6 +48,77 @@ local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "
 local vehicleData = {"gps"}
 local infoMessageValue = string.rep("a",1000)
 
+local PermissionLinesSubscribeVehicleDataAllParam = 
+[[							"SubscribeVehicleData": {
+							"hmi_levels": ["BACKGROUND",
+							"FULL", 
+							"LIMITED"
+							],
+						"parameters" : ["gps", 
+						"speed",
+						"rpm",
+						"fuelLevel",
+						"fuelLevel_State",
+						"instantFuelConsumption",
+						"fuelRange", "abs_State",
+						"externalTemperature",
+						"prndl", "tirePressure",
+						"tirePressureValue",
+						"tpms",
+						"turnSignal",
+						"odometer",
+						"beltStatus",
+						"bodyInformation",
+						"deviceStatus",
+						"driverBraking",
+						"wiperStatus",
+						"headLampStatus",
+						"engineTorque",
+						"accPedalPosition",
+						"steeringWheelAngle",
+						"eCallInfo",
+						"airbagStatus",
+						"emergencyEvent",
+						"clusterModeStatus",
+						"myKey",
+						"vin"]							
+						  }]].. ", \n"
+local PermissionLinesUnsubscribeVehicleDataAllParam = 
+[[							"UnsubscribeVehicleData": {
+							"hmi_levels": ["BACKGROUND",
+							"FULL", 
+							"LIMITED"
+							],
+						"parameters" : ["gps", 
+						"speed",
+						"rpm",
+						"fuelLevel",
+						"fuelLevel_State",
+						"instantFuelConsumption",
+						"fuelRange", "abs_State",
+						"externalTemperature",
+						"prndl", "tirePressure",
+						"tirePressureValue",
+						"tpms",
+						"turnSignal",
+						"odometer",
+						"beltStatus",
+						"bodyInformation",
+						"deviceStatus",
+						"driverBraking",
+						"wiperStatus",
+						"headLampStatus",
+						"engineTorque",
+						"accPedalPosition",
+						"steeringWheelAngle",
+						"eCallInfo",
+						"airbagStatus",
+						"emergencyEvent",
+						"clusterModeStatus",
+						"myKey",
+						"vin"]							
+						  }]].. ", \n"
+						  
 function DelayedExp(time)
 	local event = events.Event()
   event.matches = function(self, e) return self == e end
@@ -1901,110 +1972,38 @@ end
 			
 			--Begin Test Case ResultCodeCheck.4.3
 			--Description: SubscribeVehicleData request for previously subscribed VehicleData and disallowed by policies
-				function Test:Precondition_PolicyUpdate()
-					--hmi side: sending SDL.GetURLS request
-					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-					
-					--hmi side: expect SDL.GetURLS response from HMI
-					EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-					:Do(function(_,data)
-						--print("SDL.GetURLS response is received")
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-							{
-								requestType = "PROPRIETARY",
-								fileName = "filename"
-							}
-						)
-						--mobile side: expect OnSystemRequest notification 
-						EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-						:Do(function(_,data)
-							--print("OnSystemRequest notification is received")
-							--mobile side: sending SystemRequest request 
-							local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-								{
-									fileName = "PolicyTableUpdate",
-									requestType = "PROPRIETARY"
-								},
-							"files/PTU_ForSubscribeVehicleData.json")
-							
-							local systemRequestId
-							--hmi side: expect SystemRequest request
-							EXPECT_HMICALL("BasicCommunication.SystemRequest")
-							:Do(function(_,data)
-								systemRequestId = data.id
-								--print("BasicCommunication.SystemRequest is received")
-								
-								--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-								self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-									{
-										policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-									}
-								)
-								function to_run()
-									--hmi side: sending SystemRequest response
-									self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-								end
-								
-								RUN_AFTER(to_run, 500)
-							end)
-							
-							--hmi side: expect SDL.OnStatusUpdate
-							EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-							:ValidIf(function(exp,data)
-								if 
-									exp.occurences == 1 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								elseif
-									exp.occurences == 1 and
-									data.params.status == "UPDATING" then
-										return true
-								elseif
-									exp.occurences == 2 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								else 
-									if 
-										exp.occurences == 1 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-									elseif exp.occurences == 2 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-									end
-									return false
-								end
-							end)
-							:Times(Between(1,2))
-							
-							--mobile side: expect SystemRequest response
-							EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-							:Do(function(_,data)
-								--print("SystemRequest is received")
-								--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-								local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-								
-								--hmi side: expect SDL.GetUserFriendlyMessage response
-								EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-								:Do(function(_,data)
-									--print("SDL.GetUserFriendlyMessage is received")
-									
-									--hmi side: sending SDL.GetListOfPermissions request to SDL
-									local RequestIdGetListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {appID = self.applications["Test Application"]})
-									
-									-- hmi side: expect SDL.GetListOfPermissions response
-									EXPECT_HMIRESPONSE(RequestIdGetListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions", allowedFunctions = {{ id = 193465391, name = "New"}}}})
-									:Do(function(_,data)
-										--print("SDL.GetListOfPermissions response is received")
-										
-										--hmi side: sending SDL.OnAppPermissionConsent
-										self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = 193465391, name = "New"}}, source = "GUI"})
-										end)
-								end)
-							end)
-							
-						end)
-					end)
-				end
+				--Precondition: Update Policy table
+				local PermissionLinesSubscribeVehicleData = 
+		[[							"SubscribeVehicleData": {
+									"hmi_levels": ["BACKGROUND",
+									"FULL", 
+									"LIMITED"
+									],
+									"parameters" : ["accPedalPosition",
+									"beltStatus",
+									"driverBraking",
+									"myKey",
+									"prndl",
+									"rpm",
+									"steeringWheelAngle"]							
+								  }]].. ", \n"
+				local PermissionLinesUnsubscribeVehicleData = 
+		[[							"UnsubscribeVehicleData": {
+									"hmi_levels": ["BACKGROUND",
+									"FULL", 
+									"LIMITED"
+									],
+									"parameters" : ["accPedalPosition",
+									"beltStatus",
+									"driverBraking",
+									"myKey",
+									"prndl",
+									"rpm",
+									"steeringWheelAngle"]							
+								  }]].. ", \n"						  
+				local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleData..PermissionLinesUnsubscribeVehicleData
+				local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, nil, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+				testCasesForPolicyTable:updatePolicy(PTName)	
 				
 				function Test: Precondition_Subscribe_prndl()
 					--SubscribeVehicleData prndl
@@ -2030,11 +2029,11 @@ end
 					EXPECT_RESPONSE(cid, {success = false, resultCode = "IGNORED", 
 											prndl= {resultCode = "DATA_ALREADY_SUBSCRIBED", dataType = "VEHICLEDATA_PRNDL"},
 											speed= {resultCode = "DISALLOWED", dataType = "VEHICLEDATA_SPEED"},
-											info = "'prndl' is subscribed already, 'speed' is disallowed by policies"})	
+											info = "Already subscribed on some provided VehicleData. 'speed' is disallowed by policies."})	
 						
 					--mobile side: expect OnHashChange notification is not send to mobile
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
+					-- EXPECT_NOTIFICATION("OnHashChange",{})
+					-- :Times(0)
 				end
 				function Test:PostCondition_UnSubscribeVehicleData()				
 					self:unSubscribeVehicleDataSuccess({"prndl"})
@@ -2077,18 +2076,14 @@ end
 						myKey= {resultCode = "SUCCESS", dataType = "VEHICLEDATA_MYKEY"}})
 					
 					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
+					-- EXPECT_NOTIFICATION("OnHashChange",{})
+					-- :Times(0)
 				end			
 			--End Test Case ResultCodeCheck.5.1
 
-			--TODO: remove postcondition after resolving APPLINK-15019
-			-- function Test:PostCondition_UnSubscribeVehicleData()				
-				-- self:unSubscribeVehicleDataSuccess({"myKey"})
-			-- end
 			
 			-----------------------------------------------------------------------------------------
-	--TODO: check after ATF defect APPLINK-13101 resolved			
+	
 			--Begin Test Case ResultCodeCheck.5.2
 			--Description: Check GENERIC_ERROR result code for the RPC from HMI with individual results of DISALLOWED 
 				function Test: SubscribeVehicleData_GENERIC_ERROR()
@@ -2125,12 +2120,16 @@ end
 					:Timeout(5000)
 					
 					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
+					-- EXPECT_NOTIFICATION("OnHashChange",{})
+					-- :Times(0)
 				end
 			--End Test Case ResultCodeCheck.5.2	
 		--End Test case ResultCodeCheck.5
-		
+
+		--Postcondition: Update Policy table
+		local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleDataAllParam..PermissionLinesUnsubscribeVehicleDataAllParam
+		local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, nil, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+		testCasesForPolicyTable:updatePolicy(PTName)			
 		-----------------------------------------------------------------------------------------
 	
 		--Begin Test case ResultCodeCheck.6
