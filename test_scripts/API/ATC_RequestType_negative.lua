@@ -1378,7 +1378,6 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
