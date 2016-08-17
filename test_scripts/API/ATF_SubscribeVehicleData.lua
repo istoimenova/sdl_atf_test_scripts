@@ -48,6 +48,77 @@ local allVehicleData = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "
 local vehicleData = {"gps"}
 local infoMessageValue = string.rep("a",1000)
 
+local PermissionLinesSubscribeVehicleDataAllParam = 
+[[							"SubscribeVehicleData": {
+							"hmi_levels": ["BACKGROUND",
+							"FULL", 
+							"LIMITED"
+							],
+						"parameters" : ["gps", 
+						"speed",
+						"rpm",
+						"fuelLevel",
+						"fuelLevel_State",
+						"instantFuelConsumption",
+						"fuelRange", "abs_State",
+						"externalTemperature",
+						"prndl", "tirePressure",
+						"tirePressureValue",
+						"tpms",
+						"turnSignal",
+						"odometer",
+						"beltStatus",
+						"bodyInformation",
+						"deviceStatus",
+						"driverBraking",
+						"wiperStatus",
+						"headLampStatus",
+						"engineTorque",
+						"accPedalPosition",
+						"steeringWheelAngle",
+						"eCallInfo",
+						"airbagStatus",
+						"emergencyEvent",
+						"clusterModeStatus",
+						"myKey",
+						"vin"]							
+						  }]].. ", \n"
+local PermissionLinesUnsubscribeVehicleDataAllParam = 
+[[							"UnsubscribeVehicleData": {
+							"hmi_levels": ["BACKGROUND",
+							"FULL", 
+							"LIMITED"
+							],
+						"parameters" : ["gps", 
+						"speed",
+						"rpm",
+						"fuelLevel",
+						"fuelLevel_State",
+						"instantFuelConsumption",
+						"fuelRange", "abs_State",
+						"externalTemperature",
+						"prndl", "tirePressure",
+						"tirePressureValue",
+						"tpms",
+						"turnSignal",
+						"odometer",
+						"beltStatus",
+						"bodyInformation",
+						"deviceStatus",
+						"driverBraking",
+						"wiperStatus",
+						"headLampStatus",
+						"engineTorque",
+						"accPedalPosition",
+						"steeringWheelAngle",
+						"eCallInfo",
+						"airbagStatus",
+						"emergencyEvent",
+						"clusterModeStatus",
+						"myKey",
+						"vin"]							
+						  }]].. ", \n"
+						  
 function DelayedExp(time)
 	local event = events.Event()
   event.matches = function(self, e) return self == e end
@@ -183,7 +254,7 @@ function Test:subscribeVehicleDataIgnored(paramsSend)
 	--mobile side: sending SubscribeVehicleData request
 	local cid = self.mobileSession:SendRPC("SubscribeVehicleData",request)
 	
-	local expectedResult = createExpectedResult(true, "IGNORED", messageValue, response)
+	local expectedResult = createExpectedResult(false, "IGNORED", messageValue, response)
 	
 	--mobile side: expect SubscribeVehicleData response
 	EXPECT_RESPONSE(cid, expectedResult)
@@ -1901,110 +1972,59 @@ end
 			
 			--Begin Test Case ResultCodeCheck.4.3
 			--Description: SubscribeVehicleData request for previously subscribed VehicleData and disallowed by policies
-				function Test:Precondition_PolicyUpdate()
-					--hmi side: sending SDL.GetURLS request
-					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-					
-					--hmi side: expect SDL.GetURLS response from HMI
-					EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-					:Do(function(_,data)
-						--print("SDL.GetURLS response is received")
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-							{
-								requestType = "PROPRIETARY",
-								fileName = "filename"
-							}
-						)
-						--mobile side: expect OnSystemRequest notification 
-						EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-						:Do(function(_,data)
-							--print("OnSystemRequest notification is received")
-							--mobile side: sending SystemRequest request 
-							local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-								{
-									fileName = "PolicyTableUpdate",
-									requestType = "PROPRIETARY"
-								},
-							"files/PTU_ForSubscribeVehicleData.json")
-							
-							local systemRequestId
-							--hmi side: expect SystemRequest request
-							EXPECT_HMICALL("BasicCommunication.SystemRequest")
-							:Do(function(_,data)
-								systemRequestId = data.id
-								--print("BasicCommunication.SystemRequest is received")
-								
-								--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-								self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-									{
-										policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
+				--Precondition: Update Policy table
+				local PermissionLinesSubscribeVehicleData = 
+							[[							
+									"SubscribeVehicleData": {
+										"hmi_levels": 
+										[
+											"BACKGROUND",
+											"FULL", 
+											"LIMITED"
+										],
+										"parameters" : 
+										[
+											"accPedalPosition",
+											"beltStatus",
+											"driverBraking",
+											"myKey",
+											"prndl",
+											"rpm",
+											"steeringWheelAngle"
+										]							
 									}
-								)
-								function to_run()
-									--hmi side: sending SystemRequest response
-									self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-								end
-								
-								RUN_AFTER(to_run, 500)
-							end)
-							
-							--hmi side: expect SDL.OnStatusUpdate
-							EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-							:ValidIf(function(exp,data)
-								if 
-									exp.occurences == 1 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								elseif
-									exp.occurences == 1 and
-									data.params.status == "UPDATING" then
-										return true
-								elseif
-									exp.occurences == 2 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								else 
-									if 
-										exp.occurences == 1 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-									elseif exp.occurences == 2 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-									end
-									return false
-								end
-							end)
-							:Times(Between(1,2))
-							
-							--mobile side: expect SystemRequest response
-							EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-							:Do(function(_,data)
-								--print("SystemRequest is received")
-								--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-								local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-								
-								--hmi side: expect SDL.GetUserFriendlyMessage response
-								EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-								:Do(function(_,data)
-									--print("SDL.GetUserFriendlyMessage is received")
-									
-									--hmi side: sending SDL.GetListOfPermissions request to SDL
-									local RequestIdGetListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {appID = self.applications["Test Application"]})
-									
-									-- hmi side: expect SDL.GetListOfPermissions response
-									EXPECT_HMIRESPONSE(RequestIdGetListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions", allowedFunctions = {{ id = 193465391, name = "New"}}}})
-									:Do(function(_,data)
-										--print("SDL.GetListOfPermissions response is received")
-										
-										--hmi side: sending SDL.OnAppPermissionConsent
-										self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = 193465391, name = "New"}}, source = "GUI"})
-										end)
-								end)
-							end)
-							
-						end)
-					end)
-				end
+							]].. ", \n"
+				local PermissionLinesUnsubscribeVehicleData = 
+							[[						
+									"UnsubscribeVehicleData": {
+										"hmi_levels": [
+											"BACKGROUND",
+											"FULL", 
+											"LIMITED"
+										],
+										"parameters" : [
+											"accPedalPosition",
+											"beltStatus",
+											"driverBraking",
+											"myKey",
+											"prndl",
+											"rpm",
+											"steeringWheelAngle"
+										]							
+									}
+							]].. ", \n"	
+				local PermissionLinesForApp1=[[			"]].."0000001" ..[[":{
+					"keep_context": true,
+					"steal_focus": true,
+					"priority": "NONE",
+					"default_hmi": "NONE",
+					"groups": ["Base-4"]
+				}
+				]]	
+				local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleData..PermissionLinesUnsubscribeVehicleData
+				local PermissionLinesForApplication = PermissionLinesForApp1 ..", \n"
+				local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, PermissionLinesForApplication, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+				testCasesForPolicyTable:updatePolicy(PTName)	
 				
 				function Test: Precondition_Subscribe_prndl()
 					--SubscribeVehicleData prndl
@@ -2030,8 +2050,8 @@ end
 					EXPECT_RESPONSE(cid, {success = false, resultCode = "IGNORED", 
 											prndl= {resultCode = "DATA_ALREADY_SUBSCRIBED", dataType = "VEHICLEDATA_PRNDL"},
 											speed= {resultCode = "DISALLOWED", dataType = "VEHICLEDATA_SPEED"},
-											info = "'prndl' is subscribed already, 'speed' is disallowed by policies"})	
-						
+											info = "Already subscribed on some provided VehicleData. 'speed' is disallowed by policies."})	
+
 					--mobile side: expect OnHashChange notification is not send to mobile
 					EXPECT_NOTIFICATION("OnHashChange",{})
 					:Times(0)
@@ -2077,18 +2097,14 @@ end
 						myKey= {resultCode = "SUCCESS", dataType = "VEHICLEDATA_MYKEY"}})
 					
 					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
+					-- EXPECT_NOTIFICATION("OnHashChange",{})
+					-- :Times(0)
 				end			
 			--End Test Case ResultCodeCheck.5.1
 
-			--TODO: remove postcondition after resolving APPLINK-15019
-			-- function Test:PostCondition_UnSubscribeVehicleData()				
-				-- self:unSubscribeVehicleDataSuccess({"myKey"})
-			-- end
 			
 			-----------------------------------------------------------------------------------------
-	--TODO: check after ATF defect APPLINK-13101 resolved			
+	
 			--Begin Test Case ResultCodeCheck.5.2
 			--Description: Check GENERIC_ERROR result code for the RPC from HMI with individual results of DISALLOWED 
 				function Test: SubscribeVehicleData_GENERIC_ERROR()
@@ -2125,23 +2141,26 @@ end
 					:Timeout(5000)
 					
 					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
+					-- EXPECT_NOTIFICATION("OnHashChange",{})
+					-- :Times(0)
 				end
 			--End Test Case ResultCodeCheck.5.2	
 		--End Test case ResultCodeCheck.5
-		
+
+		--Postcondition: Update Policy table
+		local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleDataAllParam..PermissionLinesUnsubscribeVehicleDataAllParam
+		local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, nil, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+		testCasesForPolicyTable:updatePolicy(PTName)			
 		-----------------------------------------------------------------------------------------
 	
 		--Begin Test case ResultCodeCheck.6
-		--Description: Check DISALLOWED, USER_DISALLOWED result code with success false
+		--Description: Check DISALLOWED with success false when SubscribeVehicleData is not present in the DB.
+		--Other cases such as SUCCESS, USER_DISALOWED, DISALLOWED and combination of these codes are checked in the BLOCK VI
 
 			--Requirement id in JAMA: SDLAQ-CRS-582, SDLAQ-CRS-2396, SDLAQ-CRS-2397, APPLINK-8673, SDLAQ-CRS-594
 
 			--Verification criteria: 
-				--  SDL must return "resultCode: DISALLOWED, success:false" to the RPC in case this RPC is omitted in the PolicyTable group(s) assigned to the app that requests this RPC.
-				--  SDL must return "resultCode: DISALLOWED, success:false" to the RPC in case this RPC is included to the PolicyTable group(s) assigned to the app that requests this RPC and the group has not yet received user's consents.
-				--  In case SubscribeVehicleData RPC is allowed by policies with less than supported by protocol parameters AND the app assigned with such policies requests SubscribeVehicleData with one and-or more NOT-allowed params only, SDL must NOT send anything to HMI, AND return the individual results of DISALLOWED to response to mobile app + "ResultCode:DISALLOWED, success: false".
+			--  SDL must return "resultCode: DISALLOWED, success:false" to the RPC in case this RPC is omitted in the PolicyTable group(s) assigned to the app that requests this RPC.
 			--Begin Test Case ResultCodeCheck.6.1
 			--Description: SubscribeVehicleData is omitted in the PolicyTable group(s) assigned to the app that requests this RPC.
 				function Test:Precondition_PolicyUpdate()
@@ -2272,367 +2291,12 @@ end
 					EXPECT_NOTIFICATION("OnHashChange",{})
 					:Times(0)				
 				end				
+				
+				--PostCondition: Update policy
+				local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleDataAllParam..PermissionLinesUnsubscribeVehicleDataAllParam
+				local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, nil, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+				testCasesForPolicyTable:updatePolicy(PTName)
 			--End Test Case ResultCodeCheck.6.1
-			
-			-----------------------------------------------------------------------------------------
-
-			--Begin Test Case ResultCodeCheck.6.2
-			--Description: SubscribeVehicleData has not yet received user's consents
-				function Test:Precondition_PolicyUpdate()
-					--hmi side: sending SDL.GetURLS request
-					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-					
-					--hmi side: expect SDL.GetURLS response from HMI
-					EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-					:Do(function(_,data)
-						--print("SDL.GetURLS response is received")
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-							{
-								requestType = "PROPRIETARY",
-								fileName = "filename"
-							}
-						)
-						--mobile side: expect OnSystemRequest notification 
-						EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-						:Do(function(_,data)
-							--print("OnSystemRequest notification is received")
-							--mobile side: sending SystemRequest request 
-							local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-								{
-									fileName = "PolicyTableUpdate",
-									requestType = "PROPRIETARY"
-								},
-							"files/PTU_ForSubscribeVehicleData.json")
-							
-							local systemRequestId
-							--hmi side: expect SystemRequest request
-							EXPECT_HMICALL("BasicCommunication.SystemRequest")
-							:Do(function(_,data)
-								systemRequestId = data.id
-								--print("BasicCommunication.SystemRequest is received")
-								
-								--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-								self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-									{
-										policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-									}
-								)
-								function to_run()
-									--hmi side: sending SystemRequest response
-									self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-								end
-								
-								RUN_AFTER(to_run, 500)
-							end)
-							
-							--hmi side: expect SDL.OnStatusUpdate
-							EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-							:ValidIf(function(exp,data)
-								if 
-									exp.occurences == 1 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								elseif
-									exp.occurences == 1 and
-									data.params.status == "UPDATING" then
-										return true
-								elseif
-									exp.occurences == 2 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								else 
-									if 
-										exp.occurences == 1 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-									elseif exp.occurences == 2 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-									end
-									return false
-								end
-							end)
-							:Times(Between(1,2))
-							
-							--mobile side: expect SystemRequest response
-							EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-							:Do(function(_,data)
-								--print("SystemRequest is received")
-								--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-								local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-								
-								--hmi side: expect SDL.GetUserFriendlyMessage response
-								EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-								:Do(function(_,data)
-									--print("SDL.GetUserFriendlyMessage is received")
-									
-									--hmi side: sending SDL.GetListOfPermissions request to SDL
-									local RequestIdGetListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {appID = self.applications["Test Application"]})
-									
-									-- hmi side: expect SDL.GetListOfPermissions response
-									EXPECT_HMIRESPONSE(RequestIdGetListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions", allowedFunctions = {{ id = 193465391, name = "New"}}}})
-									:Do(function(_,data)
-										--print("SDL.GetListOfPermissions response is received")
-										
-										--hmi side: sending SDL.OnAppPermissionConsent
-										self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = false, id = 193465391, name = "New"}}, source = "GUI"})
-										end)
-								end)
-							end)
-							
-						end)
-					end)
-				end
-								
-				function Test:SubscribeVehicleData_UserDisallowed()
-					--mobile side: sending SubscribeVehicleData request
-					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
-																				{
-																					prndl = true,
-																					myKey = true
-																				})					
-										
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		prndl = true
-																	})					
-					:Times(0)
-					
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		myKey = true
-																	})					
-					:Times(0)
-					
-					--mobile side: expect SubscribeVehicleData response
-					EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED"})	
-					
-					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange", {})
-					:Times(0)
-				end				
-			--End Test Case ResultCodeCheck.6.2		
-			
-			-----------------------------------------------------------------------------------------
-
-			--Begin Test Case ResultCodeCheck.6.3
-			--Description: Two vehicleData is disallowed
-				function Test:Precondition_EnableSubscribeVehicleData()					
-					self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = 193465391, name = "New"}}, source = "GUI"})		  
-				end
-								
-				function Test:SubscribeVehicleData_Disallowed()
-					--mobile side: sending SubscribeVehicleData request
-					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
-																				{
-																					speed = true,
-																					gps = true
-																				})					
-										
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		speed = true
-																	})					
-					:Times(0)
-					
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		gps = true
-																	})					
-					:Times(0)
-					
-					--mobile side: expect SubscribeVehicleData response
-					EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED",
-										speed= {resultCode = "DISALLOWED", dataType = "VEHICLEDATA_SPEED"},
-										gps= {resultCode = "DISALLOWED", dataType = "VEHICLEDATA_GPS"},
-										info = "'speed' is disallowed by policies.'gps' is disallowed by policies."})
-										
-					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange", {})
-					:Times(0)
-				end				
-			--End Test Case ResultCodeCheck.6.3
-			
-			-----------------------------------------------------------------------------------------
-			
-			--Begin Test Case ResultCodeCheck.6.4
-			--Description: One vehicleData is disallowed and one vehicleData is user disallowed
-				function Test:Precondition_UserDissallowedSubscribeVehicleData()					
-					self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = false, id = 193465391, name = "New"}}, source = "GUI"})					
-				end				
-				
-				function Test:SubscribeVehicleData_DisallowedAndUserDisallowed()
-					--mobile side: sending SubscribeVehicleData request
-					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
-																				{
-																					speed = true,
-																					myKey = true
-																				})					
-										
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		speed = true,
-																		myKey = true
-																	})					
-					:Times(0)
-					
-					--mobile side: expect SubscribeVehicleData response
-					EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED",
-										speed= {resultCode = "DISALLOWED", dataType = "VEHICLEDATA_SPEED"},
-										myKey= {resultCode = "USER_DISALLOWED", dataType = "VEHICLEDATA_MYKEY"},
-										info = "'speed' is disallowed by policies.'myKey' is disallowed by policies."})
-										
-					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})
-					:Times(0)
-				end				
-			--End Test Case ResultCodeCheck.6.4
-			
-			-----------------------------------------------------------------------------------------
-			
-			--Begin Test Case ResultCodeCheck.6.5
-			--Description: One vehicleData is SUCCESS and one vehicleData is user disallowed
-				function Test:Precondition_AllowedAndUserDisallowedSVD()					
-					--hmi side: sending SDL.GetURLS request
-					local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
-					
-					--hmi side: expect SDL.GetURLS response from HMI
-					EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
-					:Do(function(_,data)
-						--print("SDL.GetURLS response is received")
-						--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-						self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
-							{
-								requestType = "PROPRIETARY",
-								fileName = "filename"
-							}
-						)
-						--mobile side: expect OnSystemRequest notification 
-						EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY" })
-						:Do(function(_,data)
-							--print("OnSystemRequest notification is received")
-							--mobile side: sending SystemRequest request 
-							local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
-								{
-									fileName = "PolicyTableUpdate",
-									requestType = "PROPRIETARY"
-								},
-							"files/PTU_AllowedAndUserDisallowedSVD.json")
-							
-							local systemRequestId
-							--hmi side: expect SystemRequest request
-							EXPECT_HMICALL("BasicCommunication.SystemRequest")
-							:Do(function(_,data)
-								systemRequestId = data.id
-								--print("BasicCommunication.SystemRequest is received")
-								
-								--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
-								self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
-									{
-										policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
-									}
-								)
-								function to_run()
-									--hmi side: sending SystemRequest response
-									self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
-								end
-								
-								RUN_AFTER(to_run, 500)
-							end)
-							
-							--hmi side: expect SDL.OnStatusUpdate
-							EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
-							:ValidIf(function(exp,data)
-								if 
-									exp.occurences == 1 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								elseif
-									exp.occurences == 1 and
-									data.params.status == "UPDATING" then
-										return true
-								elseif
-									exp.occurences == 2 and
-									data.params.status == "UP_TO_DATE" then
-										return true
-								else 
-									if 
-										exp.occurences == 1 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
-									elseif exp.occurences == 2 then
-											print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
-									end
-									return false
-								end
-							end)
-							:Times(Between(1,2))
-							
-							--mobile side: expect SystemRequest response
-							EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})
-							:Do(function(_,data)
-								--print("SystemRequest is received")
-								--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
-								local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusUpToDate"}})
-								
-								--hmi side: expect SDL.GetUserFriendlyMessage response
-								EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Up-To-Date", messageCode = "StatusUpToDate", textBody = "Up-To-Date"}}}})
-								:Do(function(_,data)
-									--print("SDL.GetUserFriendlyMessage is received")
-									
-									--hmi side: sending SDL.GetListOfPermissions request to SDL
-									local RequestIdGetListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {appID = self.applications["Test Application"]})
-									
-									-- hmi side: expect SDL.GetListOfPermissions response
-									EXPECT_HMIRESPONSE(RequestIdGetListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions", allowedFunctions = {{ id = 193465391, name = "New"}}}})
-									:Do(function(_,data)
-										--print("SDL.GetListOfPermissions response is received")
-										
-										--hmi side: sending SDL.OnAppPermissionConsent
-										self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = false, id = 193465391, name = "New"}}, source = "GUI"})
-										end)
-								end)
-							end)
-							
-						end)
-					end)
-				end				
-				
-				function Test:SubscribeVehicleData_SuccessAndUserDisallowed()
-					--mobile side: sending SubscribeVehicleData request
-					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
-																				{
-																					speed = true,
-																					myKey = true
-																				})					
-					
-					--hmi side: expect SubscribeVehicleData request
-					EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData",{
-																		speed = true
-																	})					
-					:Do(function(_,data)
-						--hmi side: sending VehicleInfo.SubscribeVehicleData response						
-						self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {speed= {resultCode = "SUCCESS", dataType = "VEHICLEDATA_SPEED"}})	
-					end)
-					:ValidIf (function(_,data)
-			    		if data.params.myKey then
-			    			print(" \27[36m SDL send USER_DISALLOWED vehicleData to HMI \27[0m")
-			    			return false
-			    		else 
-			    			return true
-			    		end
-			    	end)
-					
-					--mobile side: expect SubscribeVehicleData response
-					EXPECT_RESPONSE(cid, {success = true, resultCode = "SUCCESS",
-										speed= {resultCode = "SUCCESS", dataType = "VEHICLEDATA_SPEED"},
-										myKey= {resultCode = "USER_DISALLOWED", dataType = "VEHICLEDATA_MYKEY"},
-										info = "'myKey' is disallowed by policies."})
-					
-					--mobile side: expect OnHashChange notification
-					EXPECT_NOTIFICATION("OnHashChange",{})					
-				end				
-			--End Test Case ResultCodeCheck.6.5
-		--End Test case ResultCodeCheck.6
-		
 		-----------------------------------------------------------------------------------------
 		
 		--Begin Test case ResultCodeCheck.7
@@ -2646,10 +2310,7 @@ end
 				
 			--Begin Test Case ResultCodeCheck.7.1
 			--Description: Check REJECTED result code for the RPC from HMI
-				function Test:Precondition_UserAllowedSubscribeVehicleData()					
-					self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent", { appID =  self.applications["Test Application"], consentedFunctions = {{ allowed = true, id = 193465391, name = "New"}}, source = "GUI"})					
-				end
-
+		
 				function Test: SubscribeVehicleData_REJECTED_FromHMI()
 					--mobile side: sending SubscribeVehicleData request
 					local cid = self.mobileSession:SendRPC("SubscribeVehicleData",
@@ -2901,6 +2562,10 @@ end
 			--End Test case ResultCodeCheck.8		
 	end
 	Task_APPLINK_15934()
+	--PostCondition: Update policy
+	local PermissionLinesForBase4 = PermissionLinesSubscribeVehicleDataAllParam..PermissionLinesUnsubscribeVehicleDataAllParam
+	local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, nil, nil, {"SubscribeVehicleData","UnsubscribeVehicleData"})	
+	testCasesForPolicyTable:updatePolicy(PTName)
 	-------------------------------------------------------------------------------------------------------------------------
 		--End Test suit ResultCodeCheck
 			
@@ -3327,7 +2992,42 @@ end
 					end
 				end)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'myKey' disallowed by policies.", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, 
+					{
+						success = true, 
+						info = "'myKey' is disallowed by policies", 
+						resultCode = "SUCCESS",
+						
+						odometer={resultCode="SUCCESS",dataType="VEHICLEDATA_ODOMETER"},
+						accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+						airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+						fuelRange={resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"},
+						tirePressure={resultCode = "SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE"},
+						clusterModes = {resultCode= "SUCCESS",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+						tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+						fuelLevel={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL"},
+						eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+						prndl={resultCode="SUCCESS",dataType="VEHICLEDATA_PRNDL"},
+						steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+						turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+						wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+						rpm={resultCode="SUCCESS",dataType="VEHICLEDATA_RPM"},
+						tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"},
+						abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+						speed={resultCode="SUCCESS",dataType="VEHICLEDATA_SPEED"},
+						instantFuelConsumption={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+						deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+						headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},
+						fuelLevel_State={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},
+						externalTemperature={resultCode="SUCCESS",dataType="VEHICLEDATA_EXTERNTEMP"},
+						driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+						bodyInformation={resultCode="SUCCESS",dataType="VEHICLEDATA_BODYINFO"},
+						emergencyEvent={resultCode="SUCCESS",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+						beltStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_BELTSTATUS"}
+					})					
 			
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
@@ -3430,8 +3130,45 @@ end
 					end
 				end)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'mykey' disallowed by policies.", resultCode = "SUCCESS"})			
-			
+			EXPECT_RESPONSE(cid, 
+					{
+						success = true, 
+						info = "'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'mykey' are disallowed by policies", 
+						resultCode = "SUCCESS",
+						
+						wiperStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_WIPERSTATUS"},
+						accPedalPosition={resultCode="DISALLOWED",dataType = "VEHICLEDATA_ACCPEDAL"},
+						steeringWheelAngle={resultCode="DISALLOWED",dataType="VEHICLEDATA_STEERINGWHEEL"},
+						headLampStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+						deviceStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_DEVICESTATUS"},
+						eCallInfo={resultCode="DISALLOWED",dataType="VEHICLEDATA_ECALLINFO"},
+						airbagStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+						driverBraking={resultCode="DISALLOWED",dataType="VEHICLEDATA_BRAKING"},
+						engineTorque={resultCode="DISALLOWED",dataType="VEHICLEDATA_ENGINETORQUE"},	
+						myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+						clusterModes = {resultCode= "DISALLOWED",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+						emergencyEvent={resultCode="DISALLOWED",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+						
+						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},
+						speed={resultCode="SUCCESS",dataType="VEHICLEDATA_SPEED"},
+						rpm={resultCode="SUCCESS",dataType="VEHICLEDATA_RPM"},
+						fuelLevel={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL"},
+						fuelLevel_State={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						instantFuelConsumption={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						externalTemperature={resultCode="SUCCESS",dataType="VEHICLEDATA_EXTERNTEMP"},
+						prndl={resultCode="SUCCESS",dataType="VEHICLEDATA_PRNDL"},
+						tirePressure={resultCode = "SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE"},
+						odometer={resultCode="SUCCESS",dataType="VEHICLEDATA_ODOMETER"},
+						bodyInformation={resultCode="SUCCESS",dataType="VEHICLEDATA_BODYINFO"},
+						beltStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_BELTSTATUS"},
+						tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"},
+						abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+						turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+						tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+						fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"}	
+				})					
+						
+						
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
 		end
@@ -3527,7 +3264,7 @@ end
 			EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", {})
 			:Times(0)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by policies."})
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by policies"})
 			commonTestCases:DelayedExp(1000)
 		
 		end
@@ -3559,7 +3296,36 @@ end
 				end)
 				
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' disallowed by policies.", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, 
+					{	
+						success = true, 
+						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by policies", 
+						resultCode = "SUCCESS",
+						
+						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
+						speed={resultCode="DISALLOWED",dataType="VEHICLEDATA_SPEED"},
+						rpm={resultCode="DISALLOWED",dataType="VEHICLEDATA_RPM"},
+						fuelLevel={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL"},
+						fuelLevel_State={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						instantFuelConsumption={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						externalTemperature={resultCode="DISALLOWED",dataType="VEHICLEDATA_EXTERNTEMP"},
+						prndl={resultCode="DISALLOWED",dataType="VEHICLEDATA_PRNDL"},
+						
+						deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+						driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+						wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+						headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+						engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},									
+						accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+						steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+						eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+						airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+						abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+						turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+						fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"}	,
+						tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+						tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"}
+					})					
 			
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
@@ -3592,7 +3358,44 @@ end
 					end
 				end)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' disallowed by policies.", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, 
+					{
+						success = true, 
+						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						resultCode = "SUCCESS",
+						
+						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
+						speed={resultCode="DISALLOWED",dataType="VEHICLEDATA_SPEED"},
+						rpm={resultCode="DISALLOWED",dataType="VEHICLEDATA_RPM"},
+						fuelLevel={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL"},
+						fuelLevel_State={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						instantFuelConsumption={resultCode="DISALLOWED",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						externalTemperature={resultCode="DISALLOWED",dataType="VEHICLEDATA_EXTERNTEMP"},
+						prndl={resultCode="DISALLOWED",dataType="VEHICLEDATA_PRNDL"},
+						emergencyEvent={resultCode="DISALLOWED",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+						clusterModes = {resultCode= "DISALLOWED",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+						myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+						tirePressure={resultCode = "DISALLOWED",dataType="VEHICLEDATA_TIREPRESSURE"},
+						odometer={resultCode="DISALLOWED",dataType="VEHICLEDATA_ODOMETER"},
+						beltStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_BELTSTATUS"},
+						
+						bodyInformation={resultCode="SUCCESS",dataType="VEHICLEDATA_BODYINFO"},
+						deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+						driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+						wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+						headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+						engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},									
+						accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+						steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+						eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+						airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+						abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+						turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+						fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"},	
+						tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+						tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"}
+				})					
+						
 			
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
@@ -3613,7 +3416,7 @@ end
 			EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", {})
 			:Times(0)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "RPC is disallowed by the user."})
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "RPC is disallowed by the user"})
 			commonTestCases:DelayedExp(1000)
 			
 		end
@@ -3643,8 +3446,37 @@ end
 				end)
 				
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' disallowed by policies.", resultCode = "SUCCESS"})			
-			
+			EXPECT_RESPONSE(cid, 
+						{	
+							success = true,
+							info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user", 
+							resultCode = "SUCCESS",	
+							
+							gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
+							speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
+							rpm={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_RPM"},
+							fuelLevel={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL"},
+							fuelLevel_State={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+							instantFuelConsumption={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+							externalTemperature={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_EXTERNTEMP"},
+							prndl={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_PRNDL"},
+							
+							deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+							driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+							wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+							headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+							engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},									
+							accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+							steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+							eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+							airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+							abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+							turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+							fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"}	,
+							tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+							tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"}
+							
+						})		
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
 		end
@@ -3652,7 +3484,8 @@ end
 			self:unSubscribeVehicleDataSuccess(Request_WithParams_InBase4)
 		end
 		
-		-- SDL responds "USER_DISALLOWED" with info about user_disallowed and disallowed params when send SubscribeVehicleData with some params are disallowed by Policies and some params are disallowed by User. 
+		-- SDL responds "DISALLOWED" with info about user_disallowed and disallowed params when send SubscribeVehicleData with some params are disallowed by Policies and some params are disallowed by User. 
+		--Expected result is confirmed by question APPLINK-27002
 		local Request_ParamsNotPresented_ParamInGroup1 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption",
 								"externalTemperature", "prndl", "emergencyEvent", "clusterModeStatus", "mykey", "tirePressure", "odometer", "beltStatus", "bodyInformation"}
 		
@@ -3665,7 +3498,30 @@ end
 			EXPECT_HMICALL("VehicleInfo.SubscribeVehicleData", {})
 			:Times(0)
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "Several of requested parameters are disallowed by user.'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' disallowed by user. 'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' disallowed by policies"})
+			EXPECT_RESPONSE(cid, 
+					{
+						success = false, 
+						resultCode = "DISALLOWED", 
+						info = "'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies,'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user",
+						
+						gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
+						speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
+						rpm={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_RPM"},
+						fuelLevel={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL"},
+						fuelLevel_State={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						instantFuelConsumption={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						externalTemperature={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_EXTERNTEMP"},
+						prndl={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_PRNDL"},
+						
+						emergencyEvent={resultCode="DISALLOWED",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+						clusterModeStatus = {resultCode= "DISALLOWED",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+						myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+						tirePressure={resultCode = "DISALLOWED",dataType="VEHICLEDATA_TIREPRESSURE"},
+						odometer={resultCode="DISALLOWED",dataType="VEHICLEDATA_ODOMETER"},
+						beltStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_BELTSTATUS"},
+						bodyInformation={resultCode="DISALLOWED",dataType="VEHICLEDATA_BODYINFO"},
+						
+					})
 			commonTestCases:DelayedExp(1000)
 				
 		end
@@ -3695,7 +3551,45 @@ end
 				end)
 				
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' disallowed by user; 'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' disallowed by policies.", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, 
+			{
+				success = true, 
+				info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user,'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+				resultCode = "SUCCESS",
+				
+				gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
+				speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
+				rpm={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_RPM"},
+				fuelLevel={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL"},
+				fuelLevel_State={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+				instantFuelConsumption={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+				externalTemperature={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_EXTERNTEMP"},
+				prndl={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_PRNDL"},
+				
+				emergencyEvent={resultCode="DISALLOWED",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+				clusterModeStatus = {resultCode= "DISALLOWED",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+				myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+				tirePressure={resultCode = "DISALLOWED",dataType="VEHICLEDATA_TIREPRESSURE"},
+				odometer={resultCode="DISALLOWED",dataType="VEHICLEDATA_ODOMETER"},
+				beltStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_BELTSTATUS"},
+				bodyInformation={resultCode="DISALLOWED",dataType="VEHICLEDATA_BODYINFO"},
+				
+				deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+				driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+				wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+				headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+				engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},									
+				accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+				steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+				eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+				airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+				abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+				turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+				fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"}	,
+				tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+				tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"}
+			
+			})			
 			
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
@@ -3731,7 +3625,45 @@ end
 				end)
 				
 			--mobile side: expect SubscribeVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' disallowed by policies.", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid,
+					{
+						success = true, 
+						info = "'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						resultCode = "SUCCESS",
+						
+						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},
+						speed={resultCode="SUCCESS",dataType="VEHICLEDATA_SPEED"},
+						rpm={resultCode="SUCCESS",dataType="VEHICLEDATA_RPM"},
+						fuelLevel={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL"},
+						fuelLevel_State={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELLEVEL_STATE"},
+						instantFuelConsumption={resultCode="SUCCESS",dataType="VEHICLEDATA_FUELCONSUMPTION"},
+						externalTemperature={resultCode="SUCCESS",dataType="VEHICLEDATA_EXTERNTEMP"},
+						prndl={resultCode="SUCCESS",dataType="VEHICLEDATA_PRNDL"},
+						
+						emergencyEvent={resultCode="DISALLOWED",dataType="VEHICLEDATA_EMERGENCYEVENT"},
+						clusterModeStatus = {resultCode= "DISALLOWED",dataType="VEHICLEDATA_CLUSTERMODESTATUS"},
+						myKey={resultCode="DISALLOWED",dataType="VEHICLEDATA_MYKEY"},
+						tirePressure={resultCode = "DISALLOWED",dataType="VEHICLEDATA_TIREPRESSURE"},
+						odometer={resultCode="DISALLOWED",dataType="VEHICLEDATA_ODOMETER"},
+						beltStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_BELTSTATUS"},
+						bodyInformation={resultCode="DISALLOWED",dataType="VEHICLEDATA_BODYINFO"},
+						
+						deviceStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_DEVICESTATUS"},
+						driverBraking={resultCode="SUCCESS",dataType="VEHICLEDATA_BRAKING"},
+						wiperStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_WIPERSTATUS"},
+						headLampStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_HEADLAMPSTATUS"},
+						engineTorque={resultCode="SUCCESS",dataType="VEHICLEDATA_ENGINETORQUE"},									
+						accPedalPosition={resultCode="SUCCESS",dataType = "VEHICLEDATA_ACCPEDAL"},
+						steeringWheelAngle={resultCode="SUCCESS",dataType="VEHICLEDATA_STEERINGWHEEL"},
+						eCallInfo={resultCode="SUCCESS",dataType="VEHICLEDATA_ECALLINFO"},
+						airbagStatus={resultCode="SUCCESS",dataType="VEHICLEDATA_AIRBAGSTATUS"},
+						abs_State={resultCode="SUCCESS",dataType="VEHICLEDATA_ABS_STATE"},
+						turnSignal={resultCode="SUCCESS",dataType="VEHICLEDATA_TURNSIGNAL"},
+						fuelRange= {resultCode= "SUCCESS",dataType="VEHICLEDATA_FUELRANGE"}	,
+						tirePressureValue={resultCode="SUCCESS",dataType="VEHICLEDATA_TIREPRESSURE_VALUE"},
+						tpms={resultCode="SUCCESS",dataType="VEHICLEDATA_TPMS"}
+						
+					})			
 			
 			--mobile side: expect OnHashChange notification
 			EXPECT_NOTIFICATION("OnHashChange")
