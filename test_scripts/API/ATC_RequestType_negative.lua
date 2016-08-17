@@ -6,10 +6,12 @@
 -- --Precondition: preparation connecttest_RAI.lua
 -- commonPreconditions:Connecttest_without_ExitBySDLDisconnect("connecttest_malformed.lua")
 local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
+local commonSteps = require('user_modules/shared_testcases/commonSteps')
 
 --------------------------------------------------------------------------------
 --Precondition: preparation connecttest_OnAppUnregistered.lua
 commonPreconditions:Connecttest_without_ExitBySDLDisconnect("connecttest_RequestType.lua")
+commonSteps:DeleteLogsFileAndPolicyTable()
 
 --ToDo: shall be removed when APPLINK-16610 is fixed
 config.defaultProtocolVersion = 2
@@ -224,12 +226,6 @@ local function OpenConnectionCreateSession(self)
 	self.mobileSession:StartService(7)
 end
 
-
-
-
-
-
-
 -----------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -259,18 +255,21 @@ function Test:convertPreloadedToJson()
    
   local data = json.decode(json_data)
 
-  for k,v in pairs(data.policy_table.functional_groupings) do
-    if (data.policy_table.functional_groupings[k].rpcs == nil) then
-        --do
-        data.policy_table.functional_groupings[k] = nil
-    else
-        --do
-        local count = 0
-        for _ in pairs(data.policy_table.functional_groupings[k].rpcs) do count = count + 1 end
-        if (count < 30) then
-            --do
-        data.policy_table.functional_groupings[k] = nil
+  local function has_value (tab, val)
+    for index, value in ipairs (tab) do
+        if value == val then
+            return true
         end
+    end
+
+    return false
+  end
+
+  for k,v in pairs(data.policy_table.functional_groupings) do
+    if  has_value(data.policy_table.app_policies.default.groups, k) or 
+        has_value(data.policy_table.app_policies.pre_DataConsent.groups, k) then 
+    else 
+      data.policy_table.functional_groupings[k] = nil 
     end
   end
 
@@ -301,10 +300,6 @@ function Test:CreatePTUEmptyRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -371,7 +366,7 @@ local applicationRegisterParams =
       majorVersion = 3,
       minorVersion = 0
     },
-    appName = "Test Application",
+    appName = "App1",
     isMediaApplication = true,
     languageDesired = 'EN-US',
     hmiDisplayLanguageDesired = 'EN-US',
@@ -467,6 +462,7 @@ end
 
 function Test:PrecondPTU()
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:unregisterApp( ... )
@@ -487,8 +483,6 @@ function Test:PrecondExitApp1()
   self:unregisterApp()
 end
 
-local language_change = false
-
 function Test:checkOnAppRegistered(params)
   -- body
 
@@ -506,13 +500,11 @@ function Test:checkOnAppRegistered(params)
   EXPECT_RESPONSE(registerAppInterfaceID, { success = true, resultCode = "SUCCESS"})
   :Timeout(2000)
 
-  -- EXPECT_NOTIFICATION("OnAppInterfaceUnregistered", {reason = "LANGUAGE_CHANGE"})
   EXPECT_NOTIFICATION("OnAppInterfaceUnregistered")
   :Times(0)
   :ValidIf(function(exp, data)
     if 
       exp.occurences == 1 then
-        language_change = true
         self:FailTestCase("UnexpectedDisconnect")
     end
   end)
@@ -533,7 +525,7 @@ function Test:checkRequestTypeInSystemRequest(request_type)
 
     local systemRequestId
     --hmi side: expect SystemRequest request
-    if request_type ~= "QUERY_APPS" then
+    if request_type ~= "QUERY_APPS" and request_type ~= "LAUNCH_APP" then
       EXPECT_HMICALL("BasicCommunication.SystemRequest")
       :ValidIf(function (self, data)
             -- body
@@ -548,13 +540,19 @@ function Test:checkRequestTypeInSystemRequest(request_type)
           self.hmiConnection:SendResponse(data.id,"BasicCommunication.SystemRequest", "SUCCESS", {})
       end)
     end
-    if request_type ~= "QUERY_APPS" then
+    if request_type ~= "QUERY_APPS" and request_type ~= "LAUNCH_APP" then
       EXPECT_RESPONSE(CorIdSystemRequest, { success = true, resultCode = "SUCCESS"})        
       :Timeout(5000)
     else
-      -- according to CRQ "SDL behaviour in case SDL 4.0 feature is required to be ommited in implementation"
-      EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "UNSUPPORTED_RESOURCE"})        
-      :Timeout(5000)
+      if request_type == "LAUNCH_APP" then
+        userPrint(40, "open question \"What response should be for requstType LAUNCH_APP if SDL4.0 is ommited in implementation\",\nassumption is DISALLOWED result code")
+        EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "DISALLOWED"})        
+        :Timeout(5000)
+      else
+        -- according to CRQ "SDL behaviour in case SDL 4.0 feature is required to be ommited in implementation"
+        EXPECT_RESPONSE(CorIdSystemRequest, { success = false, resultCode = "UNSUPPORTED_RESOURCE"})        
+        :Timeout(5000)
+      end
     end
 end
 
@@ -599,10 +597,6 @@ function Test:CreatePTUEmptyRequestTypePreData(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -620,6 +614,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondExitAppPreData()
@@ -669,10 +664,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -686,6 +678,7 @@ function Test:TriggerPTUForOmmitedRequestType( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 
@@ -693,7 +686,7 @@ function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC3()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -749,10 +742,6 @@ function Test:CreatePTUOmmitedRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -771,13 +760,14 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC3_1()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -820,10 +810,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -841,6 +828,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 
@@ -881,10 +869,7 @@ function Test:CreatePTUOmmitedRequestTypePreData(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -898,6 +883,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondMakeDeviceUntrustedOmmitedPreData22()
@@ -908,7 +894,7 @@ function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC4()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -954,10 +940,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -971,6 +954,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondExitApp()
@@ -1006,10 +990,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1027,13 +1008,14 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC5()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -1079,10 +1061,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1100,6 +1079,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 
@@ -1140,10 +1120,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesPreData(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1161,6 +1138,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondMakeDeviceUntrustedOmmitedPreData22()
@@ -1171,7 +1149,7 @@ function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC6()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -1218,10 +1196,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1235,6 +1210,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 
@@ -1271,10 +1247,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1292,13 +1265,14 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondExitAppPreData()
   self:unregisterApp()
 end
 
-function Test:CheckOnAppRegisteredHasDeafultRequestType()
+function Test:CheckOnAppRegisteredHasDeafultRequestTypeTC7()
   self:checkOnAppRegistered({"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"})
 end
 
@@ -1345,10 +1319,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1366,6 +1337,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 
@@ -1406,10 +1378,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
 
   local json = require("json")
   data = json.encode(data)
-  -- print(data)
-  -- for i=1, #data.policy_table.app_policies.default.groups do
-  --  print(data.policy_table.app_policies.default.groups[i])
-  -- end
+  
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
@@ -1423,6 +1392,7 @@ function Test:TriggerPTU( ... )
   odometerValue = odometerValue + exchange_after_x_kilometers + 1
   self.hmiConnection:SendNotification("VehicleInfo.OnVehicleData", { odometer = odometerValue})
   self:ptu()
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
 function Test:PrecondMakeDeviceUntrustedOmmited( ... )
