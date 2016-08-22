@@ -40,7 +40,9 @@ local turnSignalValues = {"OFF", "LEFT", "RIGHT", "UNUSED"}
 local tirePressureValueParams = {"leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear", "frontRecommended", "rearRecommended"}
 local beltStatusParams = {"driverBeltDeployed", "passengerBeltDeployed", "passengerBuckleBelted", "driverBuckleBelted", "leftRow2BuckleBelted", "passengerChildDetected", "rightRow2BuckleBelted", "middleRow2BuckleBelted", "middleRow3BuckleBelted", "leftRow3BuckleBelted", "rightRow3BuckleBelted", "leftRearInflatableBelted", "rightRearInflatableBelted", "middleRow1BeltDeployed", "middleRow1BuckleBelted"}
 local airbagStatusParams = {"driverAirbagDeployed", "driverSideAirbagDeployed", "driverCurtainAirbagDeployed", "passengerAirbagDeployed", "passengerCurtainAirbagDeployed", "driverKneeAirbagDeployed", "passengerSideAirbagDeployed", "passengerKneeAirbagDeployed"}
-
+local integerParameterInResponse = require('user_modules/shared_testcases/testCasesForIntegerParameterInResponse')
+local floatParameterInResponse = require('user_modules/shared_testcases/testCasesForFloatParameterInResponse')
+local booleanParameterInResponse = require('user_modules/shared_testcases/testCasesForBooleanParameterInResponse')
 local vehicleDataValues = {
 						gps = {
 								longitudeDegrees = 25.5, 
@@ -753,367 +755,231 @@ end
 			commonFunctions:newTestCasesGroup("PositiveResponseCheck.2")				
 				--Begin Test case PositiveResponseCheck.2.1
 				--Description: Response with longitudeDegrees parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_longitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["longitudeDegrees"] = -179.9			
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.1
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.2
 				--Description: Response with longitudeDegrees parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_longitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["longitudeDegrees"] = 179.9			
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.2
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.3
 				--Description: Response with latitudeDegrees parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_latitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["latitudeDegrees"] = -89.9		
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.3
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.4
 				--Description: Response with latitudeDegrees parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_latitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["latitudeDegrees"] = 89.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.4
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.5
 				--Description: Response with utcYear parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcYear()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcYear"] = 2010
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.5
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.6
 				--Description: Response with utcYear parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcYear()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcYear"] = 2100
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.6
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.7
 				--Description: Response with utcMonth parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcMonth()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMonth"] = 1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.7
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.8
 				--Description: Response with utcMonth parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcMonth()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMonth"] = 12
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.8
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.9
 				--Description: Response with utcDay parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcDay()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcDay"] = 1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.9
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.10
 				--Description: Response with utcDay parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcDay()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcDay"] = 31
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.10
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.11
 				--Description: Response with utcHours parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcHours()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcHours"] = 0
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.11
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.12
 				--Description: Response with utcHours parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcHours()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcHours"] = 23
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.12
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.13
 				--Description: Response with utcMinutes parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcMinutes()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMinutes"] = 0
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.13
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.14
 				--Description: Response with utcMinutes parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcMinutes()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMinutes"] = 59
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.14
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.15
 				--Description: Response with utcSeconds parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_utcSeconds()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcSeconds"] = 0
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.15
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.16
 				--Description: Response with utcSeconds parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_utcSeconds()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcSeconds"] = 59
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.16
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.17
 				--Description: Response with compassDirection in bound
-					for i=1, #compassDirectionValues do
-						Test["GetVehicleData_compassDirection_"..compassDirectionValues[i]] = function(self)
-							local response = setGVDResponse({"gps"})						
-							response.gps["compassDirection"] = compassDirectionValues[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.17
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.18
 				--Description: Response with pdop parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_pdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["pdop"] = 0.1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.18
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.19
 				--Description: Response with pdop parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_pdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["pdop"] = 9.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.19
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.20
 				--Description: Response with hdop parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_hdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["hdop"] = 0.1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.20
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.21
 				--Description: Response with hdop parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_hdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["hdop"] = 9.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.21
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.22
 				--Description: Response with vdop parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_vdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["vdop"] = 0.1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.22
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.23
 				--Description: Response with vdop parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_vdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["vdop"] = 9.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.23
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.24
 				--Description: Response with actual parameter in bound
-					function Test:GetVehicleData_ResponseInBound_actual()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["actual"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.24
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.25
 				--Description: Response with satellites parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_satellites()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["satellites"] = 0
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.25
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.26
 				--Description: Response with satellites parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_satellites()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["satellites"] = 31
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.26
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.27
 				--Description: Response with dimension parameter in bound
-					for i=1, #dimensionValues do
-						Test["GetVehicleData_dimension"..dimensionValues[i]] = function(self)
-							local response = setGVDResponse({"gps"})						
-							response.gps["dimension"] = dimensionValues[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.27
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.28
 				--Description: Response with altitude parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_altitude()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["altitude"] = -9999.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.28
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.29
 				--Description: Response with altitude parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_altitude()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["altitude"] = 9999.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.29
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.30
 				--Description: Response with heading parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_heading()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["heading"] = 0.1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.30
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.31
 				--Description: Response with heading parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_heading()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["heading"] = 359.99
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.31
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.32
 				--Description: Response with gps.speed parameter lower bound
-					function Test:GetVehicleData_ResponseLowerBound_gps_speed()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["speed"] = 0.1
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.32
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.33
 				--Description: Response with gps.speed parameter upper bound
-					function Test:GetVehicleData_ResponseUpperBound_gps_speed()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["speed"] = 499.9
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case PositiveResponseCheck.2.33
 				
 				-----------------------------------------------------------------------------------------
@@ -1278,91 +1144,49 @@ end
 				
 				--Begin Test case PositiveResponseCheck.2.48
 				--Description: Response with pressureTelltale parameter in bound
-					for i=1, #warningLightStatus do
-						Test["GetVehicleData_pressureTelltale_"..warningLightStatus[i]] = function(self)
-							local response = setGVDResponse({"tirePressure"})						
-							response.tirePressure["pressureTelltale"] = warningLightStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.48
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.49
 				--Description: Response with leftFront parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_leftFront_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={leftFront = {}}}					
-							response.tirePressure.leftFront["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.49
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.50
 				--Description: Response with rightFront parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_rightFront_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={rightFront = {}}}					
-							response.tirePressure.rightFront["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.50
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.51
 				--Description: Response with leftRear parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_leftRear_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={leftRear = {}}}					
-							response.tirePressure.leftRear["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)											
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.51
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.52
 				--Description: Response with rightRear parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_rightRear_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={rightRear = {}}}					
-							response.tirePressure.rightRear["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.52
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.53
 				--Description: Response with innerLeftRear parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_innerLeftRear_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={innerLeftRear = {}}}					
-							response.tirePressure.innerLeftRear["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.53
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case PositiveResponseCheck.2.54
 				--Description: Response with innerRightRear parameter in bound
-					for i=1, #componentVolumeStatus do
-						Test["GetVehicleData_innerRightRear_"..componentVolumeStatus[i]] = function(self)
-							local response = {tirePressure={innerRightRear = {}}}					
-							response.tirePressure.innerRightRear["status"] = componentVolumeStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test case PositiveResponseCheck.2.54
 				
 				-----------------------------------------------------------------------------------------
@@ -1391,15 +1215,7 @@ end
 
 				--Begin Test case PositiveResponseCheck.2.57
 				--Description: Response with beltStatus parameter in bound
-					for j=1, #beltStatusParams do
-						for i=1, #vehicleDataEventStatus do
-							Test["GetVehicleData_"..beltStatusParams[j].."_"..vehicleDataEventStatus[i]] = function(self)
-								local response = {beltStatus={}}														
-								response.beltStatus[beltStatusParams[j]] = vehicleDataEventStatus[i]
-								self:getVehicleData_ResponseSuccess(response)								
-							end
-						end
-					end
+					-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test case PositiveResponseCheck.2.57
 				
 				-----------------------------------------------------------------------------------------
@@ -1487,116 +1303,70 @@ end
 
 				--Begin Test case PositiveResponseCheck.2.65
 				--Description: Response with voiceRecOn parameter in bound
-					function Test:GetVehicleData_ResponseInBound_voiceRecOn()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["voiceRecOn"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.65
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.66
 				--Description: Response with btIconOn parameter in bound
-					function Test:GetVehicleData_ResponseInBound_btIconOn()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["btIconOn"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.66
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.67
 				--Description: Response with callActive parameter in bound
-					function Test:GetVehicleData_ResponseInBound_callActive()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["callActive"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.67
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.68
 				--Description: Response with phoneRoaming parameter in bound
-					function Test:GetVehicleData_ResponseInBound_phoneRoaming()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["phoneRoaming"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.68
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.69
 				--Description: Response with textMsgAvailable parameter in bound
-					function Test:GetVehicleData_ResponseInBound_textMsgAvailable()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["textMsgAvailable"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.69
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.70
 				--Description: Response with battLevelStatus parameter in bound
-					for i=1, #deviceLevelStatus do
-						Test["GetVehicleData_battLevelStatus_"..deviceLevelStatus[i]] = function(self)
-							local response = setGVDResponse({"deviceStatus"})						
-							response.deviceStatus["battLevelStatus"] = deviceLevelStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.70
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.71
 				--Description: Response with monoAudioOutputMuted parameter in bound
-					function Test:GetVehicleData_ResponseInBound_monoAudioOutputMuted()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["monoAudioOutputMuted"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.71
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.72
 				--Description: Response with signalLevelStatus parameter in bound
-					for i=1, #deviceLevelStatus do
-						Test["GetVehicleData_signalLevelStatus_"..deviceLevelStatus[i]] = function(self)
-							local response = setGVDResponse({"deviceStatus"})						
-							response.deviceStatus["signalLevelStatus"] = deviceLevelStatus[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.72
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.73
 				--Description: Response with primaryAudioSource parameter in bound
-					for i=1, #primaryAudioSourceValues do
-						Test["GetVehicleData_primaryAudioSource_"..primaryAudioSourceValues[i]] = function(self)
-							local response = setGVDResponse({"deviceStatus"})						
-							response.deviceStatus["primaryAudioSource"] = primaryAudioSourceValues[i]
-							self:getVehicleData_ResponseSuccess(response)							
-						end
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.73
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case PositiveResponseCheck.2.74
 				--Description: Response with eCallEventActive parameter in bound
-					function Test:GetVehicleData_ResponseInBound_eCallEventActive()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["eCallEventActive"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.74
 				
 				-----------------------------------------------------------------------------------------
@@ -1900,11 +1670,7 @@ end
 
 				--Begin Test case PositiveResponseCheck.2.99
 				--Description: Response with monoAudioOutputMuted parameter in bound
-					function Test:GetVehicleData_ResponseInBound_stereoAudioOutputMuted()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["stereoAudioOutputMuted"] = false
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test case PositiveResponseCheck.2.99	
 			
 				-----------------------------------------------------------------------------------------
@@ -2030,7 +1796,8 @@ end
 					
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription. 
-			commonFunctions:newTestCasesGroup("PositiveResponseCheck.3")		
+			commonFunctions:newTestCasesGroup("PositiveResponseCheck.3")
+				--RequirementID: APPLINK-15255	
 				--Begin Test case PositiveResponseCheck.3.1
 				--Description: Response with only mandatory in gps structure		
 					function Test:GetVehicleData_Response_OnlyMandatoryGPS()						
@@ -2082,7 +1849,7 @@ end
 				--End Test case PositiveResponseCheck.3.3
 				
 				-----------------------------------------------------------------------------------------
-				
+				--RequirementID: APPLINK-15256
 				--Begin Test case PositiveResponseCheck.3.4
 				--Description: Response with one parameter in beltStatusParams structure
 					local beltStatusParams = {"driverBeltDeployed", "passengerBeltDeployed", "passengerBuckleBelted", "driverBuckleBelted", "leftRow2BuckleBelted", "passengerChildDetected", "rightRow2BuckleBelted", "middleRow2BuckleBelted", "middleRow3BuckleBelted", "leftRow3BuckleBelted", "rightRow3BuckleBelted", "leftRearInflatableBelted", "rightRearInflatableBelted", "middleRow1BeltDeployed", "middleRow1BuckleBelted"}
@@ -2828,37 +2595,26 @@ end
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription.
 				
+				--Requirement id in JIRA:
+					-- APPLINK-15257
+					-- APPLINK-15258
 				--Begin Test Case NegativeResponseCheck6.1
 				--Description: Check response with gps empty
-					function Test:GetVehicleData_GpsEmpty()						
-						local response = setGVDResponse({"gps"})						
-						response["gps"] = {}
-					--TODO: update after resolving APPLINK-15241
-						-- self:getVehicleData_ResponseInvalidData(response)
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck6.1
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.2
 				--Description: Check response with compassDirection empty
-					function Test:GetVehicleData_compassDirectionEmpty()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["compassDirection"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck6.2
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.3
 				--Description: Check response with dimension empty
-					function Test:GetVehicleData_dimensionEmpty()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["dimension"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck6.3
 				
 				-----------------------------------------------------------------------------------------
@@ -2898,73 +2654,42 @@ end
 				
 				--Begin Test Case NegativeResponseCheck6.7
 				--Description: Check response with tirePressure empty
-					function Test:GetVehicleData_tirePressureEmpty()						
-						local response = setGVDResponse({"tirePressure"})						
-						response["tirePressure"] = {}
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck6.7
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.8
 				--Description: Check response with pressureTelltale empty
-					function Test:GetVehicleData_pressureTelltaleEmpty()						
-						local response = setGVDResponse({"tirePressure"})						
-						response.tirePressure["pressureTelltale"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck6.8
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.9
 				--Description: Check response with parameters in tirePressure structure empty
-					local tirePressureParams ={"leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear"}
-					for i=1, #tirePressureParams do
-						Test["GetVehicleData_"..tirePressureParams[i].."Empty"] = function(self)
-							local response = setGVDResponse({"tirePressure"})						
-							response.tirePressure[tirePressureParams[i]] = {}
-							self:getVehicleData_ResponseInvalidData(response)
-						end
-					end
+				
+					-- -- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck6.9
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.10
 				--Description: Check response with status of parameters in tirePressure structure empty					
-					for i=1, #tirePressureParams do
-						Test["GetVehicleData_"..tirePressureParams[i].."StatusEmpty"] = function(self)
-							local response = {tirePressure = {}}
-							response.tirePressure[tirePressureParams[i]] = {status = ""}
-							self:getVehicleData_ResponseInvalidData(response)
-						end
-					end
+					-- -- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck6.10
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.11
-				--Description: Check response with beltStatus empty					
-					function Test:GetVehicleData_beltStatusEmpty()						
-						local response = setGVDResponse({"beltStatus"})						
-						response["beltStatus"] = {}
-						self:getVehicleData_ResponseSuccess(response)
-					end
+				-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test Case NegativeResponseCheck6.11
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.12
 				--Description: Check response with parameters in beltStatus structure empty									
-					for i=1, #beltStatusParams do
-						Test["GetVehicleData_"..beltStatusParams[i].."Empty"] = function(self)
-							local response = setGVDResponse({"beltStatus"})			
-							response.beltStatus[beltStatusParams[i]] = ""
-							self:getVehicleData_ResponseInvalidData(response)
-						end
-					end
+					-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test Case NegativeResponseCheck6.12
 				
 				-----------------------------------------------------------------------------------------
@@ -3004,44 +2729,28 @@ end
 				
 				--Begin Test Case NegativeResponseCheck6.16
 				--Description: Check response with deviceStatus empty											
-					function Test:GetVehicleData_deviceStatusEmpty()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response["deviceStatus"] = {}
-						self:getVehicleData_ResponseSuccess(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck6.16
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.17
 				--Description: Check response with battLevelStatus empty											
-					function Test:GetVehicleData_battLevelStatusEmpty()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["battLevelStatus"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck6.17
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.18
 				--Description: Check response with signalLevelStatus empty											
-					function Test:GetVehicleData_signalLevelStatusEmpty()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["signalLevelStatus"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck6.18
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck6.19
 				--Description: Check response with primaryAudioSource empty											
-					function Test:GetVehicleData_primaryAudioSourceEmpty()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["primaryAudioSource"] = ""
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck6.19
 				
 				-----------------------------------------------------------------------------------------
@@ -3223,50 +2932,21 @@ end
 				
 				--Begin Test Case NegativeResponseCheck.7.1
 				--Description: Check response with parameters in gps structure missing
-					local gpsParams = {"longitudeDegrees","latitudeDegrees","utcYear","utcMonth","utcDay","utcHours","utcMinutes","utcSeconds","compassDirection","pdop","hdop","vdop","actual","satellites","dimension","altitude","heading","speed"}
-					for i=1, #gpsParams do
-					--TODO: update after resolving APPLINK-15241 
-						-- if gpsParams[i] == "longitudeDegrees" or gpsParams[i] == "latitudeDegrees" then
-						-- 	Test["GetVehicleData_"..gpsParams[i].."Missing"] = function(self)
-						-- 		local response = setGVDResponse({"gps"})						
-						-- 		response.gps[gpsParams[i]] = nil
-						-- 		self:getVehicleData_ResponseInvalidData(response)								
-						-- 	end
-						-- else
-							Test["GetVehicleData_"..gpsParams[i].."Missing"] = function(self)
-								local response = setGVDResponse({"gps"})						
-								response.gps[gpsParams[i]] = nil
-								self:getVehicleData_ResponseSuccess(response)								
-							-- end
-						end
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck.7.1
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test Case NegativeResponseCheck.7.2
 				--Description: Check response with parameters in tirePressure structure missing
-					local tirePressureParams = {"pressureTelltale", "leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear"}
-					for i=1, #tirePressureParams do						
-						Test["GetVehicleData_"..tirePressureParams[i].."Missing"] = function(self)
-							local response = setGVDResponse({"tirePressure"})						
-							response.tirePressure[tirePressureParams[i]] = nil
-							self:getVehicleData_ResponseSuccess(response)							
-						end						
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck.7.2
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test Case NegativeResponseCheck.7.3
 				--Description: Check response with parameters in beltStatus structure missing					
-					for i=1, #beltStatusParams do						
-						Test["GetVehicleData_"..beltStatusParams[i].."Missing"] = function(self)
-							local response = setGVDResponse({"beltStatus"})						
-							response.beltStatus[beltStatusParams[i]] = nil
-							self:getVehicleData_ResponseSuccess(response)							
-						end						
-					end
+					-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test Case NegativeResponseCheck.7.3
 				
 				-----------------------------------------------------------------------------------------
@@ -3295,14 +2975,7 @@ end
 
 				--Begin Test Case NegativeResponseCheck.7.5
 				--Description: Check response with parameters in deviceStatus structure missing
-					local deviceStatusParams = {"voiceRecOn", "btIconOn", "callActive", "phoneRoaming", "textMsgAvailable", "battLevelStatus", "stereoAudioOutputMuted", "monoAudioOutputMuted", "signalLevelStatus", "primaryAudioSource", "eCallEventActive"}
-					for i=1, #deviceStatusParams do						
-						Test["GetVehicleData_"..deviceStatusParams[i].."Missing"] = function(self)
-							local response = setGVDResponse({"deviceStatus"})						
-							response.deviceStatus[deviceStatusParams[i]] = nil
-							self:getVehicleData_ResponseSuccess(response)
-						end						
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck.7.5
 				
 				-----------------------------------------------------------------------------------------
@@ -3392,65 +3065,28 @@ end
 
 				--Requirement id in JAMA:
 					--SDLAQ-CRS-98
-					
+				--Requirement in JIRA:
+				 	--APPLINK-15258
 				--Verification criteria:
 					-- The response contains 2 mandatory parameters "success" and "resultCode", "info" is sent if there is any additional information about the resultCode. The appropriate parameters sent in the request are returned with the data about subscription.
 				
 				--Begin Test Case NegativeResponseCheck.8.1
 				--Description: Check response with parameters in gps structure WrongType
-					local gpsParams = {
-										{param = "longitudeDegrees", value = "25"},
-										{param = "latitudeDegrees", value = "45"},
-										{param = "utcYear", value = 2015.5},
-										{param = "utcMonth", value = 10.5},
-										{param = "utcDay", value = 10.5},
-										{param = "utcHours", value = 10.5},
-										{param = "utcMinutes", value = 10.5},
-										{param = "utcSeconds", value = 10.5},
-										{param = "compassDirection", value = 1234},
-										{param = "pdop", value = "5"},
-										{param = "hdop", value = "5"},
-										{param = "vdop", value = "5"},
-										{param = "actual", value = 123},
-										{param = "satellites", value = 10.5},
-										{param = "dimension", value = 1234},
-										{param = "altitude", value = "10"},
-										{param = "heading", value = "100"},
-										{param = "speed", value = "250" }}
-					for i=1, #gpsParams do						
-						Test["GetVehicleData_"..gpsParams[i].param.."WrongType"] = function(self)
-							local response = setGVDResponse({"gps"})						
-							response.gps[gpsParams[i].param] = gpsParams[i].value
-							self:getVehicleData_ResponseInvalidData(response)
-						end						
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck.8.1
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test Case NegativeResponseCheck.8.2
 				--Description: Check response with parameters in tirePressure structure WrongType
-					local tirePressureParams = {"pressureTelltale", "leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear"}
-					for i=1, #tirePressureParams do						
-						Test["GetVehicleData_"..tirePressureParams[i].."WrongType"] = function(self)
-							local response = setGVDResponse({"tirePressure"})						
-							response.tirePressure[tirePressureParams[i]] = 1234
-							self:getVehicleData_ResponseInvalidData(response)
-						end						
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck.8.2
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test Case NegativeResponseCheck.8.3
 				--Description: Check response with parameters in beltStatus structure WrongType					
-					for i=1, #beltStatusParams do						
-						Test["GetVehicleData_"..beltStatusParams[i].."WrongType"] = function(self)
-							local response = setGVDResponse({"beltStatus"})						
-							response.beltStatus[beltStatusParams[i]] = 1234
-							self:getVehicleData_ResponseInvalidData(response)
-						end						
-					end
+					-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test Case NegativeResponseCheck.8.3
 				
 				-----------------------------------------------------------------------------------------
@@ -3471,14 +3107,7 @@ end
 
 				--Begin Test Case NegativeResponseCheck.8.5
 				--Description: Check response with parameters in deviceStatus structure WrongType
-					local deviceStatusParams = {"voiceRecOn", "btIconOn", "callActive", "phoneRoaming", "textMsgAvailable", "battLevelStatus", "stereoAudioOutputMuted", "monoAudioOutputMuted", "signalLevelStatus", "primaryAudioSource", "eCallEventActive"}
-					for i=1, #deviceStatusParams do						
-						Test["GetVehicleData_"..deviceStatusParams[i].."WrongType"] = function(self)
-							local response = setGVDResponse({"deviceStatus"})						
-							response.deviceStatus[deviceStatusParams[i]] = 1234
-							self:getVehicleData_ResponseInvalidData(response)
-						end						
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck.8.5
 				
 				-----------------------------------------------------------------------------------------
@@ -3596,11 +3225,7 @@ end
 				
 				--Begin Test Case NegativeResponseCheck.9.1
 				--Description: Check response with nonexistent value for compassDirection parameters
-					function Test:GetVehicleData_compassDirection_NotExist()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["compassDirection"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter() 
 				--End Test Case NegativeResponseCheck.9.1
 				
 				-----------------------------------------------------------------------------------------
@@ -3629,38 +3254,21 @@ end
 				
 				--Begin Test Case NegativeResponseCheck.9.4
 				--Description:  Check response with nonexistent value for pressureTelltale parameters
-					function Test:GetVehicleData_pressureTelltale_NotExist()						
-						local response = setGVDResponse({"tirePressure"})						
-						response.tirePressure["pressureTelltale"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck.9.4
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck.9.5
 				--Description: Check response with nonexistent value for tirePressure status
-					local tirePressureParams ={"leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear"}
-					for i=1, #tirePressureParams do
-						Test["GetVehicleData_"..tirePressureParams[i].."_NotExist"] = function(self)
-							local response = {tirePressure = {}}
-							response.tirePressure[tirePressureParams[i]] = {status = "ANY"}
-							self:getVehicleData_ResponseInvalidData(response)
-						end
-					end
+					-- It's already covered in function verify_tirePressure_parameter.
 				--End Test Case NegativeResponseCheck.9.5
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck.9.6
 				--Description: Check response with nonexistent value for beltStatus status
-					for i=1, #beltStatusParams do						
-						Test["GetVehicleData_"..beltStatusParams[i].."_NotExist"] = function(self)
-							local response = setGVDResponse({"beltStatus"})						
-							response.beltStatus[beltStatusParams[i]] = "ANY"
-							self:getVehicleData_ResponseInvalidData(response)
-						end						
-					end
+					-- It's already covered in function verify_beltStatus_parameter() 
 				--End Test Case NegativeResponseCheck.9.6
 				
 				-----------------------------------------------------------------------------------------
@@ -3689,33 +3297,21 @@ end
 				
 				--Begin Test Case NegativeResponseCheck.9.9
 				--Description:  Check response with nonexistent value for battLevelStatus parameters
-					function Test:GetVehicleData_battLevelStatus_NotExist()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["battLevelStatus"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck.9.9
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck.9.10
 				--Description:  Check response with nonexistent value for signalLevelStatus parameters
-					function Test:GetVehicleData_signalLevelStatus_NotExist()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["signalLevelStatus"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck.9.10
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test Case NegativeResponseCheck.9.11
 				--Description:  Check response with nonexistent value for primaryAudioSource parameters
-					function Test:GetVehicleData_primaryAudioSource_NotExist()						
-						local response = setGVDResponse({"deviceStatus"})						
-						response.deviceStatus["primaryAudioSource"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_deviceStatus_parameter
 				--End Test Case NegativeResponseCheck.9.11
 				
 				-----------------------------------------------------------------------------------------
@@ -3820,11 +3416,7 @@ end
 				
 				--Begin Test Case NegativeResponseCheck.9.20
 				--Description: Check response with nonexistent value for dimension parameters
-					function Test:GetVehicleData_dimension_NotExist()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["dimension"] = "ANY"
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test Case NegativeResponseCheck.9.20
 			--End Test case NegativeResponseCheck.9
 			
@@ -3884,330 +3476,210 @@ end
 				
 				--Begin Test case NegativeResponseCheck.11.1
 				--Description: Response with longitudeDegrees parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_longitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["longitudeDegrees"] = -180.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.1
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.2
 				--Description: Response with longitudeDegrees parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_longitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["longitudeDegrees"] = 180.1			
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.2
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.3
 				--Description: Response with latitudeDegrees parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_latitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["latitudeDegrees"] = -90.1	
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.3
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.4
 				--Description: Response with latitudeDegrees parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_latitudeDegrees()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["latitudeDegrees"] = 90.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.4
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.5
 				--Description: Response with utcYear parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcYear()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcYear"] = 2009
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.5
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.6
 				--Description: Response with utcYear parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcYear()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcYear"] = 2101
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.6
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.7
 				--Description: Response with utcMonth parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcMonth()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMonth"] = 0
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.7
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.8
 				--Description: Response with utcMonth parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcMonth()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMonth"] = 13
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.8
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.9
 				--Description: Response with utcDay parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcDay()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcDay"] = 0
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.9
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.10
 				--Description: Response with utcDay parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcDay()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcDay"] = 32
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.10
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.11
 				--Description: Response with utcHours parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcHours()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcHours"] = -1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.11
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.12
 				--Description: Response with utcHours parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcHours()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcHours"] = 24
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.12
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.13
 				--Description: Response with utcMinutes parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcMinutes()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMinutes"] = -1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.13
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.14
 				--Description: Response with utcMinutes parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcMinutes()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcMinutes"] = 60
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.14
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.15
 				--Description: Response with utcSeconds parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_utcSeconds()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcSeconds"] = -1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.15
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.16
 				--Description: Response with utcSeconds parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_utcSeconds()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["utcSeconds"] = 60
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.16
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.17
 				--Description: Response with pdop parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_pdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["pdop"] = -0.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.17
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.18
 				--Description: Response with pdop parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_pdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["pdop"] = 10.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.18
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.19
 				--Description: Response with hdop parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_hdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["hdop"] = -0.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+				-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.19
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.20
 				--Description: Response with hdop parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_hdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["hdop"] = 10.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.20
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.21
 				--Description: Response with vdop parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_vdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["vdop"] = -0.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.21
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.22
 				--Description: Response with vdop parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_vdop()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["vdop"] = 10.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.22
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.23
 				--Description: Response with satellites parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_satellites()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["satellites"] = -1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.23
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.24
 				--Description: Response with satellites parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_satellites()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["satellites"] = 32
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.24
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.25
 				--Description: Response with altitude parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_altitude()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["altitude"] = -10000.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.25
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.26
 				--Description: Response with altitude parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_altitude()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["altitude"] = 10001
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.26
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.27
 				--Description: Response with heading parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_heading()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["heading"] = -0.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+				-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.27
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.28
 				--Description: Response with heading parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_heading()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["heading"] = 360.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+				-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.28
 				
 				-----------------------------------------------------------------------------------------
 				
 				--Begin Test case NegativeResponseCheck.11.29
 				--Description: Response with gps.speed parameter out of lower bound
-					function Test:GetVehicleData_ResponseOutLowerBound_gps_speed()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["speed"] = -0.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.29
 				
 				-----------------------------------------------------------------------------------------
 
 				--Begin Test case NegativeResponseCheck.11.30
 				--Description: Response with gps.speed parameter out of upper bound
-					function Test:GetVehicleData_ResponseOutUpperBound_gps_speed()						
-						local response = setGVDResponse({"gps"})						
-						response.gps["speed"] = 500.1
-						self:getVehicleData_ResponseInvalidData(response)
-					end
+					-- -- It's already covered in function verify_gps_parameter()
 				--End Test case NegativeResponseCheck.11.30
 				
 				-----------------------------------------------------------------------------------------
@@ -4453,6 +3925,437 @@ end
 				--End Test case NegativeResponseCheck.11.52				
 			--Begin Test case NegativeResponseCheck.11
 			
+			local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(ParameterName, DataType)
+
+				--Print new line to separate new test cases group
+				commonFunctions:newTestCasesGroup("PositiveResponseCheck: "..ParameterName)	
+				
+				local Response = setSVDResponse(vehicleData)						
+				Response[ParameterName] = {
+					dataType = DataType,
+					resultCode = "SUCCESS"
+				}
+				Response["gps"] = {
+					dataType = "VEHICLEDATA_GPS",
+					resultCode = "SUCCESS"
+				}
+
+				---------------------------------
+				----Verify Parameter
+				local Parameter = {ParameterName}
+				--1.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "SUCCESS")		
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--1.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--1.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				---------------------------------				
+				----Verify Parameter.dataType
+				local Parameter = {ParameterName, "dataType"}
+				--2.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")		
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+
+				--2.4. IsExistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..DataType, DataType, "SUCCESS")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsExistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.5. IsNonexistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsNoneExistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--2.6. DataTypeOfAnother
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_DataTypeOfAnother", "VEHICLEDATA_GPS", "SUCCESS")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsExistentValueOfAnother"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end	
+
+				---------------------------------
+				----Verify Parameter.resultCode
+				local Parameter = {ParameterName, "resultCode"}
+				--3.1. IsMissed
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsMissed"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end	
+				
+				--3.2. IsWrongDataType
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsWrongDataType"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+				--3.3. IsEmpty
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsEmpty"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+				
+	
+				--3.4. IsExistentValue
+				for i = 1, #AllVehicleDataResultCode do
+					commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..AllVehicleDataResultCode[i], AllVehicleDataResultCode[i], "SUCCESS")
+				
+					Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_resultCode_"..AllVehicleDataResultCode[i]]=function(self)				
+						self:unSubscribeVehicleData(vehicleData, AllVehicleDataResultCode[i], ParameterName, DataType)
+						DelayedExp(2000)
+					end
+				end
+				
+				--3.5. IsNonexistentValue
+				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
+				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsNonexistentValue"]=function(self)				
+					self:unSubscribeVehicleDataSuccess(vehicleData)
+					DelayedExp(2000)
+				end
+		
+end
+	--Requirement ID: APPLINK-15258
+		--Description: The application is not notified by the onVehicleData notification when HMI send gps with empty structure.
+	local function verify_gps_parameter()
+		--[[gps: type=Common.GPSData mandatory=false	
+			--name="longitudeDegrees" type="Float" minvalue="-180" maxvalue="180" mandatory="true", 
+			--name="latitudeDegrees" type="Float" minvalue="-90" maxvalue="90" mandatory="true", 
+			--name=pdop type=Float minvalue=0 maxvalue=10 mandatory=false
+			--name=hdop type=Float minvalue=0 maxvalue=10 mandatory=false
+			--name=vdop type=Float minvalue=0 maxvalue=10 mandatory=false
+			--name=altitude type=Float minvalue=-10000 maxvalue=10000 mandatory=false
+			--name=heading type=Float minvalue=0 maxvalue=359.99 mandatory=false
+			--name=speed type=Float minvalue=0 maxvalue=500 mandatory=false
+
+			--name="utcYear" type="Integer" minvalue="2010" maxvalue="2100" mandatory="false", 
+			--name="utcMonth" type="Integer" minvalue="1" maxvalue="12" mandatory="false", 
+			--name="utcDay" type="Integer" minvalue="1" maxvalue="31" mandatory="false", 
+			--name="utcHours" type="Integer" minvalue="0" maxvalue="23" mandatory="false", 
+			--name=utcMinutes type=Integer minvalue=0 maxvalue=59 mandatory=false
+			--name=utcSeconds type=Integer minvalue=0 maxvalue=59 mandatory=false
+			--name=satellites type=Integer minvalue=0 maxvalue=31 mandatory=false
+
+			--name=actual type=Boolean mandatory=false
+			--name=shifted type=Boolean mandatory=false
+			--name=compassDirection type=Common.CompassDirection mandatory=false
+			--name=dimension type=Common.Dimension mandatory=false
+			]]
+		commonFunctions:newTestCasesGroup("Test suite for verifying: gps structure")
+
+		local response = setGVDResponse({"gps"})
+		response.gps = {longitudeDegrees = 25,
+										latitudeDegrees = 45,
+										utcYear= 2015,
+										utcMonth = 10,
+										utcDay = 10,
+										utcHours = 11,
+										utcMinutes = 30,
+										utcSeconds = 40,
+										compassDirection = "NORTHEAST",
+										pdop = 5,
+										hdop = 5,
+										vdop = 5,
+										actual = true,
+										satellites = 10,
+										dimension = "NO_FIX",
+										altitude = 10,
+										heading = 100,
+										speed = 250,
+										shifted = false}
+		--1. IsMissed
+		commonFunctions:TestCaseForResponse(self, response, {"gps"}, "IsMissed", nil, "SUCCESS")
+		--2. IsEmptyTable
+		commonFunctions:TestCaseForResponse(self, response, {"gps"}, "IsEmptyTable", {}, "GENERIC_ERROR")
+		--3. IsWrongDataType
+		commonFunctions:TestCaseForResponse(self, response, {"gps"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+		--4. TCs for parameters
+		--Description: verify parameters in GPS structure
+		-- verify latitudeDegrees in case valid longitudeDegrees
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "latitudeDegrees"}, {-90.000000, 90.000000}, true)	
+		-- verify longitudeDegrees in case valid latitudeDegrees
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "longitudeDegrees"}, {-180.000000, 180.000000}, true)
+		
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "pdop"}, {0.000000, 10.000000}, false)
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "hdop"}, {0.000000, 10.000000}, false)	
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "vdop"}, {0.000000, 10.000000}, false)
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "altitude"}, {-10000.000000, 10000.000000}, false)
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "heading"}, {0.000000, 359.99}, false)
+		floatParameterInResponse:verify_Float_Parameter(response, {"gps", "speed"}, {0.000000, 500.000000}, false)	
+		
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "utcYear"}, {2010, 2100}, false)
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "utcMonth"}, {1, 12}, false)
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "utcDay"}, {1, 31}, false)	
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "utcHours"}, {0, 23}, false)	
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "utcMinutes"}, {0, 59}, false)
+		integerParameterInResponse:verify_Integer_Parameter(response,{"gps", "utcSeconds"}, {0, 59}, false)
+		integerParameterInResponse:verify_Integer_Parameter(response, {"gps", "satellites"}, {0, 31}, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"gps", "compassDirection"}, compassDirectionValues, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"gps", "dimension"}, dimensionValues, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"gps", "actual"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"gps", "shifted"}, false)		
+		
+		function Test:GetVehicleData_GPS_AllMandatoryParams_Missed()											
+			response.gps["longitudeDegrees"] = nil
+			response.gps["latitudeDegrees"] = nil
+			self:getVehicleData_ResponseInvalidData(response)
+		end		
+	end
+	verify_gps_parameter()
+	local function verify_beltStatus_parameter()
+		--[[beltStatus: type=Common.BeltStatus mandatory=false	
+			--name="driverBeltDeployed" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="passengerBeltDeployed" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="passengerBuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="driverBuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="leftRow2BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="passengerChildDetected" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="rightRow2BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="middleRow2BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="middleRow3BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="leftRow3BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"	
+			--name="rightRow3BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="leftRearInflatableBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="rightRearInflatableBelted" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="middleRow1BeltDeployed" type="Common.VehicleDataEventStatus" mandatory="false"
+			--name="middleRow1BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"]]
+		commonFunctions:newTestCasesGroup("Test suite for verifying: beltStatus structure")
+		local response = setGVDResponse({"beltStatus"})						
+		response.beltStatus = {
+			driverBeltDeployed = "NO_EVENT",
+			passengerBeltDeployed = "NO_EVENT",
+            passengerBuckleBelted = "NO_EVENT",
+			driverBuckleBelted = "NO_EVENT",
+			leftRow2BuckleBelted = "NO_EVENT",
+			passengerChildDetected = "NO_EVENT",
+			rightRow2BuckleBelted = "NO_EVENT",
+			middleRow2BuckleBelted = "NO_EVENT",
+			middleRow3BuckleBelted = "NO_EVENT",
+			leftRow3BuckleBelted = "NO_EVENT",
+			rightRow3BuckleBelted = "NO_EVENT",
+			leftRearInflatableBelted = "NO_EVENT",
+			rightRearInflatableBelted = "NO_EVENT",
+			middleRow1BeltDeployed = "NO_EVENT",
+			middleRow1BeltDeployed = "NO_EVENT"
+			}	
+		Test["Precondition_PositiveResponseCheck_beltStatus"] = function(self)
+					vehicleData = {"beltStatus"}
+		end		
+		--1. IsMissed
+		commonFunctions:TestCaseForResponse(self, response, {"beltStatus"}, "IsMissed", nil, "SUCCESS")
+		
+		--2. IsEmptyTable
+		commonFunctions:TestCaseForResponse(self, response, {"beltStatus"}, "IsEmptyTable", {}, "SUCCESS")
+		--3. IsWrongDataType
+		commonFunctions:TestCaseForResponse(self, response, {"beltStatus"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+		--Description: verify beltStatus structure.
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "driverBeltDeployed"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "passengerBeltDeployed"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "passengerBuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "driverBuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "leftRow2BuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "passengerChildDetected"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "rightRow2BuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "middleRow2BuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "middleRow3BuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "leftRow3BuckleBelted"}, vehicleDataEventStatus, false)	
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "rightRow3BuckleBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "leftRearInflatableBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "rightRearInflatableBelted"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "middleRow1BeltDeployed"}, vehicleDataEventStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"beltStatus", "middleRow1BuckleBelted"}, vehicleDataEventStatus, false)
+
+	end
+	verify_beltStatus_parameter()	
+	Test["Precondition_PositiveResponseCheck_deviceStatus"] = function(self)
+					vehicleData = {"deviceStatus"}
+	end
+	local function verify_deviceStatus_parameter()
+	--[[deviceStatus: type=Common.DeviceStatus mandatory=false
+		--name="voiceRecOn" type="Boolean" mandatory="false"
+		--name="btIconOn" type="Boolean" mandatory="false"
+		--name="callActive" type="Boolean" mandatory="false"
+		--name="phoneRoaming" type="Boolean" mandatory="false"
+		--name="textMsgAvailable" type="Boolean" mandatory="false"
+		--name="stereoAudioOutputMuted" type="Boolean" mandatory="false"
+		--name="monoAudioOutputMuted" type="Boolean" mandatory="false"
+		--name="eCallEventActive" type="Boolean" mandatory="false"
+		--name="primaryAudioSource" type="Common.PrimaryAudioSource" mandatory="false"
+		--name="battLevelStatus" type="Common.DeviceLevelStatus" mandatory="false"	
+		--name="signalLevelStatus" type="Common.DeviceLevelStatus" mandatory="false"]]
+		
+		--Print new line to separate new test cases group
+		commonFunctions:newTestCasesGroup("Test suite For Verifying: deviceStatus structure")	
+		local response = setGVDResponse({"deviceStatus"})
+		response.deviceStatus = {voiceRecOn = true,
+		btIconOn = true,
+		callActive = true,
+		phoneRoaming = true,
+		textMsgAvailable = true,
+		battLevelStatus = "THREE_LEVEL_BARS",
+		stereoAudioOutputMuted = true,
+		monoAudioOutputMuted = true,
+		signalLevelStatus = "THREE_LEVEL_BARS",
+		primaryAudioSource = "BLUETOOTH_STEREO_BTST",
+		eCallEventActive = true
+		}
+		--1. IsMissed
+		commonFunctions:TestCaseForResponse(self, response, {"deviceStatus"}, "IsMissed", nil, "SUCCESS")
+		
+		--2. IsEmptyTable
+		commonFunctions:TestCaseForResponse(self, response, {"deviceStatus"}, "IsEmptyTable", {}, "SUCCESS")
+		
+		--3. IsWrongDataType
+		commonFunctions:TestCaseForResponse(self, response, {"deviceStatus"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+								
+		--4. TCs for parameter: voiceRecOn														
+			
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "voiceRecOn"}, false)
+		
+		--5. TCs for parameter: btIconOn, callActive, phoneRoaming, textMsgAvailable, stereoAudioOutputMuted, monoAudioOutputMuted, eCallEventActive
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "btIconOn"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "callActive"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "phoneRoaming"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "textMsgAvailable"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "stereoAudioOutputMuted"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "monoAudioOutputMuted"}, false)
+		booleanParameterInResponse:verify_Boolean_Parameter(response, {"deviceStatus", "eCallEventActive"}, false)
+		
+		--6. TCs for parameter: primaryAudioSource
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"deviceStatus", "primaryAudioSource"}, primaryAudioSourceValues, false)
+		
+		--7. TCs for parameter: battLevelStatus, signalLevelStatus
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"deviceStatus", "battLevelStatus"}, deviceLevelStatus, false)
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"deviceStatus", "signalLevelStatus"}, deviceLevelStatus, false)
+		
+	end
+	verify_deviceStatus_parameter()
+	
+	Test["Precondition_PositiveResponseCheck_tirePressure"] = function(self)
+					vehicleData = {"tirePressure"}
+	end
+
+	local function verify_tirePressure_parameter()
+		--[[tirePressure: type=Common.TireStatus mandatory=false
+			--name="pressureTelltale" type="Common.WarningLightStatus" mandatory="false"
+			--name="leftFront" type="Common.SingleTireStatus" mandatory="false"
+			--name="rightFront" type="Common.SingleTireStatus" mandatory="false"
+			--name="leftRear" type="Common.SingleTireStatus" mandatory="false"
+			--name="rightRear" type="Common.SingleTireStatus" mandatory="false"
+			--name="innerLeftRear" type="Common.SingleTireStatus" mandatory="false"
+			--name="innerRightRear" type="Common.SingleTireStatus" mandatory="false"]]
+
+		--struct name="SingleTireStatus">
+			--name="status" type="Common.ComponentVolumeStatus" mandatory="true": ComponentVolumeStatus = {"UNKNOWN", "NORMAL", "LOW", "FAULT", "ALERT", "NOT_SUPPORTED"}
+		--Print new line to separate new test cases group
+		commonFunctions:newTestCasesGroup("Test suite For Verifying: tirePressure structure")	
+						
+		local response = setGVDResponse({"tirePressure"})	
+		response.tirePressure= {
+		pressureTelltale = "ON",
+		leftFront = 50.5,
+		rightFront = 50.5,
+		leftRear = 50.5,
+		rightRear = 50.5,
+		innerLeftRear = 50.5,
+		innerRightRear = 50.5,
+		frontRecommended = 50.5,
+		rearRecommended = 50.5
+		}
+		--1. IsMissed
+		commonFunctions:TestCaseForResponse(self, response, {"tirePressure"}, "IsMissed", nil, "SUCCESS")
+		
+		--2. IsEmptyTable {}
+		commonFunctions:TestCaseForResponse(self, response, {"tirePressure"}, "IsEmptyTable", {}, "SUCCESS")
+		
+		--3. IsWrongDataType
+		commonFunctions:TestCaseForResponse(self, response, {"tirePressure"}, "IsWrongDataType", 123, "GENERIC_ERROR")
+		
+		
+		--4. TCs for parameter: pressureTelltale
+		enumerationParameterInResponse:verify_Enum_String_Parameter(response, {"tirePressure", "pressureTelltale"}, warningLightStatus, false)
+
+		
+		--5. TCs for parameters: "leftFront", "rightFront", "leftRear", "rightRear", "innerLeftRear", "innerRightRear"
+		local function verify_SingleTireStatus_parameter_type(Parameter, response)
+			--1. IsMissed
+			commonFunctions:TestCaseForResponse(self, response, Parameter, "IsMissed", nil, "SUCCESS")
+			
+			--2. IsWrongDataType
+			commonFunctions:TestCaseForResponse(self, response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")	
+			
+			--3. name="status" type="Common.ComponentVolumeStatus" mandatory="true"
+			local Parameter_status = commonFunctions:BuildChildParameter(Parameter, "status")
+			enumerationParameterInResponse:verify_Enum_String_Parameter(response, Parameter_status, componentVolumeStatus, true)
+			
+		end
+		
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {leftFront = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "leftFront"},response)
+			
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {rightFront = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "rightFront"}, response)
+			
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {leftRear = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "leftRear"}, response)
+			
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {rightRear = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "rightRear"}, response)
+			
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {innerLeftRear = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "innerLeftRear"}, response)
+			
+		local response = setGVDResponse({"tirePressure"})
+			response.tirePressure= {innerRightRear = {}, pressureTelltale = "OFF"}
+		verify_SingleTireStatus_parameter_type({"tirePressure", "innerRightRear"}, response)
+		
+	end
+	verify_tirePressure_parameter()
+	Test["Postcondition_PositiveResponseCheck_deviceStatus"] = function(self)
+					vehicleData = {"gps"}
+	end
 			-----------------------------------------------------------------------------------------
 --[[TODO: Check after APPLINK-14765 is resolved
 			--Begin Test case NegativeResponseCheck.12
