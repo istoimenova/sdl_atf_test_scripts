@@ -339,6 +339,10 @@ end
 --Requirement id in JAMA or JIRA: 	
 	--SDLAQ-CRS-1052: OnVehicleData
         -- APPLINK-16076: SDL must treat integer value for params of float type as valid
+		-- APPLINK-25603
+		-- APPLINK-23918
+		-- APPLINK-19583
+		-- APPLINK-25703
 	
 	--Verification criteria: The application is notified by the onVehicleData notification whenever new data is available and the app is subscribed for this data type.
         --Verification criteria: "Integer" value for "float" param should not be treated as an invalid_data by SDL
@@ -942,7 +946,28 @@ end
 		--3. All parameters are lower bound
 		--4. All parameters are upper bound
 -----------------------------------------------------------------------------------------------------------------------------
-
+		
+		Test["OnVehicleData_OnlyMandatoryParameters_SUCCESS_gps"] = function(self)
+			local Notification = 
+			{
+				
+				gps = 			{	        longitudeDegrees = 180,
+									latitudeDegrees = 90
+								}
+			}
+			
+			local ExpectNotification = 
+			{
+				
+				gps = 			{	        longitudeDegrees = 180,
+									latitudeDegrees = 90
+									
+								}
+			}
+			
+			self:verify_SUCCESS_Notification_Case(Notification, ExpectNotification)
+			
+		end
 		Test["OnVehicleData_PositiveNotification_SUCCESS"] = function(self)
 				
 			local Notification = 
@@ -2345,34 +2370,41 @@ end
 		commonFunctions:TestCaseForNotification(self, Notification, {"deviceStatus"}, "IsMissed", nil, true)
 		
 		--2. IsEmptyTable
-		--TODO: Update when APPLINK-15241 is resolved
-		--commonFunctions:TestCaseForNotification(self, Notification, {"deviceStatus"}, "IsEmptyTable", {}, false)
 		commonFunctions:TestCaseForNotification(self, Notification, {"deviceStatus"}, "IsEmptyTable", {}, true)
 		
 		--3. IsWrongDataType
 		commonFunctions:TestCaseForNotification(self, Notification, {"deviceStatus"}, "IsWrongDataType", 123, false)
 								
 		--4. TCs for parameter: voiceRecOn														
-			local Notification = {rpm = 1, deviceStatus = { btIconOn = false }}
+			local Notification = {rpm = 1, deviceStatus = { signalLevelStatus = "NOT_PROVIDED" }}
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "voiceRecOn"}, false)
 		
 		--5. TCs for parameter: btIconOn, callActive, phoneRoaming, textMsgAvailable, stereoAudioOutputMuted, monoAudioOutputMuted, eCallEventActive
 			local Notification = {rpm = 1, deviceStatus = { voiceRecOn = false }}
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "btIconOn"}, false)
+			local Notification = {rpm = 1, deviceStatus = { btIconOn = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "callActive"}, false)
+			local Notification = {rpm = 1, deviceStatus = { callActive = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "phoneRoaming"}, false)
+			local Notification = {rpm = 1, deviceStatus = { phoneRoaming = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "textMsgAvailable"}, false)
+			local Notification = {rpm = 1, deviceStatus = { textMsgAvailable = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "stereoAudioOutputMuted"}, false)
+			local Notification = {rpm = 1, deviceStatus = { stereoAudioOutputMuted = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "monoAudioOutputMuted"}, false)
+			local Notification = {rpm = 1, deviceStatus = { monoAudioOutputMuted = false }}			
 			booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"deviceStatus", "eCallEventActive"}, false)
 		
 		--6. TCs for parameter: primaryAudioSource
 		local PrimaryAudioSource = {"NO_SOURCE_SELECTED", "USB", "USB2", "BLUETOOTH_STEREO_BTST", "LINE_IN", "IPOD", "MOBILE_APP"}
+		local Notification = {rpm = 1, deviceStatus = { eCallEventActive = false }}		
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"deviceStatus", "primaryAudioSource"}, PrimaryAudioSource, false)
 		
 		--7. TCs for parameter: battLevelStatus, signalLevelStatus
 		local DeviceLevelStatus = {"ZERO_LEVEL_BARS", "ONE_LEVEL_BARS", "TWO_LEVEL_BARS", "THREE_LEVEL_BARS", "FOUR_LEVEL_BARS", "NOT_PROVIDED"}
+		local Notification = {rpm = 1, deviceStatus = { primaryAudioSource = "USB" }}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"deviceStatus", "battLevelStatus"}, DeviceLevelStatus, false)
+		local Notification = {rpm = 1, deviceStatus = { battLevelStatus = "NOT_PROVIDED" }}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"deviceStatus", "signalLevelStatus"}, DeviceLevelStatus, false)
 		
 	end
@@ -2553,15 +2585,13 @@ end
 			--name="rightRearInflatableBelted" type="Common.VehicleDataEventStatus" mandatory="false"
 			--name="middleRow1BeltDeployed" type="Common.VehicleDataEventStatus" mandatory="false"
 			--name="middleRow1BuckleBelted" type="Common.VehicleDataEventStatus" mandatory="false"]]
-		
+		commonFunctions:newTestCasesGroup("Test suite For Verifying: beltStatus structure")	
 		local Notification = {rpm = 1, beltStatus = {}}
 		
 		--1. IsMissed
 		commonFunctions:TestCaseForNotification(self, Notification, {"beltStatus"}, "IsMissed", nil, true)
 		
 		--2. IsEmptyTable
-		--TODO: Update when APPLINK-15241 is resolved
-		--commonFunctions:TestCaseForNotification(self, Notification, {"beltStatus"}, "IsEmptyTable", {}, false)
 		commonFunctions:TestCaseForNotification(self, Notification, {"beltStatus"}, "IsEmptyTable", {}, true)
 		
 		--3. IsWrongDataType
@@ -2570,21 +2600,33 @@ end
 		--4. TCs for parameters
 		local Notification = {rpm = 1, beltStatus = {passengerBeltDeployed = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "driverBeltDeployed"}, VehicleDataEventStatus, false)
-		
-		local Notification = {rpm = 1, beltStatus = {driverBeltDeployed = "NO_EVENT"}}
+		local Notification = {rpm = 1, beltStatus = {passengerBuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "passengerBeltDeployed"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {driverBuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "passengerBuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {leftRow2BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "driverBuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {passengerChildDetected = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "leftRow2BuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {rightRow2BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "passengerChildDetected"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {middleRow2BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "rightRow2BuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {middleRow3BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "middleRow2BuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {leftRow3BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "middleRow3BuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {rightRow3BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "leftRow3BuckleBelted"}, VehicleDataEventStatus, false)	
+		local Notification = {rpm = 1, beltStatus = {leftRearInflatableBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "rightRow3BuckleBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {rightRearInflatableBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "leftRearInflatableBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {middleRow1BeltDeployed = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "rightRearInflatableBelted"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {middleRow1BuckleBelted = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "middleRow1BeltDeployed"}, VehicleDataEventStatus, false)
+		local Notification = {rpm = 1, beltStatus = {driverBeltDeployed = "NO_EVENT"}}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"beltStatus", "middleRow1BuckleBelted"}, VehicleDataEventStatus, false)
 	end
 	verify_beltStatus_parameter()	
@@ -2650,28 +2692,28 @@ end
 			--name=satellites type=Integer minvalue=0 maxvalue=31 mandatory=false
 
 			--name=actual type=Boolean mandatory=false
-			
+			--name=shifted type=Boolean mandatory=false
 			--name=compassDirection type=Common.CompassDirection mandatory=false
 			--name=dimension type=Common.Dimension mandatory=false
 			]]
-		
+		commonFunctions:newTestCasesGroup("Test suite For Verifying: gps structure")	
 		local Notification = {rpm = 1, gps = {}}
 		
 		--1. IsMissed
 		commonFunctions:TestCaseForNotification(self, Notification, {"gps"}, "IsMissed", nil, true)
 		
 		--2. IsEmptyTable
-		--TODO: Update when APPLINK-15241 is resolved
-		--commonFunctions:TestCaseForNotification(self, Notification, {"gps"}, "IsEmptyTable", {}, false)
-		commonFunctions:TestCaseForNotification(self, Notification, {"gps"}, "IsEmptyTable", {}, true)
+		commonFunctions:TestCaseForNotification(self, Notification, {"gps"}, "IsEmptyTable", {}, false)
 		
 		--3. IsWrongDataType
 		commonFunctions:TestCaseForNotification(self, Notification, {"gps"}, "IsWrongDataType", 123, false)
 		
 		--4. TCs for parameters
-		local Notification = {rpm = 1, gps = {actual = true}}		
-		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "longitudeDegrees"}, {-180.000000, 180.000000}, false)
-		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "latitudeDegrees"}, {-90.000000, 90.000000}, false)
+		local Notification = {rpm = 1, gps = {longitudeDegrees = 180,
+												latitudeDegrees = 90,
+												actual = true}}		
+		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "longitudeDegrees"}, {-180.000000, 180.000000}, true)
+		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "latitudeDegrees"}, {-90.000000, 90.000000}, true)
 		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "pdop"}, {0.000000, 10.000000}, false)
 		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "hdop"}, {0.000000, 10.000000}, false)	
 		floatParameterInNotification:verify_Float_Parameter(Notification, {"gps", "vdop"}, {0.000000, 10.000000}, false)
@@ -2693,9 +2735,144 @@ end
 		local Dimension = {"NO_FIX", "2D", "3D"}
 		enumParameterInNotification:verify_Enumeration_Parameter(Notification, {"gps", "dimension"}, Dimension, false)
 		
-		local Notification = {rpm = 1, gps = {satellites = 1}}
+		local Notification = {rpm = 1, gps = {longitudeDegrees = 180,
+												latitudeDegrees = 90,
+												satellites = 1}}
 		booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"gps", "actual"}, false)
+		booleanParameterInNotification:verify_Boolean_Parameter(Notification, {"gps", "shifted"}, false)	
 		
+		Test["OnVehicleData_GPS_AllMandatoryParams_IsMissed"] = function(self)
+			local Notification = 
+			{
+				speed = 1.1,
+				fuelLevel = 1.1,
+				instantFuelConsumption = 1.1,
+				externalTemperature = 1.1,
+				engineTorque = 1.1,
+				accPedalPosition = 1.1,
+				steeringWheelAngle = 1.1,
+				
+				rpm = 1,
+				odometer = 1,
+				
+				vin = "a",
+				
+				prndl = "PARK",
+				fuelLevel_State = "UNKNOWN",
+				driverBraking = "NO_EVENT",
+				wiperStatus = "OFF",
+				
+				headLampStatus = {	                lowBeamsOn = false, 
+									highBeamsOn = false, 
+									ambientLightSensorStatus = "NIGHT"
+								},
+				myKey = 		{	        e911Override = "NO_DATA_EXISTS"},
+				deviceStatus = 	{	                voiceRecOn = true,
+									btIconOn = true,
+									callActive = true,
+									phoneRoaming = true,
+									textMsgAvailable = true,
+									stereoAudioOutputMuted = true,
+									monoAudioOutputMuted = true,
+									eCallEventActive = true,
+									primaryAudioSource = "USB",
+									battLevelStatus = "ZERO_LEVEL_BARS",
+									signalLevelStatus = "ZERO_LEVEL_BARS"
+								},
+				eCallInfo = 	{	                eCallNotificationStatus = "NOT_SUPPORTED",
+									auxECallNotificationStatus = "NOT_SUPPORTED",
+									eCallConfirmationStatus = "NORMAL"
+								},
+				emergencyEvent ={	                emergencyEventType = "NO_EVENT",
+									fuelCutoffStatus = "TERMINATE_FUEL",
+									rolloverEvent = "NO_EVENT",
+									maximumChangeVelocity = 0,
+									multipleEvents = "NO_EVENT"
+								},
+				bodyInformation={	                parkBrakeActive = true, 
+									driverDoorAjar = true,
+									passengerDoorAjar = true,
+									rearLeftDoorAjar = true,
+									rearRightDoorAjar = true,
+									ignitionStableStatus = "IGNITION_SWITCH_NOT_STABLE", 
+									ignitionStatus = "UNKNOWN"
+								},
+				clusterModeStatus={	                powerModeActive = true, 
+									powerModeQualificationStatus = "POWER_MODE_UNDEFINED",
+									carModeStatus = "NORMAL",
+									powerModeStatus = "KEY_OUT"
+								},
+				beltStatus = 	{	                driverBeltDeployed = "NO_EVENT",
+									passengerBeltDeployed = "NO_EVENT",
+									passengerBuckleBelted = "NO_EVENT",
+									driverBuckleBelted = "NO_EVENT",
+									leftRow2BuckleBelted = "NO_EVENT",
+									passengerChildDetected = "NO_EVENT",
+									rightRow2BuckleBelted = "NO_EVENT",
+									middleRow2BuckleBelted = "NO_EVENT",
+									middleRow3BuckleBelted = "NO_EVENT",
+									leftRow3BuckleBelted = "NO_EVENT",
+									rightRow3BuckleBelted = "NO_EVENT",
+									leftRearInflatableBelted = "NO_EVENT",
+									rightRearInflatableBelted = "NO_EVENT",
+									middleRow1BeltDeployed = "NO_EVENT",
+									middleRow1BuckleBelted = "NO_EVENT"
+								},
+				airbagStatus = {	                driverAirbagDeployed = "YES",
+									driverSideAirbagDeployed = "YES",
+									driverCurtainAirbagDeployed = "YES",
+									passengerAirbagDeployed = "YES",
+									passengerCurtainAirbagDeployed = "YES",			
+									driverKneeAirbagDeployed = "YES",
+									passengerSideAirbagDeployed = "YES",
+									passengerKneeAirbagDeployed = "YES"
+								},
+				gps = 			{
+									pdop = 1.1,
+									hdop = 1.1,
+									vdop = 1.1,
+									altitude = 1.1,
+									heading = 1.1,
+									speed = 1.1,
+									
+									utcYear = 2011,
+									utcMonth = 1,
+									utcDay = 1,
+									utcHours = 1,
+									utcMinutes = 1,
+									utcSeconds = 1,
+									satellites = 1,
+									
+									compassDirection = "NORTH",
+									dimension = "NO_FIX",
+									actual = true
+								},
+				tirePressure = 	{	                pressureTelltale = "OFF",
+									leftFront = {status = "UNKNOWN"},
+									rightFront = {status = "UNKNOWN"},
+									leftRear = {status = "UNKNOWN"},
+									rightRear = {status = "UNKNOWN"},
+									innerLeftRear = {status = "UNKNOWN"},
+									innerRightRear = {status = "UNKNOWN"}
+								},
+				fuelRange = 1.1,
+				abs_State = "ACTIVE",
+				tirePressureValue = {
+						leftFront = 1.1,
+						rightFront = 1.1,
+						leftRear = 1.1,
+						rightRear = 1.1,
+						innerLeftRear = 1.1,
+						innerRightRear = 1.1,
+						frontRecommended = 1.1,
+						rearRecommended = 1.1
+						},
+				tpms = "LOW",
+				turnSignal = "LEFT"
+			}
+			self:verify_Notification_IsIgnored_Case(Notification)
+			
+		end
 	end
 	verify_gps_parameter()
 
@@ -2711,15 +2888,13 @@ end
 
 		--struct name="SingleTireStatus">
 			--name="status" type="Common.ComponentVolumeStatus" mandatory="true": ComponentVolumeStatus = {"UNKNOWN", "NORMAL", "LOW", "FAULT", "ALERT", "NOT_SUPPORTED"}
-		
+		commonFunctions:newTestCasesGroup("Test suite For Verifying: tirePressure structure")	
 		local Notification = {rpm = 1, tirePressure = {}}
 		
 		--1. IsMissed
 		commonFunctions:TestCaseForNotification(self, Notification, {"tirePressure"}, "IsMissed", nil, true)
 		
 		--2. IsEmptyTable {}
-		--TODO: Update when APPLINK-15241 is resolved
-		--commonFunctions:TestCaseForNotification(self, Notification, {"tirePressure"}, "IsEmptyTable", {}, false)
 		commonFunctions:TestCaseForNotification(self, Notification, {"tirePressure"}, "IsEmptyTable", {}, true)
 		
 		--3. IsWrongDataType
@@ -2751,19 +2926,19 @@ end
 				
 			end
 			
-			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", leftFront = {} }}
+			local Notification = {rpm = 1, tirePressure = {rightFront = {status = "NORMAL"}, leftFront = {} }}
 			verify_SingleTireStatus_parameter_type({"tirePressure", "leftFront"}, Notification)
 			
-			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", rightFront = {} }}
+			local Notification = {rpm = 1, tirePressure = {leftRear = {status = "NORMAL"}, rightFront = {} }}
 			verify_SingleTireStatus_parameter_type({"tirePressure", "rightFront"}, Notification)
 			
-			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", leftRear = {} }}
+			local Notification = {rpm = 1, tirePressure = {rightRear = {status = "NORMAL"}, leftRear = {} }}
 			verify_SingleTireStatus_parameter_type({"tirePressure", "leftRear"}, Notification)
 			
-			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", rightRear = {} }}
+			local Notification = {rpm = 1, tirePressure = {innerLeftRear = {status = "NORMAL"}, rightRear = {} }}
 			verify_SingleTireStatus_parameter_type({"tirePressure", "rightRear"}, Notification)
 			
-			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", innerLeftRear = {} }}
+			local Notification = {rpm = 1, tirePressure = {innerRightRear = {status = "NORMAL"}, innerLeftRear = {} }}
 			verify_SingleTireStatus_parameter_type({"tirePressure", "innerLeftRear"}, Notification)
 			
 			local Notification = {rpm = 1, tirePressure = {pressureTelltale = "OFF", innerRightRear = {} }}
