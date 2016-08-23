@@ -349,7 +349,7 @@ end
 -- perform PTU with invalid .json file
 function Test:PTUInvalidJson()
 
-    UpdatePolicy(self, "files/jsons/QUERRY_jsons/incorrectJSON.json")
+    UpdatePolicy(self, "files/incorrectJSON.json")
 
 end
 
