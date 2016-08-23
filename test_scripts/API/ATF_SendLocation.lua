@@ -454,7 +454,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -553,7 +553,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -596,7 +596,7 @@ local RequestParams = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -709,7 +709,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -760,7 +760,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -803,7 +803,7 @@ function Test:SendLocation_InBase4_With_SomeAllowedParams_And_SomeDisallowedPara
 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 	end)
 	:ValidIf(function(_,data)
-		if data.params.address or data.params.addressLines or data.params.deliveryMode or data.params.locationImage or data.params.phoneNumber or data.timestamp then
+		if data.params.address or data.params.addressLines or data.params.deliveryMode or data.params.locationImage or data.params.phoneNumber or data.timeStamp then
 			commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
 			return false
 		else
@@ -811,7 +811,7 @@ function Test:SendLocation_InBase4_With_SomeAllowedParams_And_SomeDisallowedPara
 		end
 	end)
 	-- mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationImage', 'phoneNumber','timestamp' are disallowed by policies"})			
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationImage', 'phoneNumber','timeStamp' are disallowed by policies"})			
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group and 3 params are disallowed")
@@ -908,7 +908,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -940,7 +940,7 @@ function Test:SendLocation_AllowedParamsInBase4_NotAnswerForUserConsentForGroup1
 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 	end)
 	:ValidIf(function(_,data)
-		if data.params.address or data.params.timestamp or data.params.addressLines or data.params.phoneNumber or data.params.deliveryMode then
+		if data.params.address or data.params.timeStamp or data.params.addressLines or data.params.phoneNumber or data.params.deliveryMode then
 			commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
 			return false
 		else
@@ -948,7 +948,7 @@ function Test:SendLocation_AllowedParamsInBase4_NotAnswerForUserConsentForGroup1
 		end
 	end)
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'timestamp', 'addressLines', 'phoneNumber' are disallowed by policies"})			
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'timeStamp', 'addressLines', 'phoneNumber' are disallowed by policies"})			
 end
 
 -- SDL responds SUCCSS with info about disallowed params when send SendLocation with allowed params in Base4, disallowed params by policies and params in group1 when user does not answer consent for group1.
@@ -966,7 +966,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1013,7 +1013,7 @@ function Test:SendLocation_AllowedParamsBase4_ParamsNotPresentedInPolicies_NotAn
 		end
 	end)
 	-- mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationName', 'locationDescription', 'locationImage', 'phoneNumber', 'timestamp' are disallowed by policies"})			
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationName', 'locationDescription', 'locationImage', 'phoneNumber', 'timeStamp' are disallowed by policies"})			
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group (user answers NO) and 3 params are disallowed")
@@ -1033,7 +1033,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1120,7 +1120,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1154,7 +1154,7 @@ function Test:SendLocation_With_DisallowedParamsByPolicies_ParamInGroup1_UserAns
 	:Times(0)
 	
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationName', 'locationDescription', 'locationImage' are disallowed by polices,'address','timestamp', 'addressLines', 'phoneNumber' are disallowed by user"})
+	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationName', 'locationDescription', 'locationImage' are disallowed by polices,'address','timeStamp', 'addressLines', 'phoneNumber' are disallowed by user"})
 	commonTestCases:DelayedExp(1000)	
 end
 
@@ -1175,7 +1175,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1211,7 +1211,7 @@ function Test:SendLocation_AlowedParamsInBase4_ParamsNotPresentedInPolicies_Disa
 		self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 	end)
 	:ValidIf(function(_,data)
-		if data.params.locationName or data.params.locationDescription or data.params.locationImage or data.params.address or data.params.timestamp or data.params.phoneNumber or data.params.deliveryMode or data.params.addressLines then
+		if data.params.locationName or data.params.locationDescription or data.params.locationImage or data.params.address or data.params.timeStamp or data.params.phoneNumber or data.params.deliveryMode or data.params.addressLines then
 			commonFunctions:userPrint(31,"Navigation.SendLocation contain some parameters in request when should be omitted")
 			return false
 		else
@@ -1219,7 +1219,7 @@ function Test:SendLocation_AlowedParamsInBase4_ParamsNotPresentedInPolicies_Disa
 		end
 	end)
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'locationName', 'locationDescription', 'locationImage' are disallowed by policies and 'address', 'timestamp', 'phoneNumber', 'addressLines' are disallowed by user"})	
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'locationName', 'locationDescription', 'locationImage' are disallowed by policies and 'address', 'timeStamp', 'phoneNumber', 'addressLines' are disallowed by user"})	
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group (user answers YES) and params are disallowed")
@@ -1315,7 +1315,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1353,7 +1353,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1432,7 +1432,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1493,7 +1493,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1543,7 +1543,7 @@ local Request = {
 		thoroughfare = "thoroughfare",
 		subThoroughfare = "subThoroughfare"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
@@ -1591,7 +1591,7 @@ local Request = {
 		thoroughfare = "t",
 		subThoroughfare = "s"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 0,
 		minute = 0,
 		hour = 0,
@@ -1637,7 +1637,7 @@ local Request = {
 		thoroughfare = "t",
 		subThoroughfare = "s"
 	},
-	timestamp = {
+	timeStamp = {
 		second = 0,
 		minute = 0,
 		hour = 0,
@@ -1683,7 +1683,7 @@ local Request = {
 		thoroughfare = string.rep("a", 200),
 		subThoroughfare = string.rep("a", 200)
 	},
-	timestamp = {
+	timeStamp = {
 		second = 60,
 		minute = 59,
 		hour = 23,
@@ -1734,7 +1734,7 @@ local Request = {
 		thoroughfare = string.rep("a", 200),
 		subThoroughfare = string.rep("a", 200)
 	},
-	timestamp = {
+	timeStamp = {
 		second = 60,
 		minute = 59,
 		hour = 23,
@@ -1929,7 +1929,7 @@ doubleParamter:verify_Double_Parameter(Request, {"latitudeDegrees"}, Boundary_la
 -- request without mandatory longitudeDegrees, latitudeDegrees, address
 local Request = 
 {
-	timestamp = {
+	timeStamp = {
 		second = 40,
 		minute = 30,
 		hour = 14,
