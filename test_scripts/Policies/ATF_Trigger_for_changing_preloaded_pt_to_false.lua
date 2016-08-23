@@ -336,24 +336,32 @@ function Test:CheckValueOfPreloaded3()
     self:FailTestCase("preloaded_pt in localPT is 0, should be 1")
   end
  end
+
 ------------------------------------------------------------------------------------------------------
 -- Test case Check 4
 -- Register app and perform PTU with invalid .json file (Unsuccessfull PTU) -> check preloaded_pt FROM module_config ==> value is "1"
+-- register App
+function Test:RegisterAppCheck4()
+	commonFunctions:userPrint(34, "=================== Test Case Check 4 ===================")
+	RegisterApplication(self)
+end
 
+-- perform PTU with invalid .json file
+function Test:PTUInvalidJson()
 
+    UpdatePolicy(self, "files/jsons/QUERRY_jsons/incorrectJSON.json")
 
+end
 
+-- check preloaded_pt FROM module_config, value should be "1"
+function Test:CheckValueOfPreloaded4()  
+  preloaded_pt = get_preloaded_pt_value()
 
+  if (preloaded_pt == 0) then
 
-
-
-
-
-
-
-
-
-
+    self:FailTestCase("preloaded_pt in localPT is 0, should be 1")
+  end
+ end
 
 ------------------------------------------------------------------------------------------------------
 -- Test case Check 5
@@ -361,7 +369,8 @@ function Test:CheckValueOfPreloaded3()
 -- send Ignition off 
 function Test:IGNITION_OFF_Check5()
 commonFunctions:userPrint(34, "=================== Test Case Check 5 ===================")
--- commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
+-- ToDo: remove after APPLINK-19717 resolved
+commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
   
   StopSDL()
   
@@ -441,7 +450,8 @@ end
 -- send Ignition off 
 function Test:IGNITION_OFF_Check8()
 commonFunctions:userPrint(34, "=================== Test Case Check 8 ===================")
--- commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
+-- ToDo: remove after APPLINK-19717 resolved
+commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
   
   StopSDL()
   
@@ -460,7 +470,7 @@ function Test:CheckValueOfPreloaded8()
   preloaded_pt = get_preloaded_pt_value()
 
   if (preloaded_pt == 1) then
-    -- commonFunctions:userPrint(31, "preloaded_pt in localPT is 1, should be 0")
+
     self:FailTestCase("preloaded_pt in localPT is 1, should be 0")
   end
 end
@@ -478,7 +488,6 @@ function Test:CheckValueOfPreloaded9()
   preloaded_pt = get_preloaded_pt_value()
 
   if (preloaded_pt == 1) then
-    -- commonFunctions:userPrint(31, "preloaded_pt in localPT is 1, should be 0")
     self:FailTestCase("preloaded_pt in localPT is 1, should be 0")
   end
 end
@@ -490,7 +499,7 @@ end
 function Test:ExecuteMasterReset() 
 	commonFunctions:userPrint(34, "=================== Test Case Check 10 ===================")
 	--TODO: delete after APPLINK-19717 resolved
-	-- commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
+	commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
        MASTER_RESET(self)
 end
 
@@ -502,6 +511,7 @@ function Test:CheckAbsenceOfPolisyTable()
 	 self:FailTestCase("policy.sqlite should be absent")
     end
 end
+
 ------------------------------------------------------------------------------------------------------
 -- Test case Check 11
 -- Start SDL (check SDL correctly loads preloaded_pt) -> check preloaded_pt FROM module_config ==> value is "1"
@@ -511,7 +521,7 @@ function Test:RestartSDL()
   end
 
 -- check preloaded_pt FROM module_config, value should be "1"
-function Test:CheckValueOfPreloaded6()  
+function Test:CheckValueOfPreloaded11()  
   preloaded_pt = get_preloaded_pt_value()
 
   if (preloaded_pt == 0) then
@@ -519,116 +529,3 @@ function Test:CheckValueOfPreloaded6()
     self:FailTestCase("preloaded_pt in localPT is 0, should be 1")
   end
  end
-
-
-
--- Verification criteria: on the first App connection value of "preloaded_pt" = true, which means that PTU should start after tigger. 
--- After PTU is applied "preloaded_pt" in localPT chould become false
-
--- function Test:Precondition_restartSDL()
--- 	commonFunctions:userPrint(35, "\n================= Precondition ==================")
--- 	RestartSDL("InitialStart", false)
---   end
-
--- -- activate App
--- function Test:Check1_ActivationOfApplication()
--- 	commonFunctions:userPrint(34, "=================== Test Case Check 1 ===================")
--- 	commonSteps:ActivationApp(nil, "Activating_App")
-
--- 	DelayedExp(3000)	
---  end
-
--- -- check localpt created
--- function Test:Check1_LocalPTCreated()
-	
--- 		if commonSteps:file_exists(SDLStoragePath .. "policy.sqlite") == true then
--- 				commonFunctions:userPrint(33, "localPT is created")
--- 		else
--- 			commonFunctions:userPrint(31, "localPT wasn't created")
--- 	end
---  end
-
--- --check value of "preloaded_pt" in storage/policy.sqlite. It should be true. That means that LocalPT should be updated
--- function Test:CheckValueOfPreloaded()  
---   preloaded_pt = get_preloaded_pt_value()
-
---   if (preloaded_pt == nil or preloaded_pt) then
---   	print (preloaded_pt)
---     commonFunctions:userPrint(31, "preloaded_pt in localPT is true, should be false")
---   end
---  end
-
--- -- after trigger occurs (in current case "timeout_after_x_seconds" = 60 secomds) PTU process should start
--- -- HMI requests From SDL URL to send PTSnapshot
--- function Test:UpdatePT()
--- --hmi side: sending SDL.UpdateSDL request
--- 	local RequestIdUpdateSDL = self.hmiConnection:SendRequest("SDL.UpdateSDL")
-
--- 	EXPECT_HMICALL("BasicCommunication.PolicyUpdate")
--- 		:Do(function(_,data)
--- 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
--- 		end)
-	
--- 	--hmi side: expect SDL.UpdateSDL response from HMI
--- 	EXPECT_HMIRESPONSE(RequestIdUpdateSDL,{result = {code = 0, method = "SDL.UpdateSDL", result = "UPDATE_NEEDED" }})
--- 		:Do(function()
--- 			UpdatePolicy(self, "files/PTU_UpdateNeeded.json")
--- 		end)
-
--- 	DelayedExp(2000)
--- end
-
--- function Test:PTUSuccess()
--- 	-- hmi side: sending BasicCommunication.OnSystemRequest request to SDL
--- 	self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
--- 		{
--- 			policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
--- 		})
--- 	--hmi side: expect SDL.OnStatusUpdate ("UP_TO_DATE")
--- 	EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", { status = "UP_TO_DATE"})
--- 	:Do(function(_,data)
--- 		print("SDL.OnStatusUpdate is received")			               
--- 	end)
--- 	:Timeout(2000)
--- end
-
--- -- after localPT was updated, check value of "preloaded_pt". It should become false
--- function Test:CheckValueOfPreloaded()  
---   preloaded_pt = get_preloaded_pt_value()
-
---   if (preloaded_pt == nil or preloaded_pt) then
---   	self:FailTestCase ("preloaded_pt in localPT is true, should be false")
-
---   end
--- end
-
--- --///////////////////////////////////////////////////////////////////////////////////////////
--- -- the value of "preloaded_pt" should be true after MASTER_RESET (APPLINK-16899)
--- -- send master reset	
--- function Test:Check2_ExecuteMasterReset() 
--- 	commonFunctions:userPrint(34, "=================== Test Case Check 2 ===================")
--- 	--TODO: delete after APPLINK-19717 resolved
--- 	commonFunctions:userPrint(34, "currently case fails due to APPLINK-19717")
---        MASTER_RESET(self)
--- end
--- -- start SDL, register App
--- function Test:Check2_startSDLAfterMasterReset()
--- 	RestartSDL("Restart after MASTER_RESET", false)
--- 	--StartSDL_Without_stop("Restart after MASTER_RESET")
--- end
-
--- -- activate App
--- function Test:Check2_ActivationOfApplication()
--- 	commonSteps:ActivationApp(nil, "Activating_App")
-
--- 	DelayedExp(3000)	
--- end
-
--- -- check "preloaded_pt" in localPT became true after MASTER_RESET 
--- function Test:Check2_ValueOfPreloaded()  
---   preloaded_pt = get_preloaded_pt_value()
-
---   if (preloaded_pt == nil or preloaded_pt) then
---     commonFunctions:userPrint(31, "preloaded_pt=true after MASTER_RESET")
---   end
--- end
