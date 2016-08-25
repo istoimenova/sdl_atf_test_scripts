@@ -5153,7 +5153,7 @@ end
 			end)
 			:ValidIf(function(_,data)
 					if data.params.myKey then
-						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain mykey parameter in request when should be omitted")
+						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain myKey parameter in request when should be omitted")
 						return false
 					else
 						return true
@@ -5199,7 +5199,7 @@ end
 		policyTable:updatePolicy(PTName, nil, "UpdatePolicy_GetVehicleData_DisallowedSomeParams_AllowBase4")
 		
 		-- SDL responds "DISALLOWED" with info when send GetVehicleData request with some disallowed parameters.
-		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "mykey"}
+		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
 		local Request_WithAllowedParams_InBase4 = {"tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "vin"}
 		
 		function Test:GetVehicleData_With_SomeDisallowedParams_Base4()
