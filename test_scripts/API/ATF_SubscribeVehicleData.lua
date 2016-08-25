@@ -2935,7 +2935,7 @@ end
 			end)
 			:ValidIf(function(_,data)
 					if data.params.myKey then
-						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain mykey parameter in request when should be omitted")
+						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain myKey parameter in request when should be omitted")
 						return false
 					else
 						return true
@@ -3037,7 +3037,7 @@ end
 		testCasesForPolicyTable:updatePolicy(PTName, nil, "UpdatePolicy_SubscribeVehicleData_DisallowedSomeParams_AllowBase4")
 		
 		-- SDL responds "DISALLOWED" with info when send SubscribeVehicleData request with some disallowed parameters.
-		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "mykey"}
+		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
 		local Request_WithAllowedParams_InBase4 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption",
 								"externalTemperature", "prndl", "tirePressure", "odometer", "beltStatus", "bodyInformation", "abs_State", "turnSignal", "fuelRange", "tirePressureValue", "tpms"}
 		
@@ -3072,7 +3072,7 @@ end
 				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
 			end)
 			:ValidIf(function(_,data)
-					if data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.mykey then
+					if data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.myKey then
 						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain some parameters in request when should be omitted")
 						return false
 					else
@@ -3083,7 +3083,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{
 						success = true, 
-						info = "'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'mykey' are disallowed by policies", 
+						info = "'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'myKey' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						wiperStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_WIPERSTATUS"},
@@ -3202,7 +3202,7 @@ end
 		local Request_WithParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "abs_State", "turnSignal", "fuelRange", "tirePressureValue", "tpms"}
 		local Request_WithParams_InGroup1 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption",
 								"externalTemperature", "prndl"}
-		local Request_WithParams_NotPresented = {"emergencyEvent", "clusterModeStatus", "mykey", "tirePressure", "odometer", "beltStatus", "bodyInformation"}	
+		local Request_WithParams_NotPresented = {"emergencyEvent", "clusterModeStatus", "myKey", "tirePressure", "odometer", "beltStatus", "bodyInformation"}	
 
 		function Test:SubscribeVehicleData_ParamsInGroup1_User_Not_Answer_Consent()
 		
@@ -3300,7 +3300,7 @@ end
 				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
 			end)
 			:ValidIf(function(_,data)
-					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.externalTemperature or data.params.prndl  or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.mykey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
+					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.externalTemperature or data.params.prndl  or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.myKey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
 						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain some parameters in request when should be omitted")
 						return false
 					else
@@ -3311,7 +3311,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{
 						success = true, 
-						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3437,7 +3437,7 @@ end
 		-- SDL responds "DISALLOWED" with info about user_disallowed and disallowed params when send SubscribeVehicleData with some params are disallowed by Policies and some params are disallowed by User. 
 		--Expected result is confirmed by question APPLINK-27002
 		local Request_ParamsNotPresented_ParamInGroup1 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption",
-								"externalTemperature", "prndl", "emergencyEvent", "clusterModeStatus", "mykey", "tirePressure", "odometer", "beltStatus", "bodyInformation"}
+								"externalTemperature", "prndl", "emergencyEvent", "clusterModeStatus", "myKey", "tirePressure", "odometer", "beltStatus", "bodyInformation"}
 		
 		function Test:SubscribeVehicleData_With_DisallowedParamsByPolicies_ParamInGroup1_UserAnswerNO()
 
@@ -3452,7 +3452,7 @@ end
 					{
 						success = false, 
 						resultCode = "DISALLOWED", 
-						info = "'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies,'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user",
+						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies,'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user",
 						
 						gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
 						speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
@@ -3492,7 +3492,7 @@ end
 				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
 			end)
 			:ValidIf(function(_,data)
-					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.externalTemperature or data.params.prndl or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.mykey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
+					if data.params.gps or data.params.speed or data.params.rpm or data.params.fuelLevel or data.params.fuelLevel_State or data.params.instantFuelConsumption or data.params.externalTemperature or data.params.prndl or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.myKey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
 						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain some parameters in request when should be omitted")
 						return false
 					else
@@ -3504,7 +3504,7 @@ end
 			EXPECT_RESPONSE(cid, 
 			{
 				success = true, 
-				info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user,'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+				info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user,'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
 				resultCode = "SUCCESS",
 				
 				gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3566,7 +3566,7 @@ end
 				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
 			end)
 			:ValidIf(function(_,data)
-					if data.params.emergencyEvent or data.params.clusterModeStatus or data.params.mykey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
+					if data.params.emergencyEvent or data.params.clusterModeStatus or data.params.myKey or data.params.tirePressure or data.params.odometer or data.params.beltStatus or data.params.bodyInformation then
 						commonFunctions:userPrint(31,"VehicleInfo.SubscribeVehicleData contain some parameters in request when should be omitted")
 						return false
 					else
@@ -3578,7 +3578,7 @@ end
 			EXPECT_RESPONSE(cid,
 					{
 						success = true, 
-						info = "'emergencyEvent', 'clusterModeStatus', 'mykey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},
