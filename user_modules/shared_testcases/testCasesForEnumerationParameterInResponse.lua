@@ -4,7 +4,7 @@
 	--2. enumerationParameter:verify_Enum_String_Parameter(Request, Parameter, ExistentValues, Mandatory)
 ---------------------------------------------------------------------------------------------
 
-local testCasesForEnumerationParameter = {}
+local testCasesForEnumerationParameterInResponse = {}
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
 
