@@ -121,7 +121,8 @@ local function get_preloaded_pt_value()
   local retvalue = tonumber(sql_output);
   
   if (retvalue == nil) then
-     self:FailTestCase("preloaded_pt can't be read")
+    -- module:FailTestCase("preloaded_pt can't be read")
+    self:FailTestCase("preloaded_pt can't be read")
   else 
     return retvalue
   end
@@ -223,6 +224,102 @@ EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS",
 	end)
 end
 
+local function UpdatePolicyInvalidJSON(self, PTName)
+--hmi side: sending SDL.GetURLS request
+local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
+--hmi side: expect SDL.GetURLS response from HMI
+EXPECT_HMIRESPONSE(RequestIdGetURLS,{result = {code = 0, method = "SDL.GetURLS", urls = {{url = "http://policies.telematics.ford.com/api/policies"}}}})
+  :Do(function(_,data)
+	print("SDL.GetURLS response is received")
+	--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
+	self.hmiConnection:SendNotification("BasicCommunication.OnSystemRequest",
+		{   
+		    requestType = "PROPRIETARY",
+		    url="http://policies.telematics.ford.com/api/policies",
+		    fileName = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json",
+			appID = self.applications["Test Application"]				
+		}
+	)
+	--mobile side: expect OnSystemRequest notification
+	self.mobileSession:ExpectNotification("OnReceivedPolicyUpdate", 
+		{ 
+		  requestType = "PROPRIETARY",
+		  url="http://policies.telematics.ford.com/api/policies",
+		  fileName = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json"
+
+		 })
+	end)
+	:Do(function(_,data)				
+    --mobile side: sending SystemRequest request
+		local CorIdSystemRequest = self.mobileSession:SendRPC("SystemRequest",
+			{
+				fileName = "PolicyTableUpdate",
+				requestType = "PROPRIETARY"
+			},
+			"files/" .. "PTU_UpdateNeeded.json")
+
+		local systemRequestId
+		--hmi side: expect SystemRequest request
+		EXPECT_HMICALL("BasicCommunication.SystemRequest")
+		:Do(function(_,data)
+			systemRequestId = data.id
+			--hmi side: sending BasicCommunication.OnSystemRequest request to SDL
+			self.hmiConnection:SendNotification("SDL.OnReceivedPolicyUpdate",
+				{
+					policyfile = "/tmp/fs/mp/images/ivsu_cache/PolicyTableUpdate"
+				}
+			)
+			function to_run()
+				--hmi side: sending SystemRequest response
+				self.hmiConnection:SendResponse(systemRequestId,"BasicCommunication.SystemRequest", "SUCCESS", {})
+			end
+
+			RUN_AFTER(to_run, 500)
+		end)
+
+		--hmi side: expect SDL.OnStatusUpdate
+		-- EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate")
+		-- :ValidIf(function(exp,data)
+		-- 	if
+		-- 		exp.occurences == 1 and
+		-- 		data.params.status == "UP_TO_DATE" then
+		-- 			return true
+		-- 	elseif
+		-- 		exp.occurences == 1 and
+		-- 		data.params.status == "UPDATING" then
+		-- 			return true
+		-- 	elseif
+		-- 		exp.occurences == 2 and
+		-- 		data.params.status == "UP_TO_DATE" then
+		-- 			return true
+		-- 	else
+		-- 		if
+		-- 			exp.occurences == 1 then
+		-- 				print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in first occurrences status 'UP_TO_DATE' or 'UPDATING', got '" .. tostring(data.params.status) .. "' \27[0m")
+		-- 		elseif exp.occurences == 2 then
+		-- 				print ("\27[31m SDL.OnStatusUpdate came with wrong values. Expected in second occurrences status 'UP_TO_DATE', got '" .. tostring(data.params.status) .. "' \27[0m")
+		-- 		end
+		-- 		return false
+		-- 	end
+		-- end)
+		-- :Times(Between(1,2))
+
+		--mobile side: expect SystemRequest response
+
+		self.mobileSession:ExpectResponse(CorIdSystemRequest, { success = false, resultCode = "INVALID_DATA"})
+		:Do(function(_,data)
+			--hmi side: sending SDL.GetUserFriendlyMessage request to SDL
+			local RequestIdGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"StatusPending"}})
+
+			--hmi side: expect SDL.GetUserFriendlyMessage response
+			EXPECT_HMIRESPONSE(RequestIdGetUserFriendlyMessage,{result = {code = 0, method = "SDL.GetUserFriendlyMessage", messages = {{line1 = "Updating...", messageCode = "StatusPending", textBody = "Updating..."}}}})
+			:Do(function(_,data)
+			end)
+		end)
+
+	end)
+end
+
 local function MASTER_RESET(self, appNumber)
 	StopSDL()
 
@@ -285,6 +382,7 @@ function Test:CheckValueOfPreloaded1()
   
   if (preloaded_pt == 0) then
     --commonFunctions:userPrint(31, "preloaded_pt in localPT is 0, should be 1")
+   -- module:FailTestCase("preloaded_pt in localPT is 0, should be 1")
     self:FailTestCase("preloaded_pt in localPT is 0, should be 1")
 
   end
@@ -349,7 +447,7 @@ end
 -- perform PTU with invalid .json file
 function Test:PTUInvalidJson()
 
-    UpdatePolicy(self, "files/incorrectJSON.json")
+    UpdatePolicyInvalidJSON(self, "files/incorrectJSON.json")
 
 end
 
