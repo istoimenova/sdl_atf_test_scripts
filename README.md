@@ -68,11 +68,11 @@ cp <sdl_core>/src/components/interfaces/MOBILE_API.xml <sdl_atf>/data/
 * Run ATF.
 
  _Mandatory options:_
-  * Pass path to sdl binary dir with --sdl_core command line parameter
+  * Pass path to sdl binary dir with --sdl-core command line parameter
   * Pass path to test script as first command line parameter
 ```
 cd <sdl_atf>/
-./start.sh --sdl_core=<sdl_core>/build/bin  ./test_scripts/ATF_Speak.lua
+./start.sh --sdl-core=<sdl_core>/build/bin  ./test_scripts/ATF_Speak.lua
 ```
 
 __Note, that path to SDL binary dir may be different__
