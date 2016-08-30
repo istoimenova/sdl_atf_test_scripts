@@ -164,7 +164,7 @@ def tests_run():
             print("Execute {}".format(script))
             with settings(warn_only=True):
                 output = run('''./start.sh --storeFullSDLLogs \
-                             --sdl_core=./SDL_bin/ {} |\
+                             --sdl-core=./SDL_bin/ {} |\
                              tee console_output'''.format(script))
                 script_reports_dir = "{}/{}".format(config.reports_dir, script)
                 run("mkdir -p {}".format(script_reports_dir))
