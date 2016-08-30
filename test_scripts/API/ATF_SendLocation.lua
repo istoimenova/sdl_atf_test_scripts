@@ -810,8 +810,8 @@ function Test:SendLocation_InBase4_With_SomeAllowedParams_And_SomeDisallowedPara
 			return true
 		end
 	end)
-	-- mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationImage', 'phoneNumber', 'timeStamp', 'deliveryMode' are disallowed by policies"})			
+	-- mobile side: expect SendLocation response                           
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'deliveryMode', 'locationImage', 'phoneNumber', 'timeStamp' are disallowed by policies"})			
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group and 3 params are disallowed")
@@ -889,7 +889,7 @@ function Test:SendLocation_ParamsInGroup1_User_Not_Answer_Consent()
 	:Times(0)
 	
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by policies"})
+	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "Requested parameters are disallowed by Policies"})
 	commonTestCases:DelayedExp(1000)	
 end
 
@@ -948,7 +948,7 @@ function Test:SendLocation_AllowedParamsInBase4_NotAnswerForUserConsentForGroup1
 		end
 	end)
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'timeStamp', 'addressLines', 'phoneNumber', 'deliveryMode' are disallowed by policies"})			
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'deliveryMode', 'phoneNumber', 'timeStamp' are disallowed by policies"})			
 end
 
 -- SDL responds SUCCSS with info about disallowed params when send SendLocation with allowed params in Base4, disallowed params by policies and params in group1 when user does not answer consent for group1.
@@ -1012,8 +1012,8 @@ function Test:SendLocation_AllowedParamsBase4_ParamsNotPresentedInPolicies_NotAn
 			return true
 		end
 	end)
-	-- mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'locationName', 'locationDescription', 'locationImage', 'phoneNumber', 'timeStamp', 'deliveryMode' are disallowed by policies"})			
+	-- mobile side: expect SendLocation response                           
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'address', 'addressLines', 'deliveryMode', 'locationDescription', 'locationImage', 'locationName', 'phoneNumber', 'timeStamp' are disallowed by policies"})			
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group (user answers NO) and 3 params are disallowed")
@@ -1060,7 +1060,7 @@ function Test:SendLocation_ParamsInGroup1_User_Answer_NO()
 	EXPECT_HMICALL("Navigation.SendLocation", {})				
 	:Times(0)
 	
-	--mobile side: expect SendLocation response
+	--mobile side: expect SendLocation response 
 	EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "RPC is disallowed by the user"})
 	commonTestCases:DelayedExp(1000)	
 end
@@ -1153,8 +1153,8 @@ function Test:SendLocation_With_DisallowedParamsByPolicies_ParamInGroup1_UserAns
 	EXPECT_HMICALL("Navigation.SendLocation", {})				
 	:Times(0)
 	
-	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationName', 'locationDescription', 'locationImage' are disallowed by polices,'address','timeStamp', 'addressLines', 'phoneNumber', 'deliveryMode' are disallowed by user"})
+	--mobile side: expect SendLocation response																													
+	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationDescription', 'locationImage', 'locationName' are disallowed by polices, 'address', 'addressLines', 'deliveryMode', 'phoneNumber', 'timeStamp' are disallowed by user"})
 	commonTestCases:DelayedExp(1000)	
 end
 
@@ -1219,7 +1219,7 @@ function Test:SendLocation_AlowedParamsInBase4_ParamsNotPresentedInPolicies_Disa
 		end
 	end)
 	--mobile side: expect SendLocation response
-	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'locationName', 'locationDescription', 'locationImage' are disallowed by policies and 'address', 'timeStamp', 'phoneNumber', 'addressLines', 'deliveryMode' are disallowed by user"})	
+	EXPECT_RESPONSE(cid, { success = true, resultCode = "SUCCESS", info = "'locationDescription', 'locationImage', 'locationName' are disallowed by policies, 'address', 'addressLines', 'deliveryMode', 'phoneNumber', 'timeStamp' are disallowed by user"})	
 end
 
 commonFunctions:newTestCasesGroup("Checking when 2 parameters are present in Base 4, 5 params are in consent group (user answers YES) and params are disallowed")
