@@ -1154,7 +1154,7 @@ function Test:SendLocation_With_DisallowedParamsByPolicies_ParamInGroup1_UserAns
 	:Times(0)
 	
 	--mobile side: expect SendLocation response																													
-	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationDescription', 'locationImage', 'locationName' are disallowed by polices, 'address', 'addressLines', 'deliveryMode', 'phoneNumber', 'timeStamp' are disallowed by user"})
+	EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info= "'locationDescription', 'locationImage', 'locationName' are disallowed by policies, 'address', 'addressLines', 'deliveryMode', 'phoneNumber', 'timeStamp' are disallowed by user"})
 	commonTestCases:DelayedExp(1000)	
 end
 
