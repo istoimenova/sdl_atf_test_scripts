@@ -4,7 +4,7 @@
 -------------------------------------------------------------------------------------------------
 local commonSteps   = require('user_modules/shared_testcases/commonSteps')
 local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
-
+local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
   
 function DeleteLog_app_info_dat_policy()
     commonSteps:CheckSDLPath()

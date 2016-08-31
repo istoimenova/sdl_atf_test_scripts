@@ -7,8 +7,9 @@ local tcp = require('tcp_connection')
 local file_connection  = require('file_connection')
 local commonPreconditions = require ('/user_modules/shared_testcases/commonPreconditions')
 local commonSteps = require ('/user_modules/shared_testcases/commonSteps')
-
+local policyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
+local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 
 local TooManyPenReqCount = 0
 
@@ -23,8 +24,12 @@ end
 ---------------------------------------------------------------------------------------------
 ------------------------- General Precondition before ATF start -----------------------------
 ---------------------------------------------------------------------------------------------
---make backup copy of file sdl_preloaded_pt.json
+--1. Make backup copy of file sdl_preloaded_pt.json
 commonPreconditions:BackupFile("sdl_preloaded_pt.json")
+--2. Backup smartDeviceLink.ini file
+commonPreconditions:BackupFile("smartDeviceLink.ini")
+--3. Update smartDeviceLink.ini file: PendingRequestsAmount = 3 
+commonFunctions:SetValuesInIniFile_PendingRequestsAmount(3)
 -- TODO: Remove after implementation policy update
 -- Precondition: remove policy table
 commonSteps:DeletePolicyTable()
@@ -36,6 +41,7 @@ commonSteps:DeletePolicyTable()
 ---------------------------------------------------------------------------------------------
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
+
 	--Begin Precondition.1
 	--Description: Activation App by sending SDL.ActivateApp	
 		commonSteps:ActivationApp()
@@ -204,6 +210,13 @@ commonSteps:DeletePolicyTable()
 		  print ("restoring sdl_preloaded_pt.json")
 		  commonPreconditions:RestoreFile("sdl_preloaded_pt.json")
 		end
+		
+			--Post condition: Restore smartDeviceLink.ini file for SDL
+	function Test:RestoreFile_smartDeviceLink_ini()
+		commonPreconditions:RestoreFile("smartDeviceLink.ini")
+	end
+
+	
 --End Test suit ResultCodeCheck
 
 
