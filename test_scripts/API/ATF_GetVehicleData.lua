@@ -5029,7 +5029,7 @@ end
 		-- Begin Test case SequenceCheck.1
 		-- CRQ: APPLINK-24201
 		-- Description: Check allowance of parameters in Policies
-		 local function GetVehicleData_PoliciesAllowanceChecking()
+		local function GetVehicleData_PoliciesAllowanceChecking()
 		
 		--Requirement: APPLINK-21166 
 		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.1: Parameters are empty at Base4 in Policies")
@@ -5200,7 +5200,7 @@ end
 		
 		-- SDL responds "DISALLOWED" with info when send GetVehicleData request with some disallowed parameters.
 		local Request_WithDisallowedParams_InBase4 = {"deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey"}
-		local Request_WithAllowedParams_InBase4 = {"tirePressure", "tirePressureValue", "tpms", "turnSignal", "odometer", "beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "vin"}
+		local Request_WithAllowedParams_InBase4 = {"gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State", "externalTemperature", "prndl"}
 		
 		function Test:GetVehicleData_With_SomeDisallowedParams_Base4()
 			--mobile side: sending GetVehicleData request
@@ -5232,8 +5232,9 @@ end
 				--hmi side: sending VehicleInfo.GetVehicleData response
 				self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", response)	
 			end)
-			:ValidIf(function(_,data)
-					if data.params.tirePressure or data.params.tirePressureValue or data.params.tpms or data.params.turnSignal or data.params.odometer or data.params.beltStatus or data.params.bodyInformation or data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.vin then
+			:ValidIf(function(_,data) 
+					--if data.params.tirePressure or data.params.tirePressureValue or data.params.tpms or data.params.turnSignal or data.params.odometer or data.params.beltStatus or data.params.bodyInformation or data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.vin then
+					if data.params.deviceStatus or data.params.driverBraking or data.params.wiperStatus or data.params.headLampStatus or data.params.engineTorque or data.params.accPedalPosition or data.params.steeringWheelAngle or data.params.eCallInfo or data.params.airbagStatus or data.params.emergencyEvent or data.params.clusterModeStatus or data.params.myKey then
 						commonFunctions:userPrint(31,"VehicleInfo.GetVehicleData contain some parameters in request when should be omitted")
 						return false
 					else
@@ -5241,7 +5242,7 @@ end
 					end
 				end)
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer', 'beltStatus', 'bodyInformation', 'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'vin' are disallowed by policies", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, {success = true, info = "'accPedalPosition', 'airbagStatus', 'beltStatus', 'bodyInformation', 'clusterModeStatus', 'deviceStatus', 'driverBraking', 'eCallInfo', 'emergencyEvent', 'engineTorque', 'headLampStatus', 'myKey', 'odometer', 'steeringWheelAngle', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'vin', 'wiperStatus' are disallowed by policies", resultCode = "SUCCESS"})			
 
 		end
 		-------------------------------------------------------------------------------------------------------------
@@ -5316,15 +5317,15 @@ end
 		
 		-- SDL responds "SUCCESS" with info GetVehicleData with allowed params in Base4 and params in group1 when user does not answer consent for group1.
 		local Request_ParamsInBase4_ParamInGroup1 = {"beltStatus", "bodyInformation", "deviceStatus", "driverBraking", "wiperStatus", "headLampStatus", "engineTorque", "accPedalPosition", "steeringWheelAngle", "eCallInfo", "airbagStatus", "emergencyEvent", "clusterModeStatus", "myKey", "vin", "gps", "speed", "rpm", "fuelLevel", "fuelLevel_State", "instantFuelConsumption", "fuelRange", "abs_State"}
-		
+		--local Request_ParamsInBase4_ParamInGroup1 = {"beltStatus", "bodyInformation","gps", "speed"}
 		function Test:GetVehicleData_AllowedParamsInBase4_ParamInGroup1_User_Not_Answer_Consent()
 
 			local request_FromApp = setGVDRequest(Request_ParamsInBase4_ParamInGroup1)
-			local request_HMIExpect = setGVDResponse(Request_WithParams_InBase4)
+			local request_HMIExpect = setGVDRequest(Request_WithParams_InBase4)
 			local response = setGVDResponse(Request_WithParams_InBase4)
 			--mobile side: sending GetVehicleData request
 			local cid = self.mobileSession:SendRPC("GetVehicleData",request_FromApp)
-		
+			
 			--hmi side: expect GetVehicleData request
 			EXPECT_HMICALL("VehicleInfo.GetVehicleData",request_HMIExpect)
 			:Do(function(_,data)
@@ -5339,9 +5340,11 @@ end
 						return true
 					end
 				end)
-				
-			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' are disallowed by policies", resultCode = "SUCCESS"})			
+
+			--mobile side: expect the response
+			local expectedResult = createSuccessExpectedResult(response)
+			-- EXPECT_RESPONSE(cid, {expectedResult, info = "'abs_State', 'fuelLevel', 'fuelLevel_State', 'fuelRange', 'gps', 'instantFuelConsumption', 'rpm', 'speed' are disallowed by policies"})
+			EXPECT_RESPONSE(cid,expectedResult)
 			
 		end
 		
@@ -5368,7 +5371,7 @@ end
 					end
 				end)
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State', 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, {success = true, info = "'abs_State', 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'fuelRange', 'gps', 'instantFuelConsumption', 'odometer', 'prndl', 'rpm', 'speed', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal' are disallowed by policies", resultCode = "SUCCESS"})			
 		end
 
 		policyTable:userConsent(false, "group1", "UserConsent_Answer_No")
@@ -5418,7 +5421,7 @@ end
 				end)
 				
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' are disallowed by user", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, {success = true, info = "'abs_State', 'fuelLevel', 'fuelLevel_State', 'fuelRange', 'gps', 'instantFuelConsumption', 'rpm', 'speed' are disallowed by user", resultCode = "SUCCESS"})			
 			
 		end
 		
@@ -5435,7 +5438,7 @@ end
 			EXPECT_HMICALL("VehicleInfo.GetVehicleData", {})
 			:Times(0)
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = false, resultCode = "USER_DISALLOWED", info = "Several of requested parameters are disallowed by user.'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' disallowed by user; 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies"})
+			EXPECT_RESPONSE(cid, {success = false, resultCode = "DISALLOWED", info = "'externalTemperature', 'odometer', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal' are disallowed by policies, 'abs_State', 'fuelLevel', 'fuelLevel_State', 'fuelRange', 'gps', 'instantFuelConsumption', 'rpm', 'speed' are disallowed by user"})
 			commonTestCases:DelayedExp(1000)
 				
 		end
@@ -5466,7 +5469,7 @@ end
 				end)
 				
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption', 'fuelRange', 'abs_State' are disallowed by user; 'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, {success = true, info = "'externalTemperature', 'odometer', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal' are disallowed by policies, 'abs_State', 'fuelLevel', 'fuelLevel_State', 'fuelRange', 'gps', 'instantFuelConsumption', 'rpm', 'speed' are disallowed by user", resultCode = "SUCCESS"})			
 			
 		end
 		
@@ -5499,7 +5502,7 @@ end
 				end)
 				
 			--mobile side: expect GetVehicleData response
-			EXPECT_RESPONSE(cid, {success = true, info = "'externalTemperature', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal', 'odometer' are disallowed by policies", resultCode = "SUCCESS"})			
+			EXPECT_RESPONSE(cid, {success = true, info = "'externalTemperature', 'odometer', 'prndl', 'tirePressure', 'tirePressureValue', 'tpms', 'turnSignal' are disallowed by policies", resultCode = "SUCCESS"})			
 		
 		end
 		
