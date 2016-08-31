@@ -396,41 +396,41 @@ local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(Par
 				
 				--1.2. IsWrongDataType
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsWrongDataType"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsWrongDataType"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				--1.3. IsEmpty
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsEmpty"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_IsEmpty"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				---------------------------------				
 				----Verify Parameter.dataType
 				local Parameter = {ParameterName, "dataType"}
 				--2.1. IsMissed
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")		
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsMissed"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsMissed"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				--2.2. IsWrongDataType
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsWrongDataType"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsWrongDataType"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				--2.3. IsEmpty
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsEmpty"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsEmpty"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 
 				--2.4. IsExistentValue
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_"..DataType, DataType, "SUCCESS")
@@ -441,10 +441,10 @@ local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(Par
 				
 				--2.5. IsNonexistentValue
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsNoneExistentValue"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_DataType_IsNoneExistentValue"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				--2.6. DataTypeOfAnother
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsExistentValue_DataTypeOfAnother", "VEHICLEDATA_GPS", "SUCCESS")
@@ -458,24 +458,24 @@ local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(Par
 				local Parameter = {ParameterName, "resultCode"}
 				--3.1. IsMissed
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsMissed", nil, "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsMissed"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end	
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsMissed"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end	
 				
 				--3.2. IsWrongDataType
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsWrongDataType", 123, "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsWrongDataType"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsWrongDataType"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 				--3.3. IsEmpty
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsEmpty", "", "GENERIC_ERROR")
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsEmpty"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsEmpty"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 				
 	
 				--3.4. IsExistentValue
@@ -490,10 +490,10 @@ local function Verify_SubscribeVehicleData_Enum_String_Parameter_In_Response(Par
 				
 				--3.5. IsNonexistentValue
 				commonFunctions:TestCaseForResponse(self, Response, Parameter, "IsNonexistentValue", "ANY", "GENERIC_ERROR")				
-				Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsNonexistentValue"]=function(self)				
-					self:unSubscribeVehicleDataSuccess(vehicleData)
-					DelayedExp(2000)
-				end
+				-- Test["PostCondition_UnSubscribeVehicleData_"..ParameterName.."_ResultCode_IsNonexistentValue"]=function(self)				
+					-- self:unSubscribeVehicleDataSuccess(vehicleData)
+					-- DelayedExp(2000)
+				-- end
 		
 end
 
