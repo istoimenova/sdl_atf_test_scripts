@@ -2760,8 +2760,7 @@ end
 	-- Begin Test case SequenceCheck.1
 	-- CRQ: APPLINK-24201
 	-- Description: Check allowance of parameters in Policies
-	
-	commonFunctions:newTestCasesGroup("Test Suite for coverage of APPLINK-24201")
+		commonFunctions:newTestCasesGroup("Test Suite for coverage of APPLINK-24201")
 	local function UnsubscribeVehicleData_PoliciesAllowanceChecking()
 	
 		function Test:PreCondition_SubscribeVehicleData_AllowedAllParams()				
@@ -3063,7 +3062,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{
 						success = true, 
-						info = "'deviceStatus', 'driverBraking', 'wiperStatus', 'headLampStatus', 'engineTorque', 'accPedalPosition', 'steeringWheelAngle', 'eCallInfo', 'airbagStatus', 'emergencyEvent', 'clusterModeStatus', 'myKey' are disallowed by policies", 
+						info = "'accPedalPosition', 'airbagStatus', 'clusterModeStatus', 'deviceStatus', 'driverBraking', 'eCallInfo', 'emergencyEvent', 'engineTorque', 'headLampStatus', 'myKey', 'steeringWheelAngle', 'wiperStatus' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						wiperStatus={resultCode="DISALLOWED",dataType="VEHICLEDATA_WIPERSTATUS"},
@@ -3110,7 +3109,7 @@ end
 		-- RequirementID: APPLINK-19584 and APPLINK-23497
 		-- TODO: expected result needs to update when APPLINK-26935 is DONE
 		-- Description: UnsubscribeVehicleData with some params exists at Base4, group1 in Policies and some params are not presented in Policies.
-		commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: Some params are in Base 4, Group1 and some params are disallowed in Policies")
+	commonFunctions:newTestCasesGroup("PoliciesAllowanceChecking.2: Some params are in Base 4, Group1 and some params are disallowed in Policies")
 		
 		local PermissionLines_AllowedForBase4 = 
 			[[				
@@ -3235,7 +3234,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{	
 						success = true, 
-						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by policies", 
+						info = "'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3296,9 +3295,8 @@ end
 			EXPECT_RESPONSE(cid, 
 					{
 						success = true, 
-						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'myKey', 'odometer', 'prndl', 'rpm', 'speed', 'tirePressure' are disallowed by policies", 
 						resultCode = "SUCCESS",
-						
 						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
 						speed={resultCode="DISALLOWED",dataType="VEHICLEDATA_SPEED"},
 						rpm={resultCode="DISALLOWED",dataType="VEHICLEDATA_RPM"},
@@ -3391,7 +3389,7 @@ end
 			EXPECT_RESPONSE(cid, 
 						{	
 							success = true,
-							info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by policies", 
+							info = "'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user", 
 							resultCode = "SUCCESS",	
 							
 							gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3446,7 +3444,7 @@ end
 					{
 						success = false, 
 						resultCode = "DISALLOWED", 
-						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies,'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user",
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies, 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user",
 						
 						gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
 						speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
@@ -3499,7 +3497,7 @@ end
 			EXPECT_RESPONSE(cid, 
 			{
 				success = true, 
-				info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user,'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+				info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies, 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user", 
 				resultCode = "SUCCESS",
 				
 				gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3575,7 +3573,7 @@ end
 			EXPECT_RESPONSE(cid,
 					{
 						success = true, 
-						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},

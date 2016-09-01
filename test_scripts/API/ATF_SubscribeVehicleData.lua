@@ -2783,8 +2783,7 @@ end
 	-- Begin Test case SequenceCheck.1
 	-- CRQ: APPLINK-24201
 	-- Description: Check allowance of parameters in Policies
-	
-	commonFunctions:newTestCasesGroup("Test Suite for coverage of APPLINK-24201")
+commonFunctions:newTestCasesGroup("Test Suite for coverage of APPLINK-24201")
 	local function PoliciesAllowanceChecking()
 		function Test:PreCondition_UnSubscribeVehicleData_AllVehicleParams()				
 			self:unSubscribeVehicleDataSuccess(allVehicleData)
@@ -3249,7 +3248,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{	
 						success = true, 
-						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by policies", 
+						info = "'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3311,7 +3310,7 @@ end
 			EXPECT_RESPONSE(cid, 
 					{
 						success = true, 
-						info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl', 'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'myKey', 'odometer', 'prndl', 'rpm', 'speed', 'tirePressure' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3399,7 +3398,7 @@ end
 			EXPECT_RESPONSE(cid, 
 						{	
 							success = true,
-							info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user", 
+							info = "'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user", 
 							resultCode = "SUCCESS",	
 							
 							gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3452,7 +3451,7 @@ end
 					{
 						success = false, 
 						resultCode = "DISALLOWED", 
-						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies,'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user",
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies, 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user",
 						
 						gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
 						speed={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_SPEED"},
@@ -3504,7 +3503,7 @@ end
 			EXPECT_RESPONSE(cid, 
 			{
 				success = true, 
-				info = "'gps', 'speed', 'rpm', 'fuelLevel', 'fuelLevel_State', 'instantFuelConsumption','externalTemperature', 'prndl' are disallowed by user,'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+				info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies, 'externalTemperature', 'fuelLevel', 'fuelLevel_State', 'gps', 'instantFuelConsumption', 'prndl', 'rpm', 'speed' are disallowed by user", 
 				resultCode = "SUCCESS",
 				
 				gps={resultCode="USER_DISALLOWED",dataType="VEHICLEDATA_GPS"},
@@ -3578,7 +3577,7 @@ end
 			EXPECT_RESPONSE(cid,
 					{
 						success = true, 
-						info = "'emergencyEvent', 'clusterModeStatus', 'myKey', 'tirePressure', 'odometer', 'beltStatus', 'bodyInformation' are disallowed by policies", 
+						info = "'beltStatus', 'bodyInformation', 'clusterModeStatus', 'emergencyEvent', 'myKey', 'odometer', 'tirePressure' are disallowed by policies", 
 						resultCode = "SUCCESS",
 						
 						gps={resultCode="SUCCESS",dataType="VEHICLEDATA_GPS"},
@@ -3791,7 +3790,7 @@ end
 		
 		commonFunctions:newTestCasesGroup("End Test Suite for coverage of APPLINK-24201")
 	end
-	PoliciesAllowanceChecking()	
+	PoliciesAllowanceChecking()		
 	
 	--Description: TC's checks SDL behaviour by processing
 		-- different request sequence with timeout
