@@ -4889,7 +4889,7 @@ local function Test_Block_VIII()
 			local PermissionLinesForSendLocation = PermissionLines_AllowedForOnVehicleData
 			local PermissionLinesForApplication = PermissionLinesForApp1
 			local RemovedOtherRPCsInPT = {"OnVehicleData"}
-			local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLines_AllowedForOnVehicleData, PermissionLinesForApplication, RemovedRPCsInPT)	
+			local PTName = testCasesForPolicyTable:createPolicyTableFile(PermissionLinesForBase4, PermissionLines_AllowedForOnVehicleData, PermissionLinesForApplication, RemovedOtherRPCsInPT)	
 			
 			return PTName
 			
