@@ -288,6 +288,28 @@ function Test:GetExchangeAfterXKilometers( ... )
   exchange_after_x_kilometers = tonumber(tostring(s))
 end
 
+local applicationRegisterParams = 
+  {
+    syncMsgVersion =
+    {
+      majorVersion = 3,
+      minorVersion = 0
+    },
+    appName = "App1",
+    isMediaApplication = true,
+    languageDesired = 'EN-US',
+    hmiDisplayLanguageDesired = 'EN-US',
+    appID = "App1",
+    deviceInfo =
+    {
+      os = "Android",
+      carrier = "Megafon",
+      firmwareRev = "Name: Linux, Version: 3.4.0-perf",
+      osVersion = "4.4.2",
+      maxNumberRFCOMMPorts = 1
+    }
+  }
+
 function Test:CreatePTUEmptyRequestTypeDefault(...)
   -- body
   -- Create PTU from sdl_preloaded_pt.json
@@ -297,6 +319,7 @@ function Test:CreatePTUEmptyRequestTypeDefault(...)
   data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -358,28 +381,6 @@ end
 function Test:PrecondMakeDeviceUntrusted()
   self:makeDeviceUntrusted()
 end
-
-local applicationRegisterParams = 
-  {
-    syncMsgVersion =
-    {
-      majorVersion = 3,
-      minorVersion = 0
-    },
-    appName = "App1",
-    isMediaApplication = true,
-    languageDesired = 'EN-US',
-    hmiDisplayLanguageDesired = 'EN-US',
-    appID = "App1",
-    deviceInfo =
-    {
-      os = "Android",
-      carrier = "Megafon",
-      firmwareRev = "Name: Linux, Version: 3.4.0-perf",
-      osVersion = "4.4.2",
-      maxNumberRFCOMMPorts = 1
-    }
-  }
 
 function Test:PrecondRegisterApp1(...)
 	-- body
@@ -594,12 +595,18 @@ function Test:CreatePTUEmptyRequestTypePreData(...)
   -- data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
   file = io.open("/tmp/ptu_update.json", "w")
   file:write(data)
   file:close()
+  
+  --debug
+  file_debug = io.open("/tmp/ptu_update_tc2.json", "w")
+  file_debug:write(data)
+  file_debug:close()
 
 end
 
@@ -661,6 +668,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   -- data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -739,6 +747,7 @@ function Test:CreatePTUOmmitedRequestTypeDefault(...)
   data.policy_table.app_policies.default.RequestType = nil
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -807,6 +816,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -866,6 +876,7 @@ function Test:CreatePTUOmmitedRequestTypePreData(...)
   -- data.policy_table.app_policies.default.RequestType = nil
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = nil
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -937,6 +948,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   -- data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -987,6 +999,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP", "IVSU", "IGOR"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1058,6 +1071,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1117,6 +1131,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesPreData(...)
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP", "IVSU", "IGOR"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1193,6 +1208,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   -- data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1244,6 +1260,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
   data.policy_table.app_policies.default.RequestType = {"IVSU", "IGOR"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1316,6 +1333,7 @@ function Test:CreatePTUValidRequestTypeDefault(...)
   -- data.policy_table.app_policies.default.RequestType = {}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"PROPRIETARY", "QUERY_APPS", "LAUNCH_APP"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
@@ -1375,6 +1393,7 @@ function Test:CreatePTURequestTypeWithInvalidValuesDefault(...)
   data.policy_table.app_policies.default.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.device.RequestType = {"PROPRIETARY"}
   data.policy_table.app_policies.pre_DataConsent.RequestType = {"IVSU", "IGOR"}
+  data.policy_table.app_policies[applicationRegisterParams.appName] = "default"
 
   local json = require("json")
   data = json.encode(data)
