@@ -194,7 +194,27 @@
 		end
 	end
 
-	local TimeRAISuccess = 0
+	function Putfile(self, arrFileName)
+		
+		Test["Precondition_PutFile_"..arrFileName] = function(self)
+		
+			--mobile side: sending Futfile request
+			local cid = self.mobileSession:SendRPC("PutFile",
+													{
+														syncFileName = arrFileName,
+														fileType	= "GRAPHIC_PNG",
+														persistentFile = false,
+														systemFile = false
+													},
+													"files/action.png")
+
+			--mobile side: expect Futfile response
+			EXPECT_RESPONSE(cid, { success = true})
+			
+		end	
+	end	
+
+	local TimeHMILevel = 0
 	--local function Precondition_RegisterApp(self, nameTC)
 	function Precondition_RegisterApp(self, nameTC)
 		
@@ -214,24 +234,81 @@
 				  												application = {	appName = config.application1.registerAppInterfaceParams.appName }
 																})
 				:Do(function(_,data)
-					TimeRAISuccess = timestamp()
+					--TimeHMILevel = timestamp()
 			  		self.applications[data.params.application.appName] = data.params.application.appID
-			  		return TimeRAISuccess
+			  	--	return TimeHMILevel
 				end)
 
 				self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
 				:Timeout(2000)
 
-				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+				self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "NONE", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+				--self.mobileSession:ExpectNotification("OnHMIStatus", {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
 			end)
 
-			if(TimeRAISuccess == nil) then
-				TimeRAISuccess = 0
-				userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
-			end
+			-- if(TimeHMILevel == nil) then
+			-- 	TimeHMILevel = 0
+			-- 	userPrint(31, "TimeHMILevel is nil. Will be assigned 0")
+			-- end
 		end		
+
+		Putfile(self, "action.png")
 	end
 
+	function Precondition_ActivationApp(self, nameTC)	
+
+		TextPrint(nameTC .."_Precondition")
+		
+		Test[nameTC .."_ActivationApp"] = function(self)
+			
+			local Input_AppId
+			
+			Input_AppId = self.applications[config.application1.registerAppInterfaceParams.appName]
+			
+			
+			--hmi side: sending SDL.ActivateApp request
+			local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = Input_AppId})
+			EXPECT_HMIRESPONSE(RequestId)
+			:Do(function(_,data)
+				if
+					data.result.isSDLAllowed ~= true then
+					local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
+					
+					--hmi side: expect SDL.GetUserFriendlyMessage message response
+					--TODO: update after resolving APPLINK-16094.
+					--EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+					EXPECT_HMIRESPONSE(RequestId)
+					:Do(function(_,data)						
+						--hmi side: send request SDL.OnAllowSDLFunctionality
+						--self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+						self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", {allowed = true, source = "GUI", device = {id = deviceMAC, name = "127.0.0.1"}})
+
+						--hmi side: expect BasicCommunication.ActivateApp request
+						EXPECT_HMICALL("BasicCommunication.ActivateApp")
+						:Do(function(_,data)
+							--hmi side: sending BasicCommunication.ActivateApp response
+							self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+						end)
+						:Times(AnyNumber())
+					end)
+
+				end
+			end)
+			
+			--mobile side: expect notification
+			EXPECT_NOTIFICATION("OnHMIStatus", {hmiLevel = "FULL", systemContext = "MAIN"})
+			:Do(function(_,data)
+				TimeHMILevel = timestamp()
+				return TimeHMILevel
+			end)
+
+			if(TimeHMILevel == nil) then
+				TimeHMILevel = 0
+				userPrint(31, "TimeHMILevel is nil. Will be assigned 0")
+			end
+
+		end
+	end
 	local function AddCommand(self, icmdID)
 
 		local TimeAddCmdSuccess = 0
@@ -277,9 +354,9 @@
 			self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
 		end)	
 	
-		if(TimeRAISuccess == nil ) then
-			TimeRAISuccess = 0
-			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
+		if(TimeHMILevel == nil ) then
+			TimeHMILevel = 0
+			userPrint(31, "TimeHMILevel is nil. Will be assigned 0")
 		end
 		--mobile side: expect AddCommand response 
 		EXPECT_RESPONSE(cid, {  success = true, resultCode = "SUCCESS"  })
@@ -293,13 +370,13 @@
 			
 				--mobile side: expect OnHashChange notification
 				if( 
-					 (TimeAddCmdSuccess - TimeRAISuccess) <= 10000 and
+					 (TimeAddCmdSuccess - TimeHMILevel) <= 10000 and
 				 	 (TimeAddCmdSuccess > 0) )then
-					userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+					userPrint(32, "Time of SUCCESS AddCommand is within 10 sec; Real: " ..(TimeAddCmdSuccess - TimeHMILevel))
 					AddCmdSuccess[icmdID] = true
 				else
-					userPrint(33,"Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess) )
-					--self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeRAISuccess))
+					userPrint(33,"Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeHMILevel) )
+					--self:FailTestCase("Time to success of AddCommand expired after RAI. Expected 10sec; Real: " ..(TimeAddCmdSuccess - TimeHMILevel))
 					AddCmdSuccess[icmdID] = false
 				end
 			
@@ -315,9 +392,9 @@
 
 	local function DeleteCommand(self, icmdID)
 		local TimeDeleteCmdSuccess = 0
-		if(TimeRAISuccess == nil ) then
-			TimeRAISuccess = 0
-			userPrint(31, "TimeRAISuccess is nil. Will be assigned 0")
+		if(TimeHMILevel == nil ) then
+			TimeHMILevel = 0
+			userPrint(31, "TimeHMILevel is nil. Will be assigned 0")
 		end
 		--mobile side: sending DeleteCommand request
 		local cid = self.mobileSession:SendRPC("DeleteCommand",
@@ -356,12 +433,12 @@
 			else
 				TimeDeleteCmdSuccess  = timestamp()		
 				if( 
-					(TimeDeleteCmdSuccess - TimeRAISuccess) <= 10000  and
+					(TimeDeleteCmdSuccess - TimeHMILevel) <= 10000  and
 					(TimeDeleteCmdSuccess > 0) 	) then
-					userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+					userPrint(32, "Time of SUCCESS DeleteCommand is within 10 sec; Real: " ..(TimeDeleteCmdSuccess - TimeHMILevel))
 					DeleteCmdSuccess[icmdID] = true
 				else
-					userPrint(33,"Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeRAISuccess))
+					userPrint(33,"Time to success of DeleteCommand expired after RAI. Expected 10sec; Real: " ..(TimeDeleteCmdSuccess - TimeHMILevel))
 					DeleteCmdSuccess[icmdID] = false
 				end
 
@@ -415,14 +492,14 @@
 -------------------------------------------Preconditions-------------------------------------
 ---------------------------------------------------------------------------------------------
 	--Begin Precondition.1
-			TextPrint("General Precondition")
-			commonSteps:ActivationApp(_,"ActivationApp_GeneralPrecondition")
+		TextPrint("General Precondition")
+		commonSteps:ActivationApp(_,"ActivationApp_GeneralPrecondition")
 	--End Precondition.1
 
 	--Begin Precondition.2
 		--Description: Update Policy with SetGlobalProperties API in FULL, LIMITED, BACKGROUND is allowed
 		function Test:Precondition_PolicyUpdate_GeneralPrecondition()
-			--hmi side: sending SDL.GetURLS request
+			--hmi side: sending SDL.GetURLS reqeuest
 			local RequestIdGetURLS = self.hmiConnection:SendRequest("SDL.GetURLS", { service = 7 })
 		
 			--hmi side: expect SDL.GetURLS response from HMI
@@ -446,7 +523,9 @@
 																																fileName = "PolicyTableUpdate",
 																																requestType = "PROPRIETARY"
 																															},
+																															--"files/PTU_SetGlobalProperties.json"
 																															"files/ptu_general.json"
+																															
 																														)
 				
 					local systemRequestId
@@ -507,6 +586,10 @@
 			end)
 		end
 	--End Precondition.2
+
+	--Begin Precondition.3
+		Putfile(self, "action.png")
+	--End Precondition.3
 ---------------------------------------------------------------------------------------------	
 
 ---------------------------------------------------------------------------------------------
@@ -702,6 +785,7 @@
 		--Begin Test case CommonRequestCheck.2
 			--Preconditions Test case CommonRequestCheck.2
 			Precondition_RegisterApp(self, "TC2")
+			Precondition_ActivationApp(self, "TC2")
 		
 			--Description:Positive case and request with only helpPrompt and vrHelp; 5 elements of helpPrompt[]
 			--Requirement id in JIRA: APPLINK-19476
@@ -756,7 +840,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-														vrHelpTitle = "VR help title",
+														vrHelpTitle = "VR Help Title",
 														vrHelp = 
 																		{
 																			{
@@ -840,6 +924,7 @@
 		--Begin Test case CommonRequestCheck.3
 			--Preconditions Test case CommonRequestCheck.3
 				Precondition_RegisterApp(self,"TC3")
+				Precondition_ActivationApp(self, "TC3")
 		
 			--Description:Positive case and request with all params and 1 fake param; 5 elements of helpPrompt[]
 			--Requirement id in JIRA: APPLINK-19476
@@ -1001,6 +1086,7 @@
 		--Begin Test case CommonRequestCheck.4
 			--Preconditions Test case CommonRequestCheck.4
 				Precondition_RegisterApp(self,"TC4")
+				Precondition_ActivationApp(self, "TC4")
 
 			--Description:Positive case and request without any params, as result default values of VrHelp and helpPrompt shall be used.
 			--Requirement id in JIRA: APPLINK-19475; APPLINK-23962; APPLINK-23728
@@ -1061,6 +1147,7 @@
 		--Begin Test case CommonRequestCheck.5
 			--Preconditions Test case CommonRequestCheck.5
 				Precondition_RegisterApp(self,"TC5")
+				Precondition_ActivationApp(self, "TC5")
 
 			--Description:Positive case and request with only VrHelp, as result default values of helpPrompt shall be used.
 			--Requirement id in JIRA: APPLINK-19475; APPLINK-23962; APPLINK-23728
@@ -1072,8 +1159,20 @@
 					xmlReporter.AddMessage("Test Case 5")
 					userPrint(35,"======================================= Test Case 5 =============================================")
 					--mobile side: sending SetGlobalProperties request
-					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ vrHelpTitle = "VR help title" } )
-					
+					local cid = self.mobileSession:SendRPC("SetGlobalProperties",{ 
+																																					vrHelpTitle = "VR help title", 
+																																					vrHelp = {
+																																											{
+																																												text = "VR help item",
+																																												image = {
+																																																	value = "action.png",
+																																																	imageType = "DYNAMIC"
+																																																},
+																																												position = 1
+																																											}
+																																										}
+																																				})
+																													
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
@@ -1081,7 +1180,9 @@
 														vrHelpTitle = "VR help title",
 														vrHelp ={ 
 																	{
-																		text = config.application1.registerAppInterfaceParams.appName,
+																		--text = config.application1.registerAppInterfaceParams.appName,
+																		--APPLINK-20610 vrHelpTitle can't be sent without vrHelp
+																		text = "VR help item",
 																		position = 1
 																}	},
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
@@ -1120,6 +1221,7 @@
 		--Begin Test case CommonRequestCheck.6
 			--Preconditions Test case CommonRequestCheck.6
 			Precondition_RegisterApp(self,"TC6")
+			Precondition_ActivationApp(self, "TC6")
 
 			--Description:Positive case and request with only helpPrompt, as result default values of helpPrompt shall be used.
 			--Requirement id in JIRA: APPLINK-19475; APPLINK-23962; APPLINK-23728
@@ -1132,6 +1234,7 @@
 					userPrint(35,"======================================= Test Case 6 =============================================")
 					--mobile side: sending SetGlobalProperties request
 					local cid = self.mobileSession:SendRPC("SetGlobalProperties", {
+																									vrHelpTitle = "VR help title",
 																									helpPrompt = 
 																													{
 																														{
@@ -1160,7 +1263,7 @@
 					--hmi side: expect UI.SetGlobalProperties request
 					EXPECT_HMICALL("UI.SetGlobalProperties",
 													{
-														vrHelpTitle = config.application1.registerAppInterfaceParams.appName,
+														vrHelpTitle = "VR help title",
 														-- Clarification is done in APPLINK-26638
 														vrHelp ={
 																			{
@@ -1259,6 +1362,7 @@
 
 				--Preconditions Test case PositiveResponseCheck.1
 					Precondition_RegisterApp(self, "TC7_8")
+					Precondition_ActivationApp(self, "TC7_8")
 
 					Test["TC7_8_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -1453,14 +1557,14 @@
 							
 							if(AddCmdSuccess[cmdCount] == true) then
 								SGP_helpPrompt[1] ={
-																		text = "Command" .. tostring(cmdCount),
+																		text = "VRCommand" .. tostring(cmdCount),
 																		type = "TEXT" }
 								SGP_helpPrompt[2] ={
 																		text = "300",
 																		type = "SILENCE" }
 								
 								SGP_vrHelp[1] = { 
-																	text = "Command" .. tostring(cmdCount), 
+																	text = "VRCommand" .. tostring(cmdCount), 
 																	position = 1
 																}
 							else
@@ -1510,14 +1614,14 @@
 																}
 							elseif( (AddCmdSuccess[cmdCount] == true) and (DeleteCmdSuccess[cmdCount] == false) ) then
 								SGP_helpPrompt[1] ={
-																			text = "Command" .. tostring(cmdCount),
+																			text = "VRCommand" .. tostring(cmdCount),
 																			type = "TEXT" }
 								SGP_helpPrompt[2] ={
 																			text = "300",
 																			type = "SILENCE" }
 								
 								SGP_vrHelp[1] = { 
-																	text = "Command" .. tostring(cmdCount), 
+																	text = "VRCommand" .. tostring(cmdCount), 
 																	position = 1
 																}
 							end
@@ -1531,6 +1635,7 @@
 
 				--Preconditions Test case PositiveResponseCheck.3
 					Precondition_RegisterApp(self, "TC9")
+					Precondition_ActivationApp(self, "TC9")
 
 					Test["TC9_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -1727,7 +1832,7 @@
 						for i = 1, cmdCount*2, 2 do
 							if(AddCmdSuccess[i] == true) then
 								SGP_helpPrompt[j] = {
-																			text = "Command" .. tostring(cnt_cmd), --menuName}
+																			text = "VRCommand" .. tostring(cnt_cmd), --menuName}
 																			type = "TEXT" 
 																		}
 								SGP_helpPrompt[j + 1] =
@@ -1744,7 +1849,7 @@
 						j = 1
 						for i = 1, cmdCount do
 							if(AddCmdSuccess[i] == true) then
-								SGP_vrHelp[j] = {	text = "Command" .. tostring(i) }
+								SGP_vrHelp[j] = {	text = "VRCommand" .. tostring(i) }
 								j = j + 1
 							end
 
@@ -1775,7 +1880,7 @@
 	
 							for i = 1,#SGP_helpPrompt do
 								--print("SGP_helpPrompt.text = " ..SGP_helpPrompt[i].text)
-								if(SGP_helpPrompt[i].text ~= ("Command" .. tostring(i)) )then
+								if(SGP_helpPrompt[i].text ~= ("VRCommand" .. tostring(i)) )then
 									Remain_SGP_helpPrompt[i] = SGP_helpPrompt[i]
 								elseif(DeleteCmdSuccess[cnt_cmd] == false) then
 									Remain_SGP_helpPrompt[i] = SGP_helpPrompt[i]
@@ -1799,6 +1904,7 @@
 					-- start 10 sec timer right after app`s registration for waiting SetGlobalProperties_request from mobile app
 				-- Precondition PositiveResponseCheck.4
 					Precondition_RegisterApp(self,"TC11")
+					Precondition_ActivationApp(self, "TC11")
 
 					Test["TC11_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -1985,7 +2091,7 @@
 						for i = 1, cmdCount do
 							if(AddCmdSuccess[i] == true) then
 								SGP_helpPrompt[j] ={
-																			text = "Command" .. tostring(i),
+																			text = "VRCommand" .. tostring(i),
 																			type = "TEXT" }
 								SGP_helpPrompt[j+1] ={
 																			text = "300",
@@ -1993,7 +2099,7 @@
 								j = j +2
 								
 								SGP_vrHelp[i] = { 
-																	text = "Command" .. tostring(i), 
+																	text = "VRCommand" .. tostring(i), 
 																	position = 1
 																}
 							end
@@ -2106,9 +2212,9 @@
 					  												application = {	appName = config.application1.registerAppInterfaceParams.appName }
 																	})
 							:Do(function(_,data)
-								TimeRAISuccess = timestamp()
+								TimeHMILevel = timestamp()
 				  				self.applications[data.params.application.appName] = data.params.application.appID
-				  				return TimeRAISuccess
+				  				return TimeHMILevel
 							end)
 
 							self.mobileSession:ExpectResponse(CorIdRegister, { success = true, resultCode = "SUCCESS" })
@@ -2147,9 +2253,9 @@
 						end)
 						:Times(5)
 
-						if(TimeRAISuccess == nil) then
-							TimeRAISuccess = 0
-							userPrint(31,"TimeRAISuccess is nil. Will be assigned to 0")
+						if(TimeHMILevel == nil) then
+							TimeHMILevel = 0
+							userPrint(31,"TimeHMILevel is nil. Will be assigned to 0")
 						end
 					end
 
@@ -2162,7 +2268,7 @@
 
 						for i = 1, 10, 2 do
 							SGP_helpPrompt[i] ={
-													text = "Command" .. tostring(cnt_cmd), --menuName}
+													text = "VRCommand" .. tostring(cnt_cmd), --menuName}
 													type = "TEXT" }
 							SGP_helpPrompt[i + 1] ={
 														text = "300",
@@ -2171,7 +2277,7 @@
 							cnt_cmd = cnt_cmd + 1
 						end
 						for i = 1, 5 do
-							SGP_vrHelp[i] = {	text = "Command" .. tostring(i), position = i }
+							SGP_vrHelp[i] = {	text = "VRCommand" .. tostring(i), position = i }
 						end
 
 						local cid = self.mobileSession:SendRPC("SetGlobalProperties",{menuTitle = "Menu Title"})
@@ -2215,6 +2321,7 @@
 			--                                                                                      request with valid <vrHelp> and <helpPrompt> params to SDL
 				--Preconditions Test case PositiveResponseCheck.6
 					Precondition_RegisterApp(self, "TC13")
+					Precondition_ActivationApp(self, "TC13")
 
 					Test["TC13_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -2408,14 +2515,14 @@
 						for i = 1, cmdCount do
 							if(AddCmdSuccess[i] == true) then
 								SGP_helpPrompt[j] ={
-																			text = "Command" .. tostring(i),
+																			text = "VRCommand" .. tostring(i),
 																			type = "TEXT" }
 								SGP_helpPrompt[j + 1] ={
 																			text = "300",
 																			type = "SILENCE" }
 								
 								SGP_vrHelp[i] = { 
-																	text = "Command" .. tostring(cmdCount), 
+																	text = "VRCommand" .. tostring(cmdCount), 
 																	position = 1
 																}
 								j = j + 2
@@ -2482,7 +2589,7 @@
 						for i = 1, cmdCount do
 							if(AddCmdSuccess[i] == true) then
 								SGP_helpPrompt[j] ={
-																			text = "Command" .. tostring(i),
+																			text = "VRCommand" .. tostring(i),
 																			type = "TEXT" }
 								SGP_helpPrompt[j+1] ={
 																				text = "300",
@@ -2490,7 +2597,7 @@
 								j = j + 2
 
 								SGP_vrHelp[i] = { 
-																	text = "Command" .. tostring(cmdCount), 
+																	text = "VRCommand" .. tostring(cmdCount), 
 																	position = 1
 																}
 							end
@@ -2533,6 +2640,7 @@
 
 				--Preconditions Test case PositiveResponseCheck.8
 					Precondition_RegisterApp(self, "TC15")
+					Precondition_ActivationApp(self, "TC15")
 
 				--Begin Test case PositiveResponseCheck.8
 					Test["TC15_SetGlobalProperties_Reset_vrHelp_helpPrompt"] = function (self)
@@ -2711,6 +2819,7 @@
 			--                                                                                      request with valid <vrHelp> and <helpPrompt> params to SDL
 				--Preconditions Test case PositiveResponseCheck.9
 					Precondition_RegisterApp(self, "TC16")
+					Precondition_ActivationApp(self, "TC16")
 				
 				--Begin Test case PositiveResponseCheck.9
 					Test["TC16_ResetGlobalPropertiesAfterSetGlobalProp"] = function(self)
@@ -2803,6 +2912,7 @@
 
 				--Preconditions Test case PositiveResponseCheck.10
 					Precondition_RegisterApp(self, "TC17")
+					Precondition_ActivationApp(self, "TC17")
 					
 					Test["TC17_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -2994,13 +3104,13 @@
 						for i = 1, cmdCount do
 							if(AddCmdSuccess[i] == true) then
 								SGP_helpPrompt[j] ={
-																			text = "Command" .. tostring(cmdCount),
+																			text = "VRCommand" .. tostring(cmdCount),
 																			type = "TEXT" }
 								SGP_helpPrompt[j + 1] ={
 																					text = "300",
 																					type = "SILENCE" }							
 								SGP_vrHelp[i] = { 
-																	text = "Command" .. tostring(cmdCount), 
+																	text = "VRCommand" .. tostring(cmdCount), 
 																	position = 1
 																}
 							end
@@ -3227,6 +3337,7 @@
   	--Preconditions Test case NegativeRequestCheck.1
 
 			Precondition_RegisterApp(self, "TC19")
+			Precondition_ActivationApp(self, "TC19")
 
 		--Begin Test case NegativeRequestCheck.1
 			--Description: SDL receives REJECTED at response from HMI and shall not update internal list
@@ -3311,6 +3422,7 @@
 
 		--Preconditions Test case NegativeRequestCheck.2
 			Precondition_RegisterApp(self, "TC20")
+			Precondition_ActivationApp(self, "TC20")
 
 		--Begin Test case NegativeRequestCheck.2
 			--Description: SDL receives any UNSUPPORTED_RESOURCE at response from HMI and shall not update internal list
@@ -3394,6 +3506,7 @@
 
 		--Preconditions Test case NegativeRequestCheck.3
 			Precondition_RegisterApp(self, "TC21")
+			Precondition_ActivationApp(self, "TC21")
 
 			Test["TC21_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -3583,13 +3696,13 @@
 					Test["TC21_CheckInternalList_OneCommand"] = function(self)
 							
 							SGP_helpPrompt[1] ={
-																text = "Command" .. tostring(202),
+																text = "VRCommand" .. tostring(202),
 																type = "TEXT" }
 							SGP_helpPrompt[2] ={
 																text = "300",
 																type = "SILENCE" }
 								
-							SGP_vrHelp[1] = { text = "Command" .. tostring(202) }
+							SGP_vrHelp[1] = { text = "VRCommand" .. tostring(202) }
 							
 							CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 					end
@@ -3622,13 +3735,13 @@
 							local SGP_vrHelp = {}
 
 							SGP_helpPrompt[1] ={
-																		text = "Command" .. tostring(202),
+																		text = "VRCommand" .. tostring(202),
 																		type = "TEXT" }
 							SGP_helpPrompt[2] ={
 																		text = "300",
 																		type = "SILENCE" }
 								
-							SGP_vrHelp[1] = { text = "Command" .. tostring(202) }
+							SGP_vrHelp[1] = { text = "VRCommand" .. tostring(202) }
 							
 							CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 					end
@@ -3636,6 +3749,7 @@
 
 		--Preconditions Test case NegativeRequestCheck.4
 			Precondition_RegisterApp(self, "TC22")
+			Precondition_ActivationApp(self, "TC22")
 
 			Test["TC22_Precondition_SetGlobalProperties_AllValidParametes"] = function(self)
 
@@ -3819,13 +3933,13 @@
 			Test["TC22_CheckInternalList_OneCommand"] = function(self)
 							
 				SGP_helpPrompt[1] ={
-																text = "Command" .. tostring(202),
+																text = "VRCommand" .. tostring(202),
 																type = "TEXT" }
 				SGP_helpPrompt[2] ={
 																text = "300",
 																type = "SILENCE" }
 								
-				SGP_vrHelp[1] = { text = "Command" .. tostring(202) }
+				SGP_vrHelp[1] = { text = "VRCommand" .. tostring(202) }
 							
 				CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 			end
@@ -3863,13 +3977,13 @@
 					Test["TC22_NoUpdateFile_HMI_UnsupportedDeletCommand"] = function(self)
 							
 							SGP_helpPrompt[1] ={
-																text = "Command" .. tostring(202), --menuName}
+																text = "VRCommand" .. tostring(202), --menuName}
 																type = "TEXT" }
 							SGP_helpPrompt[2] ={
 																text = "300",
 																type = "SILENCE" }
 								
-							SGP_vrHelp[1] = { text = "Command" .. tostring(202) }
+							SGP_vrHelp[1] = { text = "VRCommand" .. tostring(202) }
 							
 							CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 					end
@@ -3907,6 +4021,7 @@
 		--Begin Test case EmulatingUserAction.1
 			--Precondition
 			Precondition_RegisterApp(self,"TC23")
+			Precondition_ActivationApp(self, "TC23")
 
 			Test["TC23_Precondition_NoRespUpdateList"] = function(self)
 			
@@ -4106,14 +4221,14 @@
 					helpPrompt_count = 5
 
 					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
-																text = "Command" .. tostring(cmdCount), --menuName}
+																text = "VRCommand" .. tostring(cmdCount), --menuName}
 																type = "TEXT" }
 					SGP_helpPrompt[helpPrompt_count*2 + 2] ={
 																text = "300",
 																type = "SILENCE" }
 					
 					SGP_vrHelp[1]={ text = "VR help item"}
-					SGP_vrHelp[2] = { text = "Command" .. tostring(cmdCount) }
+					SGP_vrHelp[2] = { text = "VRCommand" .. tostring(cmdCount) }
 							
 					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 				end
@@ -4250,8 +4365,9 @@
 		--Begin Test case FULLHMIStatus.1
 			--Precondition
 			Precondition_RegisterApp(self,"TC24")
+			Precondition_ActivationApp(self, "TC24")
 			
-			commonSteps:ActivationApp(_,"TC24")
+			--commonSteps:ActivationApp(_,"TC24")
 
 			Test["TC24_Precondition_FULL_NoRespUpdateList"] = function(self)
 			
@@ -4448,14 +4564,14 @@
 					helpPrompt_count = 5
 
 					SGP_helpPrompt[helpPrompt_count*2 + 1] ={
-																text = "Command" .. tostring(cmdCount), --menuName}
+																text = "VRCommand" .. tostring(cmdCount), --menuName}
 																type = "TEXT" }
 					SGP_helpPrompt[helpPrompt_count*2 + 2] ={
 																text = "300",
 																type = "SILENCE" }
 					
 					SGP_vrHelp[1]={ text = "VR help item"}
-					SGP_vrHelp[2] = { text = "Command" .. tostring(cmdCount) }
+					SGP_vrHelp[2] = { text = "VRCommand" .. tostring(cmdCount) }
 							
 					CheckUpdateFile(self, SGP_helpPrompt, SGP_vrHelp)
 				end
