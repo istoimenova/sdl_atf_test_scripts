@@ -5,10 +5,12 @@ local mobile_session = require('mobile_session')
 -- local mobile  = require('mobile_connection')
 -- local tcp = require('tcp_connection')
 -- local file_connection  = require('file_connection')
---ToDo: shall be removed when APPLINK-16610 is fixed
-config.defaultProtocolVersion = 2
+
+
+
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
+
 commonSteps:DeletePolicyTable()
 
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
@@ -57,6 +59,38 @@ local function userPrint( color, message)
   print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
 end
 
+---------------------------------------------------------------------------------------------
+------------------------------------ Common Variables ---------------------------------------
+---------------------------------------------------------------------------------------------
+local MixingAudioSupported = ""
+
+-- Read default value of MixingAudioSupported in .ini file
+f = assert(io.open(config.pathToSDL.. "/smartDeviceLink.ini", "r"))
+
+fileContent = f:read("*all")
+DefaultContant = fileContent:match('MixingAudioSupported.?=.?([^\n]*)')
+
+if not DefaultContant then
+  print ( " \27[31m MixingAudioSupported is not found in smartDeviceLink.ini \27[0m " )
+else
+  MixingAudioSupported = DefaultContant
+  --print("MixingAudioSupported = " ..MixingAudioSupported)
+end
+f:close()
+
+---------------------------------------------------------------------------------------------
+--Description: MixingAudioSupported is checked in smartDeviceLink.ini
+--Requirement id in JIRA: APPLINK-21529
+--Verification criteria: Parameter MixingAudioSupported is present in file smartDeviceLink.ini
+Test["INIfile_MixingAudioSupported"] = function(self)
+  userPrint(35,"======================================= Test Case =============================================")
+  if(MixingAudioSupported == "true") then
+    print ("\27[32m Tests will be executed for MixingAudioSupported = true.\27[0m")
+  else
+    self.FailTestCase("MixingAudioSupported = " ..MixingAudioSupported ..". Pay attention in test execution")
+  end
+end
+
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -67,7 +101,7 @@ end
       --Requirement id: Multiple media and navigation apps activation during 
       --                  active embedded navigation+audio mixing supported
 
-function Test:UnregisterApp( ... )
+function Test:UnregisterApp()
   userPrint(35, "================= Precondition ==================")
   --mobile side: UnregisterAppInterface request 
   local CorIdUAI = self.mobileSession:SendRPC("UnregisterAppInterface",{}) 
@@ -82,7 +116,7 @@ function Test:UnregisterApp( ... )
 end
 
 function Test:registerApp(session, params)
-  -- body
+  
   -- userPrint(34, "=================== Test Case ===================")
 
   local registerAppInterfaceID = session:SendRPC("RegisterAppInterface", params)
@@ -91,7 +125,7 @@ function Test:registerApp(session, params)
   EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", 
       {application = {appName = params.appName}})
   :Do(function(_,data)
-      -- body
+      
       -- remember HMI appID of registered App
       hmi_ids_of_applications[params.appName] = data.params.application.appID
   end)
@@ -158,6 +192,45 @@ local function StopAudioStreamingForNavi(self)
 end
 
 
+local function activateApp(self, hmi_app_id)--Test:TC01_PreconditionActivateApp(self, hmi_app_id)
+
+      -- hmi side: sending SDL.ActivateApp request
+      local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = hmi_app_id})
+
+      -- hmi side: expect SDL.ActivateApp response
+      EXPECT_HMIRESPONSE(RequestId)
+      :Do(function(_,data)
+          -- In case when app is not allowed, it is needed to allow app
+            if( data.result.isSDLAllowed ~= true ) then
+              -- hmi side: sending SDL.GetUserFriendlyMessage request
+              local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", 
+                    {language = "EN-US", messageCodes = {"DataConsent"}})
+
+              -- hmi side: expect SDL.GetUserFriendlyMessage response
+              -- TODO: comment until resolving APPLINK-16094
+              -- EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
+              EXPECT_HMIRESPONSE(RequestId)
+              :Do(function(_,data)
+
+                  -- hmi side: send request SDL.OnAllowSDLFunctionality
+                  self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", 
+                        {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+
+                  -- hmi side: expect BasicCommunication.ActivateApp request
+                  EXPECT_HMICALL("BasicCommunication.ActivateApp")
+                  :Do(function(_,data)
+
+                        -- hmi side: sending BasicCommunication.ActivateApp response
+                        self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+
+                  end)
+                  -- according APPLINK-9283 we send "device" parameter, so expect "BasicCommunication.ActivateApp" one time
+                  :Times(1)
+              end)                                                                                        
+          end --if( data.result.isSDLAllowed ~= true ) then
+      end)
+end
+
 -- function Test:connectMobileStartSession()
 --     local tcpConnection = tcp.Connection(config.mobileHost, config.mobilePort)
 --     local fileConnection = file_connection.FileConnection("mobile.out", tcpConnection)
@@ -171,260 +244,230 @@ end
 --     self.mobileSession:StartService(7)    
 -- end
 
--- function Test:PrecondConnectPhoneTC1( ... )
---     -- body
+-- function Test:PrecondConnectPhoneTC1()
+--     
 --     self:connectMobileStartSession()
 -- end
 ------------------------------------------------------------------------------------------------------------
 ----------------------------------------------------------- APPLINK-25974
 ------------------------------------------------------------------------------------------------------------
--- register all Apps
-function Test:PrecondRegisterMediaApp1TC1( ... )
+userPrint(35,"======================================= Test Case 01 =============================================")
+  -- register all Apps
+  function Test:PrecondRegisterMediaApp1TC1()
 
-    self:registerApp(self.mobileSession, media_app_1)
-end
+      self:registerApp(self.mobileSession, media_app_1)
+  end
 
-function Test:PrecondNaviAppOpenSessionTC1()
-    -- Connected expectation
-    self.mobileSession2 = mobile_session.MobileSession(
-        self,
-        self.mobileConnection)
-    self.mobileSession2:StartService(7)
-end
+  function Test:PrecondNaviAppOpenSessionTC1()
+      -- Connected expectation
+      self.mobileSession2 = mobile_session.MobileSession(
+          self,
+          self.mobileConnection)
+      self.mobileSession2:StartService(7)
+  end
 
-function Test:PrecondRegisterNaviApp1TC1( ... )
-    -- body
-    self:registerApp(self.mobileSession2, navigation_app_1)
-end
+  function Test:PrecondRegisterNaviAppTC1()
+      
+      self:registerApp(self.mobileSession2, navigation_app_1)
+  end
 
-function Test:PrecondNonMediaAppOpenSessionTC1()
-    -- Connected expectation
-    self.mobileSession3 = mobile_session.MobileSession(
-        self,
-        self.mobileConnection)
-    self.mobileSession3:StartService(7)
-end
+  function Test:PrecondNonMediaAppOpenSessionTC1()
+      -- Connected expectation
+      self.mobileSession3 = mobile_session.MobileSession(
+          self,
+          self.mobileConnection)
+      self.mobileSession3:StartService(7)
+  end
 
-function Test:PrecondRegisterNonMediaApp1TC1( ... )
-    -- body
-    self:registerApp(self.mobileSession3, non_media_app_1)
-end
+  function Test:PrecondRegisterNonMediaAppTC1()
+      
+      self:registerApp(self.mobileSession3, non_media_app_1)
+  end
 
-function Test:activateApp(self, hmi_app_id)
+  function Test:PrecondActivateNonMediaAppTC1()
+      
+      activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+      self.mobileSession3:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
 
-  -- if 
-  --   notificationState.VRSession == true then
-  --     self.hmiConnection:SendNotification("VR.Stopped", {})
-  -- elseif 
-  --   notificationState.EmergencyEvent == true then
-  --     self.hmiConnection:SendNotification("BasicCommunication.OnEmergencyEvent", {enabled = false})
-  -- elseif
-  --   notificationState.PhoneCall == true then
-  --     self.hmiConnection:SendNotification("BasicCommunication.OnPhoneCall", {isActive = false})
+      -- other Apps without changes
+      self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+
+      self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
+
+  function Test:PrecondActivateNaviAppTC1( )
+      
+      activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+      -- navi to FULL
+      self.mobileSession2:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
+
+      --non-media to BACKGROUND
+      self.mobileSession3:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
+
+      --media App without changes
+      self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
+
+  -- APPLINK-25974, b. Three apps running on system:
+  function Test:TC01_PrecondActivateMediaAppTC1(  )
+      
+      activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+      
+      -- media to FULL
+      self.mobileSession:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
+
+      --navi to LIMITED, AUDIBLE
+      self.mobileSession2:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
+
+      --non-media App without changes
+      self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
+
+  -- Action: User activates embedded navigation
+  -- function Test:TC01_PrecondDeactivateMediaApp(  )
+  --     
+  --     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+  --         {appID = hmi_ids_of_applications[media_app_1.appName]})
+
+  --     -- expect Media will be in LIMITED, AUDIBLE
+  --     self.mobileSession:ExpectNotification("OnHMIStatus", 
+  --         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+  --     :Times(1)
+
+  --     -- other Apps without changes
+  --     self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+  --     :Times(0)
+  --     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+  --     :Times(0)
   -- end
 
-    -- hmi side: sending SDL.ActivateApp request
-      local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = hmi_app_id})
+  -- APPLINK-25974, c.User activates embedded navigation and HMILevel of apps were changed to: (per APPLINK-17839)
+  function Test:ActivateEmbeddedNaviTC1()
+     
+      self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
+          {eventName = "EMBEDDED_NAVI", isActive = true})
 
-    -- hmi side: expect SDL.ActivateApp response
-    EXPECT_HMIRESPONSE(RequestId)
-      :Do(function(_,data)
-        -- In case when app is not allowed, it is needed to allow app
-          if
-          data.result.isSDLAllowed ~= true then
-          -- hmi side: sending SDL.GetUserFriendlyMessage request
-          local RequestId = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", 
-                  {language = "EN-US", messageCodes = {"DataConsent"}})
+      -- Media app should change state to LIMITED and NOT_AUDIBLE
+      self.mobileSession:ExpectNotification("OnHMIStatus", 
+           {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
 
-            -- hmi side: expect SDL.GetUserFriendlyMessage response
-            -- TODO: comment until resolving APPLINK-16094
-            -- EXPECT_HMIRESPONSE(RequestId,{result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-            EXPECT_HMIRESPONSE(RequestId)
-            :Do(function(_,data)
+      -- Navi app should change state to BACKGROUND and NOT_AUDIBLE
+      self.mobileSession2:ExpectNotification("OnHMIStatus", 
+           {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
+      
+      -- self.mobileSession2:ExpectNotification("OnHMIStatus", 
+      --     {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
+      -- :Times(1)
 
-                -- hmi side: send request SDL.OnAllowSDLFunctionality
-                self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality", 
-                      {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = "127.0.0.1"}})
+      -- -- other Apps without changes
+      -- self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      -- :Times(0)
+      self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
 
-                -- hmi side: expect BasicCommunication.ActivateApp request
-                  EXPECT_HMICALL("BasicCommunication.ActivateApp")
-                    :Do(function(_,data)
+  -- APPLINK-25974:
+  -- Action 1. User activates media app_1
+  -- Action 2. SDL -> media app_1: OnHMIStatus (FULL, AUDIBLE) (per APPLINK-20341)
+  function Test:ActivatesMediaAppTC1()
+      
+      userPrint(34, "=================== Test Case ===================")
+      activateApp(self, hmi_ids_of_applications[media_app_1.appName])      
 
-                      -- hmi side: sending BasicCommunication.ActivateApp response
-                      self.hmiConnection:SendResponse(data.id,"BasicCommunication.ActivateApp", "SUCCESS", {})
+      self.mobileSession:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
 
-                  end)
-                -- according APPLINK-9283 we send "device" parameter, so expect "BasicCommunication.ActivateApp" one time
-                :Times(1)
-              end)                                                                                        
-        end
-    end)
+      -- other Apps without changes
+      self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+      self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
 
-end
+  -- APPLINK-25974:
+  -- Action 3. User activates Navi App
+  function Test:UserActivatesNaviAppTC1()
+      
+      userPrint(34, "=================== Test Case ===================")
+      self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
+          {eventName = "EMBEDDED_NAVI", isActive = false})
+      
+      self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+          {appID = hmi_ids_of_applications[media_app_1.appName]})
+      
+      activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
 
-function Test:PrecondActivateNonMediaAppTC1( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
-    self.mobileSession3:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+      -- media App moves to LIMITED, AUDIBLE
+      self.mobileSession:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+      :Times(1)
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+      -- navi App moves to FULL, AUDIBLE
+      self.mobileSession2:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"}, -- Due to "EMBEDDED_NAVI", isActive = false
+          {hmiLevel = "FULL",    audioStreamingState = "AUDIBLE", systemContext = "MAIN"} ) -- Due to BasicCommunication.OnAppDeactivated(media)
+      :Times(2)
 
-function Test:PrecondActivateNaviAppTC1( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
-    -- navi to FULL
-    self.mobileSession2:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+      -- non-media still in BACKGROUND
+      self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+      :Times(0)
+  end
 
-    --non-media to BACKGROUND
-    self.mobileSession3:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+  --todo: check statuses during streaming
+  -- function Test:PrecondCreateFileForStream()
+  --     
+  --     local file_path = config.pathToSDL .. "sample.txt"
+  --     os.execute("openssl rand -out" .. file_path .. "-base64 $((5 * 1000 ))")
+  -- end
 
-    --media App without changes
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+  --todo: register defect - SDL is freezes if uncomment function below
+  -- function Test:PrecondStartAudioService()
+  --     
+  --     self.mobileSession2:StartService(10)
+  --     :Do(function ()
+  --         
+  --         self.mobileSession2:StartStreaming(10, config.pathToSDL .. "sample.txt", 30 *1024)
+  --     end)
 
-function Test:PrecondActivateMediaAppTC1( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
-    -- media to FULL
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+  --     EXPECT_HMICALL("NAVIGATION.OnAudioDataStreaming", {{available = true}, {available = false}})
 
-    --navi to LIMITED, AUDIBLE
-    self.mobileSession2:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+  --     --todo: expect hmiLevels
+  -- end
 
-    --non-media App without changes
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+  -- function Test:PostCondRemoveFile()
+  --     
+  --     os.execute("rm " .. config.pathToSDL .. "sample.txt")
+  -- end
 
--- Action: User activates embedded navigation
-function Test:PrecondDeactivateMediaAppTC1( ... )
-    -- body
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
+  --////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  --Start Audio Service and Streaming an navi app (which is in FULL, AUDIBLE)
+  function Test:NaviApp_StartStreamingAudioTC1 ()
+      StartStreamingForNavi(self)
+      commonTestCases:DelayedExp(2000)
+  end
 
-    -- expect Media will be in LIMITED, AUDIBLE
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+  function Test:NaviApp_StopStreamingAudioTC1 ()
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+      StopAudioStreamingForNavi(self)
 
-function Test:PrecondActivateEmbeddedNaviTC1( ... )
-    -- body
-    self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
-        {eventName = "EMBEDDED_NAVI", isActive = true})
-
-    -- expect Media will be in LIMITED, AUDIBLE
-    self.mobileSession2:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
-
-    -- other Apps without changes
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
-
--- User activates Media App
-function Test:UserActivatesMediaAppTC1( ... )
-    -- body
-    userPrint(34, "=================== Test Case ===================")
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
-
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
-
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
-
--- User activates Navi App
-function Test:UserActivatesNaviAppTC1( ... )
-    -- body
-    self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
-        {eventName = "EMBEDDED_NAVI", isActive = false})
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
-
-    -- media App moves to LIMITED, AUDIBLE
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
-
-    -- navi App moves to FULL, AUDIBLE
-    self.mobileSession2:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
-
-    -- non-media still in BACKGROUND
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
-
---todo: check statuses during streaming
--- function Test:PrecondCreateFileForStream( ... )
---     -- body
---     local file_path = config.pathToSDL .. "sample.txt"
---     os.execute("openssl rand -out" .. file_path .. "-base64 $((5 * 1000 ))")
--- end
-
---todo: register defect - SDL is freezes if uncomment function below
--- function Test:PrecondStartAudioService( ... )
---     -- body
---     self.mobileSession2:StartService(10)
---     :Do(function ()
---         -- body
---         self.mobileSession2:StartStreaming(10, config.pathToSDL .. "sample.txt", 30 *1024)
---     end)
-
---     EXPECT_HMICALL("NAVIGATION.OnAudioDataStreaming", {{available = true}, {available = false}})
-
---     --todo: expect hmiLevels
--- end
-
--- function Test:PostCondRemoveFile( ... )
---     -- body
---     os.execute("rm " .. config.pathToSDL .. "sample.txt")
--- end
-
---////////////////////////////////////////////////////////////////////////////////////////////////////////////
---Start Audio Service and Streaming an navi app (which is in FULL, AUDIBLE)
-function Test:NaviApp_StartStreamingAudio ()
-    StartStreamingForNavi(self)
-    commonTestCases:DelayedExp(2000)
-end
-
-function Test:NaviApp_StopStreamingAudio ()
-    StopAudioStreamingForNavi(self)
-
-end
+  end
 --End Test case TC.1
 
 ---------------------------------------------------------------------------------------------------------------
@@ -452,23 +495,23 @@ function Test:unregisterApplication(session)
   :Timeout(200)
 end
 
-function Test:PrecondUnregisterMediaAppTC2( ... )
+function Test:PrecondUnregisterMediaAppTC2()
 
     userPrint(35, "================= Precondition ==================")
     self:unregisterApplication(self.mobileSession)
 end
 
-function Test:PrecondUnregisterNaviAppTC2( ... )
+function Test:PrecondUnregisterNaviAppTC2()
 
     self:unregisterApplication(self.mobileSession2)
 end
 
-function Test:PrecondUnregisterNonMediaAppTC2( ... )
+function Test:PrecondUnregisterNonMediaAppTC2( )
 
     self:unregisterApplication(self.mobileSession3)
 end
 -- register all Apps
-function Test:PrecondRegisterMediaApp1TC2( ... )
+function Test:PrecondRegisterMediaApp1TC2()
 
     self:registerApp(self.mobileSession, media_app_1)
 end
@@ -481,7 +524,7 @@ function Test:PrecondNaviAppOpenSessionTC2()
     self.mobileSession2:StartService(7)
 end
 
-function Test:PrecondRegisterNaviApp1TC2( ... )
+function Test:PrecondRegisterNaviApp1TC2()
 
     self:registerApp(self.mobileSession2, navigation_app_1)
 end
@@ -494,7 +537,7 @@ function Test:PrecondNonMediaAppOpenSessionTC2()
     self.mobileSession3:StartService(7)
 end
 
-function Test:PrecondRegisterNonMediaApp1TC2( ... )
+function Test:PrecondRegisterNonMediaApp1TC2()
 
     self:registerApp(self.mobileSession3, non_media_app_1)
 end
@@ -551,9 +594,9 @@ function Test:activateApp(self, hmi_app_id)
 
 end
 
-function Test:PrecondActivateNonMediaAppTC2( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+function Test:PrecondActivateNonMediaAppTC2()
+    
+    activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
     self.mobileSession3:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
@@ -565,9 +608,9 @@ function Test:PrecondActivateNonMediaAppTC2( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateNaviAppTC2( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+function Test:PrecondActivateNaviAppTC2( )
+   
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
     -- navi to FULL
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -583,9 +626,10 @@ function Test:PrecondActivateNaviAppTC2( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateMediaAppTC2( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+--APPLINK-25979: Pre-condition b. Three apps running on system:
+function Test:PrecondActivateMediaAppTC2()
+    
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
     -- media to FULL
     self.mobileSession:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -603,44 +647,48 @@ end
 ---End precondition TC2
 ------------------------------------------------------------------------------
 -- Action: User activates embedded navigation
-function Test:PrecondDeactivateMediaAppTC2( ... )
+-- function Test:PrecondDeactivateMediaAppTC2()
 
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
+--     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+--         {appID = hmi_ids_of_applications[media_app_1.appName]})
 
-    -- expect Media will be in LIMITED, AUDIBLE
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+--     -- expect Media will be in LIMITED, AUDIBLE
+--     self.mobileSession:ExpectNotification("OnHMIStatus", 
+--         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+--     :Times(1)
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+--     -- other Apps without changes
+--     self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+--     :Times(0)
+--     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+--     :Times(0)
+-- end
 
-function Test:PrecondActivateEmbeddedNaviTC2( ... )
+-- APPLINK-25979: c. User activates embedded navigation and HMILevel of apps were changed to:
+function Test:PrecondActivateEmbeddedNaviTC2()
 
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "EMBEDDED_NAVI", isActive = true})
+
+    -- media app: LIMITED and AUDIBLE
+    self.mobileSession:ExpectNotification("OnHMIStatus",  
+        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+    :Times(1)
 
     -- expect navi will be in BACKGROUND, NOT_AUDIBLE
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- other Apps without changes (media: LIMITED, AUDIBLE.  non-media: BACKGROUND, NOT_AUDIBLE )
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
+    
     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
     :Times(0)
 end
 
--- User activates Media App to FULL, AUDIBLE
-function Test:UserActivatesMediaAppTC2( ... )
+-- APPLINK-25979: d. User activates media app_1 -> FULL, AUDIBLE
+function Test:UserActivatesMediaAppTC2()
 
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
 
     self.mobileSession:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -653,36 +701,46 @@ function Test:UserActivatesMediaAppTC2( ... )
     :Times(0)
 end
 
+-- APPLINK-25979: e. User activates navigation app_2 -> FULL, AUDIBLE 
 -- User activates Navi App to FULL, AUDIBLE
-function Test:UserActivatesNaviAppTC2( ... )
-    -- body
+function Test:UserActivatesNaviAppTC2()
+
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "EMBEDDED_NAVI", isActive = false})
+
     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
         {appID = hmi_ids_of_applications[media_app_1.appName]})
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+
+    -- navi App moves to FULL, AUDIBLE
+    self.mobileSession2:ExpectNotification("OnHMIStatus", 
+          {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"}, -- Due to "EMBEDDED_NAVI", isActive = false
+          {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"} ) -- Due to BasicCommunication.OnAppDeactivated(media)
+    :Times(2)
 
     -- media App moves to LIMITED, AUDIBLE
     self.mobileSession:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- navi App moves to FULL, AUDIBLE
-    self.mobileSession2:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+   
 
     -- non-media still in BACKGROUND
-    self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
     :Times(0)
 end
 
--- action: user activates non_media_app_3
-function Test:UserActivateNonMediaAppTC2( ... )
+-- APPLINK-25979: Action: user activates non_media_app_3
+function Test:UserActivateNonMediaAppTC2()
     
     userPrint(34, "=================== Test Case ===================")
 
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+    
+    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+        {appID = hmi_ids_of_applications[navigation_app_1.appName]})
+
     self.mobileSession3:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
@@ -692,29 +750,29 @@ function Test:UserActivateNonMediaAppTC2( ... )
         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- media app without changes (FULL, AUDIBLE)
+    -- media app without changes (LIMITED, AUDIBLE)
     self.mobileSession:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
     :Times(0)
 
 end
 
 -- HMI -> SDL: OnAppDeactivated for media app
-function Test:DeactivateMediaAppTC2( ... )
+-- function Test:DeactivateMediaAppTC2( )
 
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
+--     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+--         {appID = hmi_ids_of_applications[media_app_1.appName]})
 
-    -- expect Media will be in LIMITED, AUDIBLE
-    self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+--     -- expect Media will be in LIMITED, AUDIBLE
+--     self.mobileSession:ExpectNotification("OnHMIStatus", 
+--         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+--     :Times(1)
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-    self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
-end
+--     -- other Apps without changes
+--     self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+--     :Times(0)
+--     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
+--     :Times(0)
+-- end
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -739,41 +797,41 @@ function Test:unregisterApplication(session)
   :Timeout(200)
 end
 
-function Test:PrecondUnregisterMediaAppTC3( ... )
-    -- body
+function Test:PrecondUnregisterMediaAppTC3()
+    
     userPrint(35, "================= Precondition ==================")
     self:unregisterApplication(self.mobileSession)
 end
 
-function Test:PrecondUnregisterNaviAppTC3( ... )
-    -- body
+function Test:PrecondUnregisterNaviAppTC3()
+    
     self:unregisterApplication(self.mobileSession2)
 end
 
-function Test:PrecondUnregisterNonMediaAppTC3( ... )
-    -- body
+function Test:PrecondUnregisterNonMediaAppTC3()
+    
     self:unregisterApplication(self.mobileSession3)
 end
 
 -- register all Apps
-function Test:PrecondRegisterMediaApp1TC3( ... )
-    -- body
+function Test:PrecondRegisterMediaApp1TC3()
+    
     self:registerApp(self.mobileSession, media_app_1)
 end
 
-function Test:PrecondRegisterNaviApp1TC3( ... )
-    -- body
+function Test:PrecondRegisterNaviApp1TC3()
+    
     self:registerApp(self.mobileSession2, navigation_app_1)
 end
 
-function Test:PrecondRegisterNonMediaApp1TC3( ... )
-    -- body
+function Test:PrecondRegisterNonMediaApp1TC3()
+    
     self:registerApp(self.mobileSession3, non_media_app_1)
 end
 
-function Test:PrecondActivateNonMediaAppTC3( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+function Test:PrecondActivateNonMediaAppTC3()
+    
+    activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
     self.mobileSession3:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
@@ -785,9 +843,9 @@ function Test:PrecondActivateNonMediaAppTC3( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateNaviAppTC3( ... )
-    -- body
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+function Test:PrecondActivateNaviAppTC3()
+    
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
     -- navi to FULL
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -803,9 +861,10 @@ function Test:PrecondActivateNaviAppTC3( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateMediaAppTC3( ... )
+--APPLINK-25987: Precondition: Three apps running on system
+function Test:PrecondActivateMediaAppTC3()
 
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
     -- media to FULL
     self.mobileSession:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -821,11 +880,11 @@ function Test:PrecondActivateMediaAppTC3( ... )
     :Times(0)
 end
 
--- Action: User activates embedded audio
-function Test:PrecondActivateEmbeddedAudio( ... )
+--APPLINK-25987: c. User activates embedded audio source 
+function Test:PrecondActivateEmbeddedAudioTC3()
 
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
+    -- self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+    --     {appID = hmi_ids_of_applications[media_app_1.appName]})
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "AUDIO_SOURCE", isActive = true})
 
@@ -834,19 +893,25 @@ function Test:PrecondActivateEmbeddedAudio( ... )
         {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
+    -- expect Navi will be in LIMITED, AUDIBLE
+    -- TODO: Uncomment after APPLINK-20371 is resolved
+    -- self.mobileSession2:ExpectNotification("OnHMIStatus",
+    --     {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+    -- :Times(1)
+
+    -- non-media App without changes
     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
     :Times(0)
 end
 
+--APPLINK-25987: 
 -- Action: User activates navi App
-function Test:UserActivatesNaviAppTC3( ... )
+-- navigation app_2: OnHMIStatus (FULL, AUDIBLE)
+function Test:UserActivatesNaviAppTC3()
 
     userPrint(34, "=================== Test Case ===================")
 
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
 
     -- media App moves to LIMITED, AUDIBLE
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
@@ -860,19 +925,22 @@ function Test:UserActivatesNaviAppTC3( ... )
     :Times(0)
 end
 
--- Action: User activates media App
-function Test:UserActivatesMediaAppTC3( ... )
+--APPLINK-25987: Action: User activates media App
+function Test:UserActivatesMediaAppTC3()
 
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "AUDIO_SOURCE", isActive = false})
+   
     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
         {appID = hmi_ids_of_applications[navigation_app_1.appName]})
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+   
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
 
     -- media App moves to FULL, AUDIBLE
     self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"}, -- Due to "AUDIO_SOURCE", isActive = false
+        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"} ) -- Due to BasicCommunication.OnAppDeactivated(media)
+    :Times(2)
 
     -- navi App moves to LIMITED, AUDIBLE
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
@@ -885,7 +953,7 @@ function Test:UserActivatesMediaAppTC3( ... )
 end
 
 -- audio streamind is started
-
+--[[TODO: APPLINK-28069 - 
 --Start Audio Service and Streaming in media app (which is in FULL, AUDIBLE)
 function Test:StartStreamingForMediaApp()
     StartStreamingForMedia(self)
@@ -894,7 +962,7 @@ end
 
 function Test:StopStreamingForMediaApp()
     StopAudioStreamingForMedia(self)
-end
+end]]
 --End Test case TC.3
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -921,41 +989,41 @@ function Test:unregisterApplication(session)
   :Timeout(200)
 end
 
-function Test:PrecondUnregisterMediaAppTC4( ... )
+function Test:PrecondUnregisterMediaAppTC4()
 
     userPrint(35, "================= Precondition ==================")
     self:unregisterApplication(self.mobileSession)
 end
 
-function Test:PrecondUnregisterNaviAppTC4( ... )
+function Test:PrecondUnregisterNaviAppTC4()
 
     self:unregisterApplication(self.mobileSession2)
 end
 
-function Test:PrecondUnregisterNonMediaAppTC4( ... )
+function Test:PrecondUnregisterNonMediaAppTC4()
 
     self:unregisterApplication(self.mobileSession3)
 end
 
 -- register all Apps
-function Test:PrecondRegisterMediaApp1TC4( ... )
+function Test:PrecondRegisterMediaApp1TC4()
 
     self:registerApp(self.mobileSession, media_app_1)
 end
 
-function Test:PrecondRegisterNaviApp1TC4( ... )
+function Test:PrecondRegisterNaviApp1TC4()
 
     self:registerApp(self.mobileSession2, navigation_app_1)
 end
 
-function Test:PrecondRegisterNonMediaApp1TC4( ... )
+function Test:PrecondRegisterNonMediaApp1TC4()
 
     self:registerApp(self.mobileSession3, non_media_app_1)
 end
 
-function Test:PrecondActivateNonMediaAppTC4( ... )
+function Test:PrecondActivateNonMediaAppTC4()
 
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
     self.mobileSession3:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
@@ -967,9 +1035,9 @@ function Test:PrecondActivateNonMediaAppTC4( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateNaviAppTC4( ... )
+function Test:PrecondActivateNaviAppTC4()
 
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
     -- navi to FULL
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -985,9 +1053,10 @@ function Test:PrecondActivateNaviAppTC4( ... )
     :Times(0)
 end
 
-function Test:PrecondActivateMediaAppTC4( ... )
+--APPLINK-25988: Pre-conditions: Three apps running on system:
+function Test:PrecondActivateMediaAppTC4()
 
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
     -- media to FULL
     self.mobileSession:ExpectNotification("OnHMIStatus", 
         {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
@@ -1003,11 +1072,11 @@ function Test:PrecondActivateMediaAppTC4( ... )
     :Times(0)
 end
 
--- Action: User activates embedded audio
-function Test:PrecondActivateEmbeddedAudio( ... )
+--APPLINK-25988: c. User activates embedded audio
+function Test:PrecondActivateEmbeddedAudioTC4()
 
-    self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
-        {appID = hmi_ids_of_applications[media_app_1.appName]})
+    -- self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
+    --     {appID = hmi_ids_of_applications[media_app_1.appName]})
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "AUDIO_SOURCE", isActive = true})
 
@@ -1016,17 +1085,21 @@ function Test:PrecondActivateEmbeddedAudio( ... )
         {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- other Apps without changes
-    self.mobileSession2:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
-    :Times(0)
+    -- TODO: Uncomment after APPLINK-20371 is resolved
+    -- expect navi will be in LIMITED, AUDIBLE
+    -- self.mobileSession2:ExpectNotification("OnHMIStatus",
+    --     {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+    -- :Times(1)
+
+    -- non-media Apps without changes
     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
     :Times(0)
 end
 
 -- Action: User activates navi App
-function Test:PrecondActivatesNaviAppTC4( ... )
+function Test:PrecondActivatesNaviAppTC4()
 
-    self:activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
+    activateApp(self, hmi_ids_of_applications[navigation_app_1.appName])
 
     -- navi app moves to FULL, AUDIBLE
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
@@ -1041,18 +1114,21 @@ function Test:PrecondActivatesNaviAppTC4( ... )
 end
 
 -- Action: User activates media App
-function Test:PrecondActivatesMediaAppTC4( ... )
+function Test:PrecondActivatesMediaAppTC4()
 
     self.hmiConnection:SendNotification("BasicCommunication.OnEventChanged", 
         {eventName = "AUDIO_SOURCE", isActive = false})
+
     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
         {appID = hmi_ids_of_applications[navigation_app_1.appName]})
-    self:activateApp(self, hmi_ids_of_applications[media_app_1.appName])
+    
+    activateApp(self, hmi_ids_of_applications[media_app_1.appName])
 
     -- media App moves to FULL, AUDIBLE
     self.mobileSession:ExpectNotification("OnHMIStatus", 
-        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    :Times(1)
+        {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"}, -- Due to "AUDIO_SOURCE", isActive = false
+        {hmiLevel = "FULL", audioStreamingState = "AUDIBLE", systemContext = "MAIN"} ) -- Due to BasicCommunication.OnAppDeactivated(media)
+    :Times(2)
 
     -- navi App moves to LIMITED, AUDIBLE
     self.mobileSession2:ExpectNotification("OnHMIStatus", 
@@ -1064,12 +1140,13 @@ function Test:PrecondActivatesMediaAppTC4( ... )
     :Times(0)
 end
 
-function Test:UserActivatesNonMediaApp( ... )
+function Test:UserActivatesNonMediaAppTC4()
 
     userPrint(34, "=================== Test Case ===================")
     self.hmiConnection:SendNotification("BasicCommunication.OnAppDeactivated", 
         {appID = hmi_ids_of_applications[media_app_1.appName]})
-    self:activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
+
+    activateApp(self, hmi_ids_of_applications[non_media_app_1.appName])
 
     -- non-media App moves to FULL, NOT_AUDIBLE
     self.mobileSession3:ExpectNotification("OnHMIStatus", 
@@ -1092,7 +1169,7 @@ function Test:StartStreamingForNaviApp ()
     StartStreamingForNavi(self)
 end
 
-function Test:StopStreamingForNaviApp( ... )
+function Test:StopStreamingForNaviApp()
     StopAudioStreamingForNavi(self)
 end
 
