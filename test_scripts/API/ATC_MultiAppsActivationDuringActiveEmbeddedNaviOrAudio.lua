@@ -894,10 +894,11 @@ function Test:PrecondActivateEmbeddedAudioTC3()
     :Times(1)
 
     -- expect Navi will be in LIMITED, AUDIBLE
-    -- TODO: Uncomment after APPLINK-20371 is resolved
-    -- self.mobileSession2:ExpectNotification("OnHMIStatus",
-    --     {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    -- :Times(1)
+    -- TODO: APPLINK-20371 is not resolved
+    userPrint(31,"APPLINK-20371 is not resolved")
+    self.mobileSession2:ExpectNotification("OnHMIStatus",
+         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+    :Times(1)
 
     -- non-media App without changes
     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
@@ -1085,11 +1086,12 @@ function Test:PrecondActivateEmbeddedAudioTC4()
         {hmiLevel = "BACKGROUND", audioStreamingState = "NOT_AUDIBLE", systemContext = "MAIN"})
     :Times(1)
 
-    -- TODO: Uncomment after APPLINK-20371 is resolved
+    -- TODO: APPLINK-20371 is not resolved
     -- expect navi will be in LIMITED, AUDIBLE
-    -- self.mobileSession2:ExpectNotification("OnHMIStatus",
-    --     {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
-    -- :Times(1)
+    userPrint(31,"APPLINK-20371 is not resolved")
+    self.mobileSession2:ExpectNotification("OnHMIStatus",
+         {hmiLevel = "LIMITED", audioStreamingState = "AUDIBLE", systemContext = "MAIN"})
+    :Times(1)
 
     -- non-media Apps without changes
     self.mobileSession3:ExpectNotification("OnHMIStatus", {systemContext = "MAIN"})
