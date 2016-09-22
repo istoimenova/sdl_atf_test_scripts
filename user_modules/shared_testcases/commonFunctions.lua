@@ -693,32 +693,6 @@ function commonFunctions:SetValuesInIniFile_PendingRequestsAmount(ValueToUpdate)
 	commonFunctions:SetValuesInIniFile("%p?PendingRequestsAmount%s?=%s-[%d]-%s-\n", "PendingRequestsAmount", ValueToUpdate)
 end
 
-function commonFunctions:GetValueInIniFile(paramName, valueToSet) --FindExpression, parameterName, ValueToUpdate )
-
-	local SDLini = config.pathToSDL .. "smartDeviceLink.ini"
-
-	f = assert(io.open(SDLini, "r"))
-	if f then
-		fileContent = f:read("*all")
-
-		fileContentFind = fileContent:match(FindExpression)
-		
-		print("===================")
-		print(fileContentFind)
-		print("===================")
-
-		if fileContentFind then
-		
-		else
-			commonFunctions:printError("Parameter is not found")
-		end
-		f:close()
-	else
-		commonFunctions:printError("Cannot open file")
-	end
-
-end
-
 
 
 ---------------------------------------------------------------------------------------------
