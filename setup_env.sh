@@ -29,14 +29,20 @@
 
 #Repository for Qt 5.3
 sudo add-apt-repository --yes  ppa:beineri/opt-qt532-trusty
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get -qq update
 
+
 # SDL build dependencies
-sudo apt-get -q -y install cmake  gcc-4.9 g++-4.9 libssl-dev libbluetooth3 libbluetooth-dev libudev-dev libavahi-client-dev bluez-tools sqlite3 libsqlite3-dev automake1.11
+sudo apt-get -q -y install cmake gcc-4.9 g++-4.9 libssl-dev libbluetooth3 libbluetooth-dev libudev-dev libavahi-client-dev bluez-tools sqlite3 libsqlite3-dev automake1.11 libexpat1-dev
 
 #ATF build depdencies
-sudo apt-get -q -y install qt53base qt53websockets liblua5.2-dev libxml2-dev lua-lpeg-dev
+sudo apt-get -q -y install qt53base qt53websockets liblua5.2-dev libxml2-dev lua-lpeg-dev libgl1-mesa-dev
 
 #Automatisation execution dependencies
-sudo apt-get -q -y install python2.7 python-pip python-flake8
+sudo apt-get -q -y install python2.7 python-pip python-flake8  openssh-server 
 sudo pip install fabric
+
+#Some scripts require managing system network
+#So it should be possible to run ifconfig from user
+sudo chmod 4755 /sbin/ifconfig

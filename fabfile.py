@@ -199,20 +199,11 @@ def tests_run():
                 print("  * {}".format(case))
 
 
-@task
-def setup():
-    """
-    Setup system preconditions for test scripts
-    """
-    run("sudo chmod 4755 /sbin/ifconfig")
-
-
 @task(task_class=TaskWithConfig)
 def prepare():
     """
     Prepare all preconditions for tests_run
     """
-    execute(setup)
     execute(clone_sdl)
     execute(clone_atf)
     execute(clone_scripts)
