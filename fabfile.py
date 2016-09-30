@@ -40,6 +40,20 @@ from utils import get_list_of_failed_test_cases
 from utils import get_known_issues
 from utils import filter_known_issues
 import config as config
+import os
+
+def ResolvePath(relative_path):
+    return os.path.abspath(os.path.expanduser(relative_path))
+
+config.work_dir = ResolvePath(config.work_dir)
+config.sdl_clone_dir = ResolvePath(config.sdl_clone_dir)
+config.sdl_build_dir = ResolvePath(config.sdl_build_dir)
+config.qt_path = ResolvePath(config.qt_path)
+config.atf_build_dir = ResolvePath(config.atf_build_dir)
+config.scripts_clone_dir = ResolvePath(config.scripts_clone_dir)
+config.test_scripts_dir = ResolvePath(config.test_scripts_dir)
+config.test_run_dir = ResolvePath(config.test_run_dir)
+config.reports_dir = ResolvePath(config.reports_dir)
 
 
 class TaskWithConfig(Task):
