@@ -28,11 +28,12 @@
 	
 	Test = require('user_modules/connecttest_resumption')
 	require('cardinalities')
-	local events 				   = require('events')
+	local events 			   = require('events')
 	local mobile_session  	   = require('mobile_session')
 	local mobile  			   = require('mobile_connection')
-	local tcp 						 = require('tcp_connection')
-	local file_connection  = require('file_connection')
+	local tcp 				   = require('tcp_connection')
+	local file_connection  	   = require('file_connection')
+	local json 				   = require("json")
 
 	-- Postcondition: removing user_modules/connecttest_resumption.lua
 	function Test:Postcondition_remove_user_connecttest()
@@ -75,23 +76,50 @@
 	local strAppFolder = config.pathToSDL .. "storage/" ..config.application1.registerAppInterfaceParams.appID.. "_" .. config.deviceMAC.. "/"
 	strMaxLengthFileName255 = string.rep("a", 251)  .. ".png" -- set max length file name
 
-	local default_HelpPromt = "Default Help Prompt"
-	
+	local notsplit_default_HelpPromt 
+	local temp_HelpPromt = {}
+	local default_HelpPromt = {}
 	-- Requirement id in JIRA: APPLINK-19475
 	-- Read default value of HelpPromt in .ini file
 	f = assert(io.open(config.pathToSDL.. "/smartDeviceLink.ini", "r"))
  
  	fileContent = f:read("*all")
- 	--DefaultContant = fileContent:match('HelpPromt.?=.?([^\n]*)')
- 	DefaultContant = fileContent:match('HelpPromt.?=.?([^,]*)')
- 	
+ 	DefaultContant = fileContent:match('HelpPromt.?=.?([^\n]*)')
+ 	print("DefaultContant = " ..DefaultContant) 	
+
 	if not DefaultContant then
 		print ( " \27[31m HelpPromt is not found in smartDeviceLink.ini \27[0m " )
+		default_HelpPromt = "Default Help Prompt"
 	else
-		default_HelpPromt = DefaultContant
-		print(default_HelpPromt)
+		local i = 1
+		for notsplit_default_HelpPromt in string.gmatch(DefaultContant,"[^,]*") do
+
+			if( (notsplit_default_HelpPromt ~= nil) and (#notsplit_default_HelpPromt > 1) ) then
+				temp_HelpPromt[i] = notsplit_default_HelpPromt
+				print(i .. ": temp_HelpPromt = " ..temp_HelpPromt[i])
+				i = i + 1
+
+			end
+		end
+		local count = 1
+
+		for i = 1, #temp_HelpPromt do
+			default_HelpPromt[count] = { 
+											text = temp_HelpPromt[i],
+										 	type = "TEXT"
+										}
+			if (#temp_HelpPromt > 1) then
+				default_HelpPromt[count + 1] = {
+													text = "300",
+													type = "SILENCE"
+												}
+			end
+			count = count + 2
+		end
 	end
+
 	f:close()
+
 ---------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------
@@ -191,6 +219,17 @@
 ---------------------------------------------------------------------------------------------
 -----------------------------------Local functions ------------------------------------------
 ---------------------------------------------------------------------------------------------
+	function DelayedExp(time)
+		local event = events.Event()
+		event.matches = function(self, e) return self == e end
+		EXPECT_EVENT(event, "Delayed event")
+		:Timeout(time+1000)
+		
+		RUN_AFTER(function()
+			RAISE_EVENT(event, event)
+		end, time)
+	end
+
 	local function userPrint( color, message)
 
 		print ("\27[" .. tostring(color) .. "m " .. tostring(message) .. " \27[0m")
@@ -271,7 +310,6 @@
 			userPrint(31, "TimeHMILevel is nil. Will be assigned 0")
 		end
 	end	
-
 	
 	--local function Precondition_RegisterApp(self, nameTC)
 	function Precondition_RegisterApp(self, nameTC)
@@ -316,17 +354,62 @@
 	function Precondition_ResumeAppRegister(self, nameTC)
 		
 		Test[nameTC .."_CloseConnection"] = function(self)
+			
+			self.mobileConnection:Close() 		
+			DelayedExp(12000)	
+		end
 
-			self.mobileConnection:Close() 
+		Test[nameTC .. "_Update_AppInfoDat"] = function(self)
+			local DefaultContent_helpPrompt
+			local DefaultContent_vrHelp
+			local DefaultContent_vrHelpTitle
+
+			f = assert(io.open(config.pathToSDL.. "/app_info.dat", "r"))
+
+		 	fileContent = f:read("*all")
+		 	
+		 	-- helpPrompt
+				--DefaultContent_helpPrompt1 = fileContent:match('"helpPrompt".?:.?.?%[.-%],')
+				DefaultContent_helpPrompt = fileContent:match('"helpPrompt".?:.?.?%[.-%].?')
+
+			    if (not DefaultContent_helpPrompt)then
+			      print ( " \27[31m helpPrompt is not found in app_info.dat \27[0m " )
+			    else
+			       fileContent  =  string.gsub(fileContent, '"helpPrompt".?:.?.?%[.-%].?', '')
+			    end		
+
+			-- vrHelp
+				DefaultContent_vrHelp = fileContent:match('"vrHelp".?:.?.?%[.-%].?')
+
+			    if ( not DefaultContent_vrHelp ) then
+			      print ( " \27[31m vrHelp is not found in app_info.dat \27[0m " )
+			    else
+			       fileContent  =  string.gsub(fileContent, '"vrHelp".?:.?.?%[.-%].?', '')
+			    end				
+
+			-- vrHelpTitle
+				DefaultContent_vrHelpTitle = fileContent:match('"vrHelpTitle".?:.?.?%".-%".?')
+
+			    if (not DefaultContent_vrHelpTitle)   then
+			      print ( " \27[31m vrHelpTitle is not found in app_info.dat \27[0m " )
+			    else
+			       fileContent  =  string.gsub(fileContent, '"vrHelpTitle".?:.?.?%".-%".?','')
+			    end		
+	
+    		f = assert(io.open(config.pathToSDL.. "/app_info.dat", "w+"))
+			f:write(fileContent)
+			f:close()
+ 
 		end
 
 		Test[nameTC .."_ConnectMobile"] = function(self)
-
+			
 			self:connectMobile()
+			
 		end
 
 		Test[nameTC .."_StartSession"] = function(self)		
-
+			
 			config.application1.registerAppInterfaceParams.hashID = self.currentHashID
 
 			self.mobileSession = mobile_session.MobileSession(
@@ -335,9 +418,8 @@
 																config.application1.registerAppInterfaceParams
 															)
 			self.mobileSession:StartService(7)
-		end
-
-		
+			
+		end		
 	end
 
 	function Precondition_ActivationApp(self, nameTC)	
@@ -473,7 +555,6 @@
 				end)
 			end
 		end)
-
 	end
 
 	local function DeleteCommand(self, icmdID)
@@ -530,7 +611,6 @@
 
 				EXPECT_NOTIFICATION("OnHashChange")
 				:Do(function(_, data)
-					print("4 self.currentHashID = "..self.currentHashID)
 					self.currentHashID = data.payload.hashID
 				end)
 			end
@@ -612,8 +692,9 @@
 																																requestType = "PROPRIETARY"
 																															},
 																															"files/PTU_SetGlobalProperties.json"
-																															--"files/ptu_general.json"
-																															
+																															--[[TODO: Uncomment when APPLINK-28296 is clarified.
+																															"files/ptu_general.json"
+																															]]
 																														)
 				
 					local systemRequestId
@@ -676,6 +757,7 @@
 	--End Precondition.2
 
 	--Begin Precondition.3
+
 		Putfile(self, "action.png")
 	--End Precondition.3
 ---------------------------------------------------------------------------------------------	
@@ -1220,13 +1302,7 @@
 					--hmi side: expect TTS.SetGlobalProperties request
 					EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,																		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -1300,12 +1376,7 @@
 					--hmi side: expect TTS.SetGlobalProperties request
 					EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																					}},																			
+														helpPrompt = default_HelpPromt,	
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 					:Do(function(_,data)
@@ -1462,7 +1533,6 @@
 ---------------------------------------------------------------------------------------------
 	--Begin Test suit PositiveResponseCheck
 
-		
 		--Description: Positive case without request but with update of internal list with helpPrompts, vrHelp
 			--Requirement id in JIRA: APPLINK-19477
 			--Verification criteria:
@@ -1511,11 +1581,12 @@
 								
 								self.currentHashID = data.payload.hashID
 							end)
-						end			
+						end		
 
 						Precondition_ResumeAppRegister(self, "TC7")
 
 						Test["TC7_Resumption_data"] = function(self)	
+							
 							local SGP_helpPrompt = {}
 							local SGP_vrHelp = {}
 							
@@ -1529,9 +1600,7 @@
 																	position = 1
 																}
 							else
-								SGP_helpPrompt[1] ={
-																			text = default_HelpPromt,
-																			type = "TEXT" }								
+								SGP_helpPrompt = default_HelpPromt
 								SGP_vrHelp[1] = { 
 																	text = config.application1.registerAppInterfaceParams.appName,
 																	position = 1
@@ -1613,9 +1682,7 @@
 																	position = 1
 																}
 							else
-								SGP_helpPrompt[1] ={
-																			text = default_HelpPromt,
-																			type = "TEXT" }								
+								SGP_helpPrompt = default_HelpPromt
 								SGP_vrHelp[1] = { 
 																	text = config.application1.registerAppInterfaceParams.appName,
 																	position = 1
@@ -1658,15 +1725,10 @@
 							local SGP_helpPrompt = {}
 							local SGP_vrHelp = {}
 
-							print("1: AddCmdSuccess[cmdCount] = " ..tostring(AddCmdSuccess[cmdCount]))
-							print("2: DeleteCmdSuccess[cmdCount] = " ..tostring(DeleteCmdSuccess[cmdCount]) )
 							if(
 								( (AddCmdSuccess[cmdCount] == true) and (DeleteCmdSuccess[cmdCount] == true) ) or
 								  (AddCmdSuccess[cmdCount] == false) )then
-								SGP_helpPrompt[1] ={
-																			text = default_HelpPromt,
-																			type = "TEXT"
-																		}
+								SGP_helpPrompt = default_HelpPromt
 							
 								SGP_vrHelp[1] = {
 																	text = config.application1.registerAppInterfaceParams.appName,
@@ -1724,11 +1786,7 @@
 							if(
 								( (AddCmdSuccess[cmdCount] == true) and (DeleteCmdSuccess[cmdCount] == true) ) or
 								  (AddCmdSuccess[cmdCount] == false) )then
-								SGP_helpPrompt[1] ={
-																			text = default_HelpPromt,
-																			type = "TEXT"
-																		}
-							
+								SGP_helpPrompt = default_HelpPromt						
 								SGP_vrHelp[1] = {
 																	text = config.application1.registerAppInterfaceParams.appName,
 																	position = 1
@@ -1746,7 +1804,7 @@
 						end
 
 					end
-			
+		
 					--End Test case PositiveResponseCheck.2		
 				--End PositivaResponseCheck.1 and PositivaResponseCheck.2
 
@@ -3126,13 +3184,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -3216,13 +3268,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -3398,13 +3444,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -3644,13 +3684,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 														{
-															helpPrompt = 
-																					{
-																						{
-																							text = default_HelpPromt,
-																							type = "TEXT"
-																					}			
-																						},																		
+															helpPrompt = default_HelpPromt,																		
 															appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 														})
 						:Do(function(_,data)
@@ -3932,13 +3966,7 @@
 							--hmi side: expect TTS.SetGlobalProperties request
 							EXPECT_HMICALL("TTS.SetGlobalProperties",
 														{
-															helpPrompt = 
-																					{
-																						{
-																							text = default_HelpPromt,
-																							type = "TEXT"
-																					}			
-																						},																		
+															helpPrompt = default_HelpPromt,																		
 															appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 														})
 							:Do(function(_,data)
@@ -3983,13 +4011,7 @@
 							--hmi side: expect TTS.SetGlobalProperties request
 							EXPECT_HMICALL("TTS.SetGlobalProperties",
 															{
-																helpPrompt = 
-																						{
-																							{
-																								text = default_HelpPromt,
-																								type = "TEXT"
-																						}			
-																							},																		
+																helpPrompt = default_HelpPromt,																		
 																appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 															})
 							:Do(function(_,data)
@@ -4267,13 +4289,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,																		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -4362,13 +4378,7 @@
 						--hmi side: expect TTS.SetGlobalProperties request
 						EXPECT_HMICALL("TTS.SetGlobalProperties",
 													{
-														helpPrompt = 
-																				{
-																					{
-																						text = default_HelpPromt,
-																						type = "TEXT"
-																				}			
-																					},																		
+														helpPrompt = default_HelpPromt,																		
 														appID = self.applications[config.application1.registerAppInterfaceParams.appName]
 													})
 						:Do(function(_,data)
@@ -5895,7 +5905,7 @@
 					end)
 				end
 		--End Test case EmulatingUserAction.2
-  --End Test suit EmulatingUserAction
+  --End Test suit EmulatingUserAction 
 ----------------------------------------------------------------------------------------------
 
 ----------------------------------------------------------------------------------------------
