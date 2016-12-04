@@ -25,6 +25,7 @@ local json = require('json4lua/json/json')
 --14. Function gets parameter from smartDeviceLink.ini file
 --15. Function sets parameter to smartDeviceLink.ini file
 --16. Function transform data from PTU to permission change data
+--17. Function gets data form policy.sqlite file
 ---------------------------------------------------------------------------------------------
 
 --return true if app is media or navigation
@@ -748,11 +749,19 @@ function check_file_existing(path)
 	file:close()
 end
 
+function concatenation_path(path1, path2)
+	local len = string.len(path1)
+	if string.sub(path1, len, len) == '/' then
+		return path1..path2
+	end
+	return path1..'/'..path2 
+end
+
 ---------------------------------------------------------------------------------------------
 --14. Function gets parameter from smartDeviceLink.ini file
 ---------------------------------------------------------------------------------------------
 function commonFunctions:read_parameter_from_smart_device_link_ini(param_name)
-	local path_to_ini_file = config.pathToSDL .. "smartDeviceLink.ini"
+	local path_to_ini_file = concatenation_path(config.pathToSDL, "smartDeviceLink.ini")
 	check_file_existing(path_to_ini_file)
 	local param_value  = nil
 	for line in io.lines(path_to_ini_file) do
@@ -776,7 +785,7 @@ end
 --15. Function sets parameter to smartDeviceLink.ini file
 ---------------------------------------------------------------------------------------------
 function commonFunctions:write_parameter_to_smart_device_link_ini(param_name, param_value)
-	local path_to_ini_file = config.pathToSDL .. "smartDeviceLink.ini"
+	local path_to_ini_file = concatenation_path(config.pathToSDL, "smartDeviceLink.ini")
 	check_file_existing(path_to_ini_file)
 	local new_file_content = ""
 	local is_find_string = false
@@ -847,6 +856,40 @@ function commonFunctions:convert_ptu_to_permissions_change_data(path_to_ptu, gro
 		table.insert(permission_items, permission_item)
 	end
 	return permission_items
+end
+
+---------------------------------------------------------------------------------------------
+-- Function returns output from console
+---------------------------------------------------------------------------------------------
+function os.capture(cmd, raw)
+   local f = assert(io.popen(cmd, 'r'))
+     local s = assert(f:read('*a'))
+   f:close()
+   if raw then return s end
+   s = string.gsub(s, '^%s+', '')
+   s = string.gsub(s, '%s+$', '')
+   s = string.gsub(s, '[\n\r]+', ' ')
+   return s
+ end
+
+---------------------------------------------------------------------------------------------
+--17. Function returns data from sqlite based on statement
+---------------------------------------------------------------------------------------------
+function commonFunctions:Get_data_policy_sql(statement)
+  local path_policy = config.pathToSDL.."storage/policy.sqlite"
+  check_file_existing(path_policy)
+
+  local sql_select = "sqlite3 " .. path_policy .." "..statement
+  local handle = assert( io.popen( sql_select , 'r'))
+  local sql_output = handle:read( '*l' )   
+  local ret_value = tonumber(sql_output)    
+  handle:close()
+  if (ret_value == nil) then
+    print("Parameter is not found!")
+    return ret_value
+  else 
+    return ret_value
+  end
 end
 
 return commonFunctions
