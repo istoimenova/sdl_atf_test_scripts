@@ -36,6 +36,7 @@ local defaultFunctionGroupName = "group1"
 --7. trigger_user_request_update_from_HMI
 --8. trigger_getting_device_consent
 --9. trigger_PTU_user_press_button_HMI
+--10. Delete_Policy_table_snapshot
 ---------------------------------------------------------------------------------------------
 
 --Create new policy table from a template without APIName
@@ -997,6 +998,15 @@ function testCasesForPolicyTable:trigger_PTU_user_press_button_HMI(self, execute
     testCasesForPolicyTable.time_policyupdate = timestamp()
     self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
   end)
+end
+
+function testCasesForPolicyTable.Delete_Policy_table_snapshot()
+  if( commonSteps:file_exists("/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json") ~= false) then
+    print("/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json exists will be deleted!")
+    os.execute("rm /tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json")
+  else
+    print("/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json does not exist")
+  end
 end
 
 return testCasesForPolicyTable

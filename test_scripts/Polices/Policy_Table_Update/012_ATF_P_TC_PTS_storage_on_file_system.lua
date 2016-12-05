@@ -21,9 +21,12 @@ config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd40
 --[[ Required Shared libraries ]]
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
+local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
+local commonTestCases = require('user_modules/shared_testcases/commonTestCases')
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
@@ -50,13 +53,17 @@ function Test:TestStep_PTS_Storage_On_File_System()
 
           self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality",
             {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = ServerAddress, isSDLAllowed = true}})
-
-          if ( commonSteps:file_exists( SystemFilesPath..'/' .. PathToSnapshot) == false ) then
-            self:FailTestCase(SystemFilesPath..'/' .. PathToSnapshot.."sdl_snapshot.json doesn't exist!")
+          local function check_snapshot()
+            if ( commonSteps:file_exists( SystemFilesPath..'/' .. PathToSnapshot) == false ) then
+              self:FailTestCase(SystemFilesPath..'/' .. PathToSnapshot.."sdl_snapshot.json doesn't exist!")
+            end
           end
+
+          RUN_AFTER(check_snapshot,1000)
         end)
     end)
   EXPECT_HMICALL("BasicCommunication.PolicyUpdate",{})
+  commonTestCases:DelayedExp(2000)
 end
 
 --[[ Postconditions ]]

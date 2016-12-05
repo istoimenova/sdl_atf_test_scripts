@@ -22,9 +22,11 @@ config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd40
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/testCasesForPolicyTableSnapshot')
+local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
@@ -37,6 +39,7 @@ require('user_modules/AppTypes')
 --[[ Test ]]
 commonFunctions:newTestCasesGroup("Test")
 function Test:TestStep_PTS_Timeout_wait_response_PTU()
+  local is_test_fail = false
   local hmi_app_id = self.applications[config.application1.registerAppInterfaceParams.appName]
   local ServerAddress = commonFunctions:read_parameter_from_smart_device_link_ini("ServerAddress")
 
@@ -47,29 +50,27 @@ function Test:TestStep_PTS_Timeout_wait_response_PTU()
 
       EXPECT_HMIRESPONSE( RequestId1, {result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
       :Do(function(_,_)
-
           self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality",
             {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = ServerAddress, isSDLAllowed = true}})
-
-          testCasesForPolicyTableSnapshot:verify_PTS(true,
-            {config.application1.registerAppInterfaceParams.appID},
-            {config.deviceMAC},
-            {hmi_app_id})
-
-          local timeout_pts = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
-          local timeout_preloaded
-          for i = 1, #testCasesForPolicyTableSnapshot.preloaded_elements do
-            if(testCasesForPolicyTableSnapshot.preloaded_elements[i].name == "module_config.timeout_after_x_seconds") then
-              timeout_preloaded = testCasesForPolicyTableSnapshot.preloaded_elements[i].value
-            end
-          end
-          if(timeout_preloaded == nil) then timeout_preloaded = 0 end
-          if ( timeout_pts ~= timeout_preloaded ) then
-            self:FailTestCase("timeout in PTS should be "..timeout_preloaded.."ms, real: "..timeout_pts.."ms")
-          end
         end)
     end)
   EXPECT_HMICALL("BasicCommunication.PolicyUpdate",{})
+  :Do(function(_,data)
+    testCasesForPolicyTableSnapshot:verify_PTS(true,
+      {config.application1.registerAppInterfaceParams.appID},
+      {config.deviceMAC},
+      {hmi_app_id})
+
+      local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_Preloaded_PT("module_config.timeout_after_x_seconds")
+
+      if(data.params.timeout ~= timeout_after_x_seconds) then
+        commonFunctions:printError("Error: Timeout to wait response = "..data.params.timeout.."ms. Expected: "..timeout_after_x_seconds.."ms.")
+        is_test_fail = true
+      end
+      if(is_test_fail == true) then
+        self:FailTestCase("Test is FAILED. See prints.")
+      end
+    end)
 end
 
 --[[ Postconditions ]]

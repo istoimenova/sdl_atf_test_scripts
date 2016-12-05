@@ -24,9 +24,11 @@ config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd40
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
 local commonFunctions = require('user_modules/shared_testcases/commonFunctions')
 local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/testCasesForPolicyTableSnapshot')
+local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --[[ General Settings for configuration ]]
 Test = require('connecttest')
@@ -54,25 +56,31 @@ function Test:TestStep_PTU_DeviceConsent_from_User()
 
           EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", { status = "UPDATE_NEEDED" })
 
-          testCasesForPolicyTableSnapshot:verify_PTS(true,
-            {config.application1.registerAppInterfaceParams.appID},
-            {config.deviceMAC},
-            {hmi_app1_id})
+          EXPECT_HMICALL("BasicCommunication.PolicyUpdate", {file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json"})
+          :Do(function(_,_data1)
+            testCasesForPolicyTableSnapshot:verify_PTS(true,
+              {config.application1.registerAppInterfaceParams.appID},
+              {config.deviceMAC},
+              {hmi_app1_id})
 
-          local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
-          local seconds_between_retries = {}
-          for i = 1, #testCasesForPolicyTableSnapshot.pts_seconds_between_retries do
-            seconds_between_retries[i] = testCasesForPolicyTableSnapshot.pts_seconds_between_retries[i].value
-          end
-          EXPECT_HMICALL("BasicCommunication.PolicyUpdate",
-            {
-              file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json",
-              timeout = timeout_after_x_seconds,
-              retry = seconds_between_retries
-            })
-          :Do(function(_,data)
-              self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
-            end)
+            local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
+            local seconds_between_retries = {}
+            for i = 1, #testCasesForPolicyTableSnapshot.pts_seconds_between_retries do
+              seconds_between_retries[i] = testCasesForPolicyTableSnapshot.pts_seconds_between_retries[i].value
+              if(seconds_between_retries[i] ~= _data1.params.retry[i]) then
+                commonFunctions:printError("Error: data.params.retry["..i.."]: ".._data1.params.retry[i] .."ms. Expected: "..seconds_between_retries[i].."ms")
+                is_test_failed = true
+              end
+            end
+            if(_data1.params.timeout ~= timeout_after_x_seconds) then
+              commonFunctions:printError("Error: data.params.timeout = ".._data1.params.timeout.."ms. Expected: "..timeout_after_x_seconds.."ms.")
+              is_test_failed = true
+            end
+            if(is_test_failed == true) then
+              self:FailTestCase("Test is FAILED. See prints.")
+            end
+            self.hmiConnection:SendResponse(_data1.id, _data1.method, "SUCCESS", {})
+          end)
 
         end)
 

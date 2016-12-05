@@ -31,6 +31,7 @@ local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/t
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --[[ General Settings for configuration ]]
 Test = require('connecttest')
@@ -48,6 +49,10 @@ function Test:Precondition_flow_SUCCEESS_EXTERNAL_PROPRIETARY()
   testCasesForPolicyTable:flow_SUCCEESS_EXTERNAL_PROPRIETARY(self)
 end
 
+function Test.Precondition_Delete_PTS()
+  testCasesForPolicyTable.Delete_Policy_table_snapshot()
+end
+
 --[[ Test ]]
 commonFunctions:newTestCasesGroup("Test")
 function Test:TestStep_StartNewSession()
@@ -56,6 +61,7 @@ function Test:TestStep_StartNewSession()
 end
 
 function Test:TestStep_PTU_AppID_NotListed_PT_WiFi()
+  local is_test_fail = false
   local hmi_app_id1 = self.applications[config.application1.registerAppInterfaceParams.appName]
   local correlationId = self.mobileSession1:SendRPC("RegisterAppInterface", config.application2.registerAppInterfaceParams)
   EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", { application = { appName = config.application2.registerAppInterfaceParams.appName } })
@@ -63,26 +69,30 @@ function Test:TestStep_PTU_AppID_NotListed_PT_WiFi()
       local hmi_app_id2 = data.params.application.appID
       EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", {status = "UPDATE_NEEDED"})
 
-      testCasesForPolicyTableSnapshot:verify_PTS(true,
+      EXPECT_HMICALL("BasicCommunication.PolicyUpdate",{file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json" })
+      :Do(function(_,_data1)
+        testCasesForPolicyTableSnapshot:verify_PTS(true,
         {config.application1.registerAppInterfaceParams.appID, config.application1.registerAppInterfaceParams.appID},
         {config.deviceMAC},
         {hmi_app_id1, hmi_app_id2})
 
       local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
       local seconds_between_retries = {}
-
       for i = 1, #testCasesForPolicyTableSnapshot.pts_seconds_between_retries do
         seconds_between_retries[i] = testCasesForPolicyTableSnapshot.pts_seconds_between_retries[i].value
+        if(seconds_between_retries[i] ~= _data1.params.retry[i]) then
+          commonFunctions:printError("Error: data.params.retry["..i.."]: ".._data1.params.retry[i] .."ms. Expected: "..seconds_between_retries[i].."ms")
+          is_test_fail = true
+        end
       end
-
-      EXPECT_HMICALL("BasicCommunication.PolicyUpdate",
-        {
-          file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json",
-          timeout = timeout_after_x_seconds,
-          retry = seconds_between_retries
-        })
-      :Do(function(_,data1)
-          self.hmiConnection:SendResponse(data1.id, data1.method, "SUCCESS", {})
+      if(_data1.params.timeout ~= timeout_after_x_seconds) then
+        commonFunctions:printError("Error: data.params.timeout = ".._data1.params.timeout.."ms. Expected: "..timeout_after_x_seconds.."ms.")
+        is_test_fail = true
+      end
+    if(is_test_fail == true) then
+      self:FailTestCase("Test is FAILED. See prints.")
+    end
+          self.hmiConnection:SendResponse(_data1.id, _data1.method, "SUCCESS", {})
         end)
     end)
   self.mobileSession1:ExpectResponse(correlationId, { success = true, resultCode = "SUCCESS"})

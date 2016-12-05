@@ -30,6 +30,7 @@ local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/t
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
@@ -54,6 +55,10 @@ function Test:Precondition_UnregisterApp()
   EXPECT_HMINOTIFICATION("BasicCommunication.OnAppUnregistered",
     {appID = self.applications[config.application1.registerAppInterfaceParams.appName], unexpectedDisconnect = false})
   EXPECT_RESPONSE("UnregisterAppInterface", {success = true , resultCode = "SUCCESS"})
+end
+
+function Test.Precondition_Remove_PTS()
+  testCasesForPolicyTable.Delete_Policy_table_snapshot()
 end
 
 -- Request PTU

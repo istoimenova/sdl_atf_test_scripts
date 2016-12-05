@@ -35,6 +35,7 @@ local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/t
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
@@ -85,7 +86,7 @@ function Test:TestStep_Sending_PTS_to_mobile_application()
       local time_wait = (timeout_pts*seconds_between_retries[1]*1000 + 10000)
       commonTestCases:DelayedExp(time_wait) -- tolerance 10 sec
 
-      local function verify_retry_sequence()
+      local function verify_retry_sequence(occurences)
         --time_update_needed[#time_update_needed + 1] = testCasesForPolicyTable.time_trigger
         time_update_needed[#time_update_needed + 1] = timestamp()
         local time_1 = time_update_needed[#time_update_needed]
@@ -93,9 +94,9 @@ function Test:TestStep_Sending_PTS_to_mobile_application()
         local timeout = (time_1 - time_2)
         if( ( timeout > (timeout_pts*1000 + 2000) ) or ( timeout < (timeout_pts*1000 - 2000) )) then
           is_test_fail = true
-          commonFunctions:printError("ERROR: timeout for first retry sequence is not as expected: "..timeout_pts.."msec(5sec tolerance). real: "..timeout.."ms")
+          commonFunctions:printError("ERROR: timeout for retry sequence "..occurences.." is not as expected: "..timeout_pts.."msec(5sec tolerance). real: "..timeout.."ms")
         else
-          print("timeout is as expected: "..timeout_pts.."ms. real: "..timeout)
+          print("timeout is as expected for retry sequesnce "..occurences..": "..timeout_pts.."ms. real: "..timeout)
         end
       end
 
@@ -111,7 +112,7 @@ function Test:TestStep_Sending_PTS_to_mobile_application()
             is_test_fail = true
             commonFunctions:printError("ERROR: PTU sequence is restarted again!")
           end
-          verify_retry_sequence()
+          verify_retry_sequence(exp_pu.occurences)
           self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {})
         end)
     end)

@@ -33,6 +33,8 @@ commonSteps:DeleteLogsFileAndPolicyTable()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
+
 
 --[[ General Settings for configuration ]]
 Test = require('connecttest')
@@ -59,6 +61,7 @@ function Test:TestStep_StartNewSession()
 end
 
 function Test:TestStep_PTU_AppID_SecondApp_NotListed_PT()
+  local is_test_fail = false
   local hmi_app1_id = self.applications[config.application1.registerAppInterfaceParams.appName]
 
   local correlationId = self.mobileSession1:SendRPC("RegisterAppInterface", config.application2.registerAppInterfaceParams)
@@ -68,26 +71,31 @@ function Test:TestStep_PTU_AppID_SecondApp_NotListed_PT()
       local hmi_app2_id = data.params.application.appID
       EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", {status = "UPDATE_NEEDED"})
 
-      testCasesForPolicyTableSnapshot:verify_PTS(true, {
-          config.application1.registerAppInterfaceParams.appID,
-          config.application2.registerAppInterfaceParams.appID,
-        },
-        {config.deviceMAC},
-        {hmi_app1_id, hmi_app2_id})
-
-      local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
-      local seconds_between_retries = {}
-      for i = 1, #testCasesForPolicyTableSnapshot.pts_seconds_between_retries do
-        seconds_between_retries[i] = testCasesForPolicyTableSnapshot.pts_seconds_between_retries[i].value
-      end
-
-      EXPECT_HMICALL("BasicCommunication.PolicyUpdate",
-        {
-          file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json",
-          timeout = timeout_after_x_seconds,
-          retry = seconds_between_retries
-        })
+      EXPECT_HMICALL("BasicCommunication.PolicyUpdate",{ file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json" })
       :Do(function(_,data1)
+         testCasesForPolicyTableSnapshot:verify_PTS(true, {
+            config.application1.registerAppInterfaceParams.appID,
+            config.application2.registerAppInterfaceParams.appID,
+          },
+          {config.deviceMAC},
+          {hmi_app1_id, hmi_app2_id})
+
+          local timeout_after_x_seconds = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
+          local seconds_between_retries = {}
+          for i = 1, #testCasesForPolicyTableSnapshot.pts_seconds_between_retries do
+            seconds_between_retries[i] = testCasesForPolicyTableSnapshot.pts_seconds_between_retries[i].value
+            if(seconds_between_retries[i] ~= data1.params.retry[i]) then
+              commonFunctions:printError("Error: data.params.retry["..i.."]: "..data1.params.retry[i] .."ms. Expected: "..seconds_between_retries[i].."ms")
+              is_test_fail = true
+            end
+          end
+          if(data1.params.timeout ~= timeout_after_x_seconds) then
+            commonFunctions:printError("Error: data.params.timeout = "..data1.params.timeout.."ms. Expected: "..timeout_after_x_seconds.."ms.")
+            is_test_fail = true
+          end
+          if(is_test_fail == true) then
+            self:FailTestCase("Test is FAILED. See prints.")
+          end
           self.hmiConnection:SendResponse(data1.id, data1.method, "SUCCESS", {})
         end)
     end)

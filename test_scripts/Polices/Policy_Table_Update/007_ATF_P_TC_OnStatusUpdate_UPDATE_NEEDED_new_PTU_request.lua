@@ -29,6 +29,7 @@ local testCasesForPolicyTable = require('user_modules/shared_testcases/testCases
 
 --[[ General Precondition before ATF start ]]
 commonSteps:DeleteLogsFileAndPolicyTable()
+testCasesForPolicyTable.Delete_Policy_table_snapshot()
 
 --ToDo: shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
 config.defaultProtocolVersion = 2
@@ -40,6 +41,20 @@ require('user_modules/AppTypes')
 
 --[[ Preconditions ]]
 commonFunctions:newTestCasesGroup("Preconditions")
+function Test:Precondition_trigger_getting_device_consent()
+  testCasesForPolicyTable:trigger_getting_device_consent(self, config.application1.registerAppInterfaceParams.appName, config.deviceMAC)
+end
+
+function Test:Precondition_flow_SUCCEESS_EXTERNAL_PROPRIETARY()
+  testCasesForPolicyTable:flow_SUCCEESS_EXTERNAL_PROPRIETARY(self)
+end
+
+function Test.Precondition_Remove_PTS()
+  os.execute("rm /tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json")
+  if( commonSteps:file_exists("/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json") ~= false) then
+    os.execute("rm /tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json")
+  end
+end
 
 --[[ Test ]]
 commonFunctions:newTestCasesGroup("Test")
