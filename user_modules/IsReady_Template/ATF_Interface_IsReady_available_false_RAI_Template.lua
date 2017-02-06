@@ -18,7 +18,7 @@ local testCasesForPolicyTable = require('user_modules/shared_testcases/testCases
 
 config.defaultProtocolVersion = 2
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
-config.SDLStoragePath = config.pathToSDL .. "storage/"
+commonPreconditions:GetPathToSDL = config.pathToSDL .. "storage/"
 local isReady = require('user_modules/IsReady_Template/isReady')
 
 DefaultTimeout = 3
