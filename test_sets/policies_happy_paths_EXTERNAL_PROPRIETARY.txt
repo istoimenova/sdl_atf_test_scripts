@@ -1,1 +1,5 @@
 ./test_scripts/Polices/Policy_Table_Update/028_ATF_P_TC_HMILvl_on_PTU_affected_in_BACKGROUND_or_NONE.lua
+./test_scripts/Polices/Policy_Table_Update/026_ATF_P_TC_PTU_Merge_Into_LPT.lua
+./test_scripts/Polices/user_consent_of_Policies/125_ATF_No_user_consent_prompt_in_group.lua
+./test_scripts/Polices/user_consent_of_Policies/126_ATF_User_consent_prompt_persists.lua
+

@@ -176,7 +176,7 @@ function Test:Precondition_IsPermissionsConsentNeeded_false_on_app_activation()
   EXPECT_HMICALL("BasicCommunication.PolicyUpdate", {file = "/tmp/fs/mp/images/ivsu_cache/sdl_snapshot.json"})
   :Do(function()
       local app_permission = testCasesForPolicyTableSnapshot:get_data_from_PTS("device_data."..config.deviceMAC..".user_consent_records."..config.application1.registerAppInterfaceParams.appID)
-      if(app_permission ~= 0) then
+      if(app_permission ~= nil) then
         self:FailTestCase("Consented gropus are assigned to application")
       end
     end)
@@ -298,11 +298,11 @@ function Test:Precondition_PTU_user_consent_prompt_present()
     local is_test_passed = true
     local app_permission_Location = testCasesForPolicyTableSnapshot:get_data_from_PTS("device_data."..config.deviceMAC..".user_consent_records."..config.application1.registerAppInterfaceParams.appID..".consent_groups.Location-1")
     local app_permission_Notifications = testCasesForPolicyTableSnapshot:get_data_from_PTS("device_data."..config.deviceMAC..".user_consent_records."..config.application1.registerAppInterfaceParams.appID..".consent_groups.Notifications")
-    if(app_permission_Location ~= 0) then
+    if(app_permission_Location ~= nil) then
       commonFunctions:printError("Location-1 is assigned user_consent_records")
       is_test_passed = false
     end
-    if(app_permission_Notifications == 0) then
+    if(app_permission_Notifications == nil) then
       commonFunctions:printError("Notifications is not assigned user_consent_records")
       is_test_passed = false
     elseif(app_permission_Notifications ~= true) then
