@@ -10,16 +10,19 @@
 -- Application not in PT is registered -> PTU is triggered
 -- SDL->HMI: SDL.OnStatusUpdate(UPDATE_NEEDED)
 -- SDL->HMI:SDL.PolicyUpdate(file, timeout, retry[])
+--
+-- 2. Performed steps
 -- HMI -> SDL: SDL.GetURLs (<service>)
 -- HMI->SDL: BasicCommunication.OnSystemRequest ('url', requestType: PROPRIETARY)
--- 2. Performed steps
--- SDL->app: OnSystemRequest ('url', requestType:PROPRIETARY, fileType="JSON")
+--
 -- Expected result:
 -- Timeout expires and retry sequence started
+-- SDL->app: OnSystemRequest ('url', requestType:PROPRIETARY, fileType="JSON")
 -- SDL->HMI: SDL.OnStatusUpdate(UPDATE_NEEDED)
 ---------------------------------------------------------------------------------------------
 --[[ General configuration parameters ]]
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+config.application1.registerAppInterfaceParams.appHMIType = { "MEDIA" }
 
 --[[ Required Shared libraries ]]
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
@@ -40,6 +43,12 @@ Test = require('connecttest')
 require('cardinalities')
 require('user_modules/AppTypes')
 
+function Test:Precondition_WaitPTUTrigger()
+  EXPECT_HMICALL("BasicCommunication.PolicyUpdate")
+  :Do(function(_,data) self.hmiConnection:SendResponse(data.id, data.method, "SUCCESS", {}) end)
+  commonTestCases:DelayedExp(5000)
+end
+
 --[[ Test ]]
 commonFunctions:newTestCasesGroup("Test")
 function Test:TestStep_Sending_PTS_to_mobile_application()
@@ -47,9 +56,6 @@ function Test:TestStep_Sending_PTS_to_mobile_application()
   local time_system_request = {}
   local endpoints = {}
   local is_test_fail = false
-  local SystemFilesPath = commonFunctions:read_parameter_from_smart_device_link_ini("SystemFilesPath")
-  local PathToSnapshot = commonFunctions:read_parameter_from_smart_device_link_ini("PathToSnapshot")
-  local file_pts = SystemFilesPath.."/"..PathToSnapshot
 
   local seconds_between_retries = {}
   local timeout_pts = testCasesForPolicyTableSnapshot:get_data_from_PTS("module_config.timeout_after_x_seconds")
@@ -90,7 +96,7 @@ function Test:TestStep_Sending_PTS_to_mobile_application()
       EXPECT_NOTIFICATION("OnSystemRequest", { requestType = "PROPRIETARY", fileType = "JSON"})
       :Do(function(_,_) time_system_request[#time_system_request + 1] = timestamp() end)
 
-      EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", {status = "UPDATING"}, {status = "UPDATE_NEEDED"}):Times(2):Timeout(64000)
+      EXPECT_HMINOTIFICATION("SDL.OnStatusUpdate", {status = "UPDATE_NEEDED"}, {status = "UPDATING"}):Times(2):Timeout(64000)
       :Do(function(exp_pu, data)
           print(exp_pu.occurences..":"..data.params.status)
           if(data.params.status == "UPDATE_NEEDED") then
