@@ -4,7 +4,12 @@
 -- [HMI API] GetListOfPermissions request/response
 --
 -- Description:
--- 1. Preconditions: SDL and HMI are running.
+-- On getting SDL.GetListOfPermissions with appID parameter, PoliciesManager must respond with the list of <groupName>s
+-- that have the field "user_consent_prompt" in corresponding <functional grouping>
+-- and are assigned to the currently registered applications (section "<appID>" -> "groups")
+--
+-- 1. Preconditions:
+-- SDL and HMI are running.
 -- Local PT contains in "appID_1" section: "groupName_11", "groupName_12" groups;
 -- and in "appID_2" section: "groupName_21", "groupName_22" groups;
 --
