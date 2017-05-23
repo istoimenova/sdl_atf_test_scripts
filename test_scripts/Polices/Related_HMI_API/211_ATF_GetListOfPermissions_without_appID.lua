@@ -1,96 +1,215 @@
 ---------------------------------------------------------------------------------------------
--- Description:
--- 1. Preconditions: SDL and HMI are running. Local PT contains in "appID_1" section: "groupName_11", "groupName_12" groups;
--- and in "appID_2" section: "groupName_21", "groupName_22" groups;
--- 2. Performed steps: 1. Send SDL.GetListOfPermissions {appID_1}, From HMI: SDL->HMI: GetListOfPermissions {allowedFunctions:
---
 -- Requirement summary:
--- GetListOfPermissions without appID
+-- [Policies] GetListOfPermissions without appID
 -- [HMI API] GetListOfPermissions request/response
 --
+-- Description:
+-- On getting SDL.GetListOfPermissions without appID parameter,
+-- PoliciesManager must respond with the list of <groupName>s
+-- that have the field "user_consent_prompt" in corresponding <functional grouping>
+-- and are assigned to the currently registered applications (section "<appID>" -> "groups")
+--
+-- 1. Preconditions:
+-- SDL and HMI are running.
+-- Local PT contains in "appID_1" section: "groupName_11", "groupName_12" groups;
+-- and in "appID_2" section: "groupName_21", "groupName_22" groups;
+-- Register applications with appID_1 and appID_2
+-- Activate appID_1 and consent device
+--
+-- 2. Performed steps:
+-- 2.1. HMI -> SDL: GetListOfpermissions ()// without appID
+-- 2.2. Allow groupName_11 and disallow groupName_12
+-- 2.3. Allow groupName_21 and disallow groupName_22
+-- 2.4. HMI -> SDL: GetListOfpermissions ()// without appID
+--
 -- Expected result:
--- On getting SDL.GetListOfPermissions without appID parameter, PoliciesManager must respond with the list of <groupName>s
--- that have the field "user_consent_prompt" in corresponding <functional grouping> and are assigned to the currently registered applications (section "<appID>" -> "groups")
+-- 1. SDL->HMI: GetListOfPermissions
+-- (allowedFunctions [{<groupName_11>, allowed:nil}, {<groupName_12>, allowed:nil},
+-- {<groupName_11>, allowed:nil}, {<groupName_12>, allowed:nil}])
+-- 3. SDL->HMI: GetListOfPermissions
+-- (allowedFunctions [{<groupName_11>, allowed:true}, {<groupName_12>, allowed:false}])
+--
 ---------------------------------------------------------------------------------------------
 --[[ General configuration parameters ]]
 config.deviceMAC = "12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0"
+--TODO(istoimenova): remove when issue: "ATF does not stop HB timers by closing session and connection" is fixed
+config.defaultProtocolVersion = 2
 
 --[[ Required Shared libraries ]]
 local commonFunctions = require ('user_modules/shared_testcases/commonFunctions')
 local commonSteps = require('user_modules/shared_testcases/commonSteps')
+local commonPreconditions = require('user_modules/shared_testcases/commonPreconditions')
 local testCasesForPolicyTable = require('user_modules/shared_testcases/testCasesForPolicyTable')
-local testCasesForPolicyTableSnapshot = require('user_modules/shared_testcases/testCasesForPolicyTableSnapshot')
+local json = require('json')
+local mobile_session = require('mobile_session')
+
+--[[ Local variables]]
+local id_group_1 = 0
+local id_group_2 = 0
+local id_group_3 = 0
+local id_group_4 = 0
 
 --[[ Local Functions ]]
-commonSteps:DeleteLogsFileAndPolicyTable()
-testCasesForPolicyTable:Precondition_updatePolicy_By_overwriting_preloaded_pt("files/DeviceConsentedAndAppPermissionsForConsent_preloaded_pt.json")
---TODO(istoimenova): shall be removed when issue: "ATF does not stop HB timers by closing session and connection" is fixed
-config.defaultProtocolVersion = 2
+--[[@create_ptu_file: creates PTU file for specific application permissions.
+! @parameters:
+! app_id - Id of application that will be included tmp.json
+]]
+local function update_preloaded_pt()
+  local config_path = commonPreconditions:GetPathToSDL()
+  local pathToFile = config_path .. 'sdl_preloaded_pt.json'
+  commonPreconditions:BackupFile("sdl_preloaded_pt.json")
+
+  local file = io.open(pathToFile, "r")
+  local json_data = file:read("*all")
+  file:close()
+
+  local data = json.decode(json_data)
+
+  -- Add user consent groups
+  data.policy_table.functional_groupings["groupName_11"] = {
+    user_consent_prompt = "groupName_11",
+    rpcs = {}
+  }
+  data.policy_table.functional_groupings["groupName_12"] = {
+    user_consent_prompt = "groupName_12",
+    rpcs = {}
+  }
+  data.policy_table.functional_groupings["groupName_21"] = {
+    user_consent_prompt = "groupName_21",
+    rpcs = {}
+  }
+  data.policy_table.functional_groupings["groupName_22"] = {
+    user_consent_prompt = "groupName_22",
+    rpcs = {}
+  }
+
+  if(data.policy_table.functional_groupings["DataConsent-2"]) then
+    data.policy_table.functional_groupings["DataConsent-2"].rpcs = json.null
+  end
+
+  data.policy_table.app_policies[config.application1.registerAppInterfaceParams.appID] = nil
+  data.policy_table.app_policies[config.application1.registerAppInterfaceParams.appID] =
+  {
+    keep_context = false,
+    steal_focus = false,
+    priority = "NONE",
+    default_hmi = "NONE",
+    groups = {"Base-4", "groupName_11", "groupName_12"}
+  }
+
+  data.policy_table.app_policies[config.application2.registerAppInterfaceParams.appID] = nil
+  data.policy_table.app_policies[config.application2.registerAppInterfaceParams.appID] =
+  {
+    keep_context = false,
+    steal_focus = false,
+    priority = "NONE",
+    default_hmi = "NONE",
+    groups = {"Base-4", "groupName_21", "groupName_21"}
+  }
+
+  data = json.encode(data)
+  file = io.open(pathToFile, "w")
+  file:write(data)
+  file:close()
+end
 
 --[[ General Settings for configuration ]]
+commonSteps:DeleteLogsFiles()
+commonSteps:DeletePolicyTable()
+update_preloaded_pt()
+
 Test = require('connecttest')
 require('cardinalities')
 require('user_modules/AppTypes')
 
---[[ Test ]]
-commonFunctions:newTestCasesGroup("Test")
-function Test:TestStep_GetListOfPermissions_without_appID()
-  local ServerAddress = commonFunctions:read_parameter_from_smart_device_link_ini("ServerAddress")
-  local RequestId = self.hmiConnection:SendRequest("SDL.ActivateApp", { appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
+--[[ Preconditions ]]
+commonFunctions:newTestCasesGroup("Preconditions")
 
-  --Allow SDL functionality
-  EXPECT_HMIRESPONSE(RequestId,{ result = { code = 0, method = "SDL.ActivateApp", isPermissionsConsentNeeded = true}})
+function Test:Precondition_StartSecondSession()
+  self.mobileSession = mobile_session.MobileSession(self, self.mobileConnection)
+  self.mobileSession:StartService(7)
+end
+
+function Test:Precondition_RegisterSecondApp()
+  local CorIdRegister = self.mobileSession:SendRPC("RegisterAppInterface",
+    config.application2.registerAppInterfaceParams)
+
+  EXPECT_HMINOTIFICATION("BasicCommunication.OnAppRegistered", {
+      application = { appName = config.application2.registerAppInterfaceParams.appName }})
   :Do(function(_,data)
-      if(data.result.isSDLAllowed == false) then
-        local RequestId1 = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage", {language = "EN-US", messageCodes = {"DataConsent"}})
-        EXPECT_HMIRESPONSE( RequestId1, {result = {code = 0, method = "SDL.GetUserFriendlyMessage"}})
-        :Do(function(_,_)
-            self.hmiConnection:SendNotification("SDL.OnAllowSDLFunctionality",
-              {allowed = true, source = "GUI", device = {id = config.deviceMAC, name = ServerAddress, isSDLAllowed = true}})
-          end)
-      end
+      self.applications[config.application2.registerAppInterfaceParams.appName] = data.params.application.appID
+    end)
 
-      if (data.result.isPermissionsConsentNeeded == true) then
-        local RequestIdListOfPermissions = self.hmiConnection:SendRequest("SDL.GetListOfPermissions", {})
-        EXPECT_HMIRESPONSE(RequestIdListOfPermissions,{result = {code = 0, method = "SDL.GetListOfPermissions",
-              --TODO(istoimenova): id should be read from policy.sqlite
-              -- allowed: If ommited - no information about User Consent is yet found for app.
-              allowedFunctions = {{ name = "DrivingCharacteristics", id = 4734356}}}})
-        :Do(function()
-            local ReqIDGetUserFriendlyMessage = self.hmiConnection:SendRequest("SDL.GetUserFriendlyMessage",
-              {language = "EN-US", messageCodes = {"AppPermissions"}})
+  EXPECT_RESPONSE(CorIdRegister, { success = true, resultCode = "SUCCESS" })
+  EXPECT_NOTIFICATION("OnHMIStatus", { systemContext = "MAIN", hmiLevel = "NONE", audioStreamingState = "NOT_AUDIBLE"})
+end
 
-            EXPECT_HMIRESPONSE(ReqIDGetUserFriendlyMessage,
-              { result = { code = 0, messages = {{ messageCode = "AppPermissions"}}, method = "SDL.GetUserFriendlyMessage"}})
-            :Do(function(_,_)
-                self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent",
-                  { appID = self.applications[config.application1.registerAppInterfaceParams.appName],
-                    consentedFunctions = {{ allowed = true, id = 4734356, name = "DrivingCharacteristics"}}, source = "GUI"})
-                EXPECT_NOTIFICATION("OnPermissionsChange")
-              end)
+function Test:Precondition_Device_Consented()
+  testCasesForPolicyTable:trigger_getting_device_consent(self,
+    config.application1.registerAppInterfaceParams.appName, config.deviceMAC)
+end
 
-          end)
+function Test:Precondition_GetListOfPermissions_before_OnAppPermissionConsent()
+  local request_id = self.hmiConnection:SendRequest("SDL.GetListOfPermissions")
+  EXPECT_HMIRESPONSE(request_id,
+    {allowedFunctions = {
+        {name = "groupName_11"}, {name = "groupName_12"},
+        {name = "groupName_21"}, {name = "groupName_22"}}})
+  :ValidIf(function(_,data)
+      -- 'allowed' values should be empty
+      if (data.result.allowedFunctions[1].allowed ~= nil) or (data.result.allowedFunctions[2].allowed ~= nil) then
+        self.FailTestCase("allowedFunctions's 'allowed' values are not empty.")
       else
-        commonFunctions:userPrint(31, "Wrong SDL bahavior: there are app permissions for consent, isPermissionsConsentNeeded should be true")
-        return false
+        return true
       end
+    end)
+  :Do(function(_,data)
+      if(data.result.allowedFunctions[1] ~= nil) then id_group_1 = data.result.allowedFunctions[1].id end
+      if(data.result.allowedFunctions[2] ~= nil) then id_group_2 = data.result.allowedFunctions[2].id end
+      if(data.result.allowedFunctions[3] ~= nil) then id_group_3 = data.result.allowedFunctions[3].id end
+      if(data.result.allowedFunctions[4] ~= nil) then id_group_4 = data.result.allowedFunctions[4].id end
     end)
 end
 
--- Triger PTU to update sdl snapshot
-function Test:TestStep_trigger_user_request_update_from_HMI()
-  testCasesForPolicyTable:trigger_user_request_update_from_HMI(self)
+function Test:Precondition_ChangePermissions_appID_1()
+  self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent",
+    { appID = self.applications[config.application1.registerAppInterfaceParams.appName],
+      consentedFunctions = {
+        {allowed = true, id = id_group_1, name = "groupName_11"},
+        {allowed = false, id = id_group_2, name = "groupName_12"}
+    }, source = "GUI"})
+  EXPECT_NOTIFICATION("OnPermissionsChange")
 end
 
-function Test:TestStep_verify_PermissionConsent()
-  local app_permission = testCasesForPolicyTableSnapshot:get_data_from_PTS("device_data."..config.deviceMAC..".user_consent_records."..config.application1.registerAppInterfaceParams.appID..".consent_groups.DrivingCharacteristics-3")
-  if(app_permission ~= true) then
-    self:FailTestCase("DrivingCharacteristics-3 is not assigned to application, real: " ..app_permission)
-  end
+function Test:Precondition_ChangePermissions_appID_2()
+  self.hmiConnection:SendNotification("SDL.OnAppPermissionConsent",
+    { appID = self.applications[config.application2.registerAppInterfaceParams.appName],
+      consentedFunctions = {
+        {allowed = true, id = id_group_3, name = "groupName_21"},
+        {allowed = false, id = id_group_4, name = "groupName_22"}
+    }, source = "GUI"})
+  self.mobileSession:ExpectNotification("OnPermissionsChange")
+end
+
+--[[ Test ]]
+commonFunctions:newTestCasesGroup("Test")
+
+function Test:TestStep_GetListOfPermissions_without_appID()
+  local request_id = self.hmiConnection:SendRequest("SDL.GetListOfPermissions",
+    {appID = self.applications[config.application1.registerAppInterfaceParams.appName]})
+  EXPECT_HMIRESPONSE(request_id,{
+      result = {code = 0, method = "SDL.GetListOfPermissions",
+        allowedFunctions = {
+          {name = "groupName_11", id = id_group_1, allowed = true},
+          {name = "groupName_12", id = id_group_2, allowed = false},
+          {name = "groupName_21", id = id_group_1, allowed = true},
+          {name = "groupName_22", id = id_group_1, allowed = false},
+    }}})
 end
 
 --[[ Postconditions ]]
 commonFunctions:newTestCasesGroup("Postconditions")
+
 testCasesForPolicyTable:Restore_preloaded_pt()
 function Test.Postcondition_StopSDL()
   StopSDL()
